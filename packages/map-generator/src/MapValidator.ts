@@ -41,7 +41,10 @@ export const validateMap = (
   if (analysis.shortestPathLength < minPathLengthBySize[settings.mapSize]) {
     reasons.push('Map is too short.')
   }
-  if (analysis.shortestPathLength > maxPathLengthBySize[settings.mapSize]) {
+  if (
+    analysis.shortestPathLength >
+    maxPathLengthBySize[settings.mapSize] * (settings.petalCount ?? 1)
+  ) {
     reasons.push('Map is too long.')
   }
   if (analysis.difficultyScore < 15 || analysis.difficultyScore > 95) {

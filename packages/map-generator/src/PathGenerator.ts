@@ -1,31 +1,11 @@
 import type { HexTile } from '../../shared/src/index.js'
 import { SeededRandom } from './SeededRandom.js'
-import { axialDistance, getNeighbors } from './HexGrid.js'
-
-const tileIdSet = (tiles: HexTile[]): Set<string> =>
-  new Set(tiles.map((tile) => tile.id))
-
-const chooseStep = (
-  current: HexTile,
-  target: HexTile,
-  grid: HexTile[],
-  random: SeededRandom,
-): HexTile => {
-  const currentDistance = axialDistance(current, target)
-  const candidates = getNeighbors(grid, current).filter(
-    (candidate) => axialDistance(candidate, target) < currentDistance,
-  )
-  if (candidates.length === 0) {
-    throw new Error('Unable to trace a contiguous path to the target.')
-  }
-  const bestDistance = Math.min(
-    ...candidates.map((candidate) => axialDistance(candidate, target)),
-  )
-  const bestChoices = candidates.filter(
-    (candidate) => axialDistance(candidate, target) === bestDistance,
-  )
-  return random.pick(bestChoices)
-}
+import {
+  axialDistance,
+  getNeighborCoordinates,
+  getNeighbors,
+  hexKey,
+} from './HexGrid.js'
 
 export const tracePath = (
   from: HexTile,
@@ -33,23 +13,34 @@ export const tracePath = (
   grid: HexTile[],
   random: SeededRandom,
 ): HexTile[] => {
-  const path: HexTile[] = [from]
-  const seen = tileIdSet(path)
-  let current = from
-  let safety = grid.length * 2
-  while (current.id !== to.id && safety > 0) {
-    const next = chooseStep(current, to, grid, random)
-    if (!seen.has(next.id)) {
-      path.push(next)
-      seen.add(next.id)
+  const byCoordinate = new Map(
+    grid.map((tile) => [hexKey(tile.q, tile.r), tile]),
+  )
+  const queue = [from]
+  const previous = new Map<string, string>([[from.id, '']])
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index]!
+    if (current.id === to.id) break
+    const neighbors = random.shuffle(
+      getNeighborCoordinates(current.q, current.r)
+        .map(({ q, r }) => byCoordinate.get(hexKey(q, r)))
+        .filter((tile): tile is HexTile => Boolean(tile)),
+    )
+    for (const neighbor of neighbors) {
+      if (previous.has(neighbor.id)) continue
+      previous.set(neighbor.id, current.id)
+      queue.push(neighbor)
     }
-    current = next
-    safety -= 1
   }
-  if (path[path.length - 1]!.id !== to.id) {
+  if (!previous.has(to.id)) {
     throw new Error('Failed to build a contiguous path segment.')
   }
-  return path
+  const byId = new Map(grid.map((tile) => [tile.id, tile]))
+  const path: HexTile[] = []
+  for (let id = to.id; id; id = previous.get(id) ?? '') {
+    path.push(byId.get(id)!)
+  }
+  return path.reverse()
 }
 
 export const createRouteSet = (

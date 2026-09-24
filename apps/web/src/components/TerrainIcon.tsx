@@ -12,6 +12,19 @@ export function TerrainIcon({ terrain }: { terrain: TerrainType }) {
       strokeLinejoin="round"
       pointerEvents="none"
     >
+      {terrain === 'UNKNOWN' && (
+        <text
+          x="0"
+          y="5"
+          textAnchor="middle"
+          fill="#e2e8f0"
+          stroke="none"
+          fontSize="16"
+          fontWeight="800"
+        >
+          ?
+        </text>
+      )}
       {terrain === 'START' && (
         <>
           <path d="M-6 7V-8M-6-7H5L2-3l3 4H-6" fill="#dbeafe" />

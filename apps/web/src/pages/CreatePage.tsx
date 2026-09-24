@@ -1,23 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { MapSettings } from '@shared'
 import { defaultSettings, useGameStore } from '../store.js'
+import { errorLabels } from '../labels.js'
 
 const randomSeed = (): string => `PATH-${Math.floor(Math.random() * 100000)}`
 
 export function CreatePage() {
   const navigate = useNavigate()
   const session = useGameStore((state) => state.session)
+  const account = useGameStore((state) => state.account)
   const room = useGameStore((state) => state.room)
+  const error = useGameStore((state) => state.error)
   const createRoom = useGameStore((state) => state.createRoom)
   const [playerName, setPlayerName] = useState('Gracz 1')
   const [settings, setSettings] = useState<MapSettings>(defaultSettings)
+  const [createRequested, setCreateRequested] = useState(false)
+  const previousRoomCode = useRef(session?.roomCode)
 
   useEffect(() => {
-    if (room?.roomCode && session?.roomCode === room.roomCode) {
+    if (
+      createRequested &&
+      room?.status === 'LOBBY' &&
+      room.roomCode !== previousRoomCode.current &&
+      session?.roomCode === room.roomCode
+    ) {
       navigate(`/room/${room.roomCode}`)
     }
-  }, [navigate, room?.roomCode, session?.roomCode])
+  }, [createRequested, navigate, room, session?.roomCode])
 
   const canSubmit = useMemo(() => playerName.trim().length > 0, [playerName])
 
@@ -31,7 +41,8 @@ export function CreatePage() {
         <label>
           Nazwa gracza
           <input
-            value={playerName}
+            value={account?.username ?? playerName}
+            disabled={Boolean(account)}
             onChange={(event) => setPlayerName(event.target.value)}
           />
         </label>
@@ -69,6 +80,49 @@ export function CreatePage() {
           </select>
         </label>
         <label>
+          Liczba połączonych płatków
+          <select
+            value={settings.petalCount}
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                petalCount: Number(event.target.value),
+              })
+            }
+          >
+            {Array.from({ length: 12 }, (_, index) => index + 1).map(
+              (count) => (
+                <option key={count} value={count}>
+                  {count}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+        <label>
+          Mgła wojny
+          <select
+            value={settings.fogMode}
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                fogMode: event.target.value as MapSettings['fogMode'],
+              })
+            }
+          >
+            <option value="NONE">Brak — cała mapa z typami i kosztami</option>
+            <option value="PETAL">
+              Płatek — szczegóły tylko na bieżącym płatku
+            </option>
+            <option value="MEDIUM">
+              Średnia — szczegóły do 2 pól, typy do 4
+            </option>
+            <option value="FULL">
+              Pełna — szczegóły sąsiadów, typy do 2 pól
+            </option>
+          </select>
+        </label>
+        <label>
           Trudność
           <select
             value={settings.difficulty}
@@ -99,15 +153,37 @@ export function CreatePage() {
             }
           />
         </label>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={settings.allowSharedTiles}
+            onChange={(event) =>
+              setSettings({
+                ...settings,
+                allowSharedTiles: event.target.checked,
+              })
+            }
+          />
+          Gracze mogą stać na tym samym polu
+        </label>
       </div>
       <button
         type="button"
         className="primary-button"
-        disabled={!canSubmit}
-        onClick={() => createRoom(playerName.trim(), settings)}
+        disabled={!canSubmit || (createRequested && !error)}
+        onClick={() => {
+          previousRoomCode.current = session?.roomCode
+          setCreateRequested(true)
+          createRoom((account?.username ?? playerName).trim(), settings)
+        }}
       >
-        Utwórz pokój
+        {createRequested && !error ? 'Tworzenie pokoju…' : 'Utwórz pokój'}
       </button>
+      {createRequested && error && (
+        <p className="auth-error" role="alert">
+          {errorLabels[error.code] ?? error.message}
+        </p>
+      )}
     </main>
   )
 }

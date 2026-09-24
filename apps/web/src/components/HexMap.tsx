@@ -6,6 +6,7 @@ import { playerColor } from '../playerColors.js'
 import { TerrainIcon } from './TerrainIcon.js'
 
 const tileColors: Record<HexTile['terrain'], string> = {
+  UNKNOWN: '#334155',
   START: '#60a5fa',
   GOAL: '#f97316',
   JUNGLE: '#22c55e',
@@ -28,6 +29,7 @@ const terrainOrder: HexTile['terrain'][] = [
 ]
 
 const terrainRules: Record<HexTile['terrain'], string> = {
+  UNKNOWN: 'Typ i koszt pola pozostają ukryte.',
   START: 'Powrót kosztuje 1 punkt dowolnego koloru.',
   JUNGLE: 'Koszt z pola: zielone lub uniwersalne punkty.',
   WATER: 'Koszt z pola: niebieskie lub uniwersalne punkty.',
@@ -59,6 +61,10 @@ const cubeDistance = (left: HexTile, right: HexTile): number =>
   )
 
 const tileDescription = (tile: HexTile): string => {
+  if (tile.terrain === 'UNKNOWN') return 'Nieodkryte pole'
+  if (tile.difficulty < 0) {
+    return `${terrainLabels[tile.terrain]} — koszt nieznany`
+  }
   const costType = getTerrainCost(tile.terrain, tile.difficulty)
   if (tile.isBlocked || costType === 'BLOCKED') {
     return `${terrainLabels[tile.terrain]}: pole zablokowane`
@@ -82,6 +88,30 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
   const currentTile = game.map.tiles.find(
     (tile) => tile.id === localPlayer?.position,
   )
+  const mapView = useMemo(() => {
+    if (
+      game.settings.fogMode === 'MEDIUM' ||
+      game.settings.fogMode === 'FULL'
+    ) {
+      const point = currentTile
+        ? hexToPixel(currentTile.q, currentTile.r, 24)
+        : { x: 0, y: 0 }
+      return { centerX: point.x, centerY: point.y, width: 360, height: 330 }
+    }
+    const points = game.map.tiles.map((tile) => hexToPixel(tile.q, tile.r, 24))
+    const xs = points.map((point) => point.x)
+    const ys = points.map((point) => point.y)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const minY = Math.min(...ys)
+    const maxY = Math.max(...ys)
+    return {
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2,
+      width: Math.max(480, maxX - minX + 72),
+      height: Math.max(440, maxY - minY + 72),
+    }
+  }, [currentTile, game.map.tiles, game.settings.fogMode])
 
   const reachable = useMemo(() => {
     if (!localPlayer || !currentTile) {
@@ -93,11 +123,22 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
           (tile) =>
             cubeDistance(tile, currentTile) === 1 &&
             !tile.isBlocked &&
+            (game.settings.allowSharedTiles !== false ||
+              !game.players.some(
+                (player) =>
+                  player.id !== localPlayer.id && player.position === tile.id,
+              )) &&
             canAffordMove(localPlayer, tile),
         )
         .map((tile) => tile.id),
     )
-  }, [currentTile, game.map.tiles, localPlayer])
+  }, [
+    currentTile,
+    game.map.tiles,
+    game.players,
+    game.settings.allowSharedTiles,
+    localPlayer,
+  ])
 
   return (
     <div className="panel map-panel">
@@ -110,7 +151,10 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
             onClick={() => {
               if (currentTile) {
                 const point = hexToPixel(currentTile.q, currentTile.r, 24)
-                setPan({ x: -point.x * zoom, y: -point.y * zoom })
+                setPan({
+                  x: point.x - mapView.centerX,
+                  y: point.y - mapView.centerY,
+                })
               }
             }}
           >
@@ -118,13 +162,13 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
           </button>
           <button
             type="button"
-            onClick={() => setZoom((value) => Math.min(2, value + 0.1))}
+            onClick={() => setZoom((value) => Math.min(4, value + 0.2))}
           >
             +
           </button>
           <button
             type="button"
-            onClick={() => setZoom((value) => Math.max(0.6, value - 0.1))}
+            onClick={() => setZoom((value) => Math.max(0.6, value - 0.2))}
           >
             -
           </button>
@@ -155,12 +199,12 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
         </div>
       </div>
       <svg
-        viewBox="-240 -220 480 440"
+        viewBox={`${mapView.centerX + pan.x - mapView.width / (2 * zoom)} ${mapView.centerY + pan.y - mapView.height / (2 * zoom)} ${mapView.width / zoom} ${mapView.height / zoom}`}
         className="hex-map"
         role="img"
         aria-label="Mapa gry"
       >
-        <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
+        <g>
           {game.map.tiles.map((tile) => {
             const { x, y } = hexToPixel(tile.q, tile.r, 24)
             const occupiedBy = game.players.filter(
@@ -198,7 +242,13 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
                   strokeWidth={
                     isLocalTile ? 4 : isSelected ? 3 : isReachable ? 2.5 : 1
                   }
-                  opacity={tile.isBlocked ? 0.45 : 1}
+                  opacity={
+                    tile.terrain === 'UNKNOWN'
+                      ? 0.85
+                      : tile.isBlocked
+                        ? 0.45
+                        : 1
+                  }
                 />
                 <g transform={`translate(${x} ${y - 5})`}>
                   <TerrainIcon terrain={tile.terrain} />
@@ -209,9 +259,13 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
                   textAnchor="middle"
                   className="hex-difficulty"
                 >
-                  {tile.terrain === 'MOUNTAIN'
-                    ? '×'
-                    : Math.max(1, tile.difficulty)}
+                  {tile.terrain === 'UNKNOWN'
+                    ? ''
+                    : tile.difficulty < 0
+                      ? '?'
+                      : tile.terrain === 'MOUNTAIN'
+                        ? '×'
+                        : Math.max(1, tile.difficulty)}
                 </text>
                 {occupiedBy.map((player, index) => {
                   const number =
@@ -283,11 +337,13 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
           ))}
         </ul>
       </details>
-      <div className="map-stats">
-        <span>Najkrótsza trasa: {game.map.stats.shortestPathLength}</span>
-        <span>Trasy: {game.map.stats.routeCount}</span>
-        <span>Trudność: {game.map.stats.difficultyScore}</span>
-      </div>
+      {game.settings.fogMode === 'NONE' && (
+        <div className="map-stats">
+          <span>Najkrótsza trasa: {game.map.stats.shortestPathLength}</span>
+          <span>Trasy: {game.map.stats.routeCount}</span>
+          <span>Trudność: {game.map.stats.difficultyScore}</span>
+        </div>
+      )}
     </div>
   )
 }

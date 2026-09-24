@@ -10,11 +10,15 @@ export const mapSettingsSchema = z.object({
   mountainDensity: z.number().min(0).max(0.4),
   specialTileDensity: z.number().min(0).max(0.2),
   chokepointCount: z.number().int().min(0).max(6),
+  allowSharedTiles: z.boolean().default(true),
+  petalCount: z.number().int().min(1).max(12).default(3),
+  fogMode: z.enum(['NONE', 'PETAL', 'MEDIUM', 'FULL']).default('NONE'),
 })
 
 export const roomCreateSchema = z.object({
   playerName: z.string().min(1).max(24),
   settings: mapSettingsSchema,
+  authToken: z.string().optional(),
 })
 
 export const roomJoinSchema = z.object({
@@ -25,6 +29,7 @@ export const roomJoinSchema = z.object({
   playerName: z.string().min(1).max(24),
   playerId: z.string().optional(),
   sessionToken: z.string().optional(),
+  authToken: z.string().optional(),
 })
 
 export const roomUpdateSettingsSchema = z.object({

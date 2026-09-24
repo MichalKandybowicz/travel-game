@@ -54,13 +54,10 @@ export function CardFace({
         <strong>+{card.movementValue}</strong>
         <span>{movementLabels[card.movementType]} punkty ruchu</span>
       </span>
-      <small className="game-card__description">
-        {cardLabels[card.id]?.description ?? card.description}
-      </small>
       <span className="game-card__footer">
         {purchaseCost === undefined
-          ? `Zamiana: +${card.id === 'coin' ? 2 : 1} złota`
-          : `Koszt: ${purchaseCost} złota`}
+          ? `Zamiana: +${card.goldValue} złota`
+          : `Koszt: ${purchaseCost} złota · Zamiana: +${card.goldValue} złota`}
       </span>
     </span>
   )

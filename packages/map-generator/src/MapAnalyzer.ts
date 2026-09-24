@@ -1,10 +1,25 @@
 import type { GameMap, HexTile, MapAnalysis } from '../../shared/src/index.js'
-import { getNeighbors } from './HexGrid.js'
+import { getNeighborCoordinates, hexKey } from './HexGrid.js'
+
+type NeighborLookup = (tile: HexTile) => HexTile[]
+
+const buildNeighborLookup = (tiles: HexTile[]): NeighborLookup => {
+  const byCoordinate = new Map(
+    tiles.map((tile) => [hexKey(tile.q, tile.r), tile]),
+  )
+  return (tile) =>
+    getNeighborCoordinates(tile.q, tile.r)
+      .map(({ q, r }) => byCoordinate.get(hexKey(q, r)))
+      .filter((neighbor): neighbor is HexTile => Boolean(neighbor))
+}
 
 const traversable = (tile: HexTile): boolean =>
   !tile.isBlocked && tile.terrain !== 'MOUNTAIN'
 
-const buildReachableFromGoal = (map: GameMap): Set<string> => {
+const buildReachableFromGoal = (
+  map: GameMap,
+  neighborsOf: NeighborLookup,
+): Set<string> => {
   const goal = map.tiles.find((tile) => tile.id === map.goalHexId)!
   const queue: HexTile[] = [goal]
   const visited = new Set<string>([goal.id])
@@ -13,7 +28,7 @@ const buildReachableFromGoal = (map: GameMap): Set<string> => {
   while (queueIndex < queue.length) {
     const current = queue[queueIndex]!
     queueIndex += 1
-    for (const neighbor of getNeighbors(map.tiles, current)) {
+    for (const neighbor of neighborsOf(current)) {
       if (!traversable(neighbor) || visited.has(neighbor.id)) {
         continue
       }
@@ -25,7 +40,7 @@ const buildReachableFromGoal = (map: GameMap): Set<string> => {
   return visited
 }
 
-const bfsDistance = (map: GameMap): number => {
+const bfsDistance = (map: GameMap, neighborsOf: NeighborLookup): number => {
   const start = map.tiles.find((tile) => tile.id === map.startHexId)!
   const goal = map.tiles.find((tile) => tile.id === map.goalHexId)!
   const queue: Array<{ tile: HexTile; distance: number }> = [
@@ -40,7 +55,7 @@ const bfsDistance = (map: GameMap): number => {
     if (current.tile.id === goal.id) {
       return current.distance
     }
-    for (const neighbor of getNeighbors(map.tiles, current.tile)) {
+    for (const neighbor of neighborsOf(current.tile)) {
       if (!traversable(neighbor) || visited.has(neighbor.id)) {
         continue
       }
@@ -52,16 +67,23 @@ const bfsDistance = (map: GameMap): number => {
   return Number.POSITIVE_INFINITY
 }
 
-export const countDistinctRoutesFromStart = (map: GameMap): number => {
+const countRoutesFromStart = (
+  map: GameMap,
+  neighborsOf: NeighborLookup,
+): number => {
   const start = map.tiles.find((tile) => tile.id === map.startHexId)!
-  const reachableFromGoal = buildReachableFromGoal(map)
+  const reachableFromGoal = buildReachableFromGoal(map, neighborsOf)
 
-  return getNeighbors(map.tiles, start).filter(
+  return neighborsOf(start).filter(
     (neighbor) => traversable(neighbor) && reachableFromGoal.has(neighbor.id),
   ).length
 }
 
+export const countDistinctRoutesFromStart = (map: GameMap): number =>
+  countRoutesFromStart(map, buildNeighborLookup(map.tiles))
+
 export const analyzeMap = (map: GameMap): MapAnalysis => {
+  const neighborsOf = buildNeighborLookup(map.tiles)
   const terrainCounts = map.tiles.reduce<Record<string, number>>(
     (accumulator, tile) => {
       accumulator[tile.terrain] = (accumulator[tile.terrain] ?? 0) + 1
@@ -70,20 +92,20 @@ export const analyzeMap = (map: GameMap): MapAnalysis => {
     {},
   )
   const traversableTiles = map.tiles.filter(traversable)
-  const shortestPathLength = bfsDistance(map)
+  const shortestPathLength = bfsDistance(map, neighborsOf)
   const averageDifficulty =
     traversableTiles.reduce((sum, tile) => sum + tile.difficulty, 0) /
     Math.max(1, traversableTiles.length)
   const mountainPercent = Math.round(
     ((terrainCounts.MOUNTAIN ?? 0) / map.tiles.length) * 100,
   )
-  const routeCount = countDistinctRoutesFromStart(map)
+  const routeCount = countRoutesFromStart(map, neighborsOf)
   const difficultyScore = Math.max(
     0,
     Math.min(
       100,
       Math.round(
-        shortestPathLength * 2 +
+        (shortestPathLength / Math.sqrt(map.petalCount ?? 1)) * 2 +
           averageDifficulty * 12 +
           mountainPercent * 0.8 +
           Math.max(0, 4 - routeCount) * 5,

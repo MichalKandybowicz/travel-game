@@ -1,4 +1,5 @@
 export type TerrainType =
+  | 'UNKNOWN'
   | 'JUNGLE'
   | 'WATER'
   | 'VILLAGE'
@@ -13,6 +14,7 @@ export type CardPlayMode = 'MOVEMENT' | 'GOLD'
 export type CardType = 'MOVEMENT'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
+export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
 export type RoomStatus = 'LOBBY' | 'IN_GAME' | 'FINISHED'
 export type GameStatus = 'LOBBY' | 'ACTIVE' | 'FINISHED'
 
@@ -26,6 +28,9 @@ export interface MapSettings {
   mountainDensity: number
   specialTileDensity: number
   chokepointCount: number
+  allowSharedTiles: boolean
+  petalCount: number
+  fogMode: FogMode
 }
 
 export interface MapAnalysis {
@@ -45,11 +50,13 @@ export interface HexTile {
   terrain: TerrainType
   difficulty: number
   isBlocked: boolean
+  petalId?: number
   specialType?: 'CHOKEPOINT' | 'LOOP' | 'CAMP'
 }
 
 export interface GameMap {
   tiles: HexTile[]
+  petalCount?: number
   startHexId: string
   goalHexId: string
   stats: MapAnalysis
@@ -61,6 +68,7 @@ export interface CardDefinition {
   type: CardType
   movementType: MovementType
   movementValue: number
+  goldValue: number
   purchaseCost: number
   description: string
 }
@@ -88,6 +96,7 @@ export interface PlayerState {
   playedCards: CardInstance[]
   availableMovement: MovementPool
   availableGold: number
+  hasBoughtThisTurn?: boolean
   isReady: boolean
   connected: boolean
 }
@@ -105,6 +114,12 @@ export interface GameState {
   market: string[]
   marketDrawPile: string[]
   marketCycle: number
+  roundPlayedCards: Array<{
+    instanceId: string
+    playerId: string
+    cardId: string
+    mode: CardPlayMode
+  }>
   winnerId?: string
 }
 
@@ -123,6 +138,7 @@ export interface RoomState {
   settings: MapSettings
   status: RoomStatus
   seed: string
+  mapShape?: Array<{ q: number; r: number; petalId: number }> | undefined
 }
 
 export interface SessionState {
@@ -132,6 +148,13 @@ export interface SessionState {
   sessionToken: string
 }
 
+export interface AccountSession {
+  id: string
+  username: string
+  token: string
+  activeRoomCode?: string | undefined
+}
+
 export interface GameError {
   code:
     | 'NOT_YOUR_TURN'
@@ -139,7 +162,10 @@ export interface GameError {
     | 'NOT_ENOUGH_MOVEMENT'
     | 'CARD_NOT_IN_HAND'
     | 'NOT_ENOUGH_GOLD'
+    | 'PURCHASE_LIMIT'
     | 'HEX_BLOCKED'
+    | 'HEX_OCCUPIED'
+    | 'LEAVE_FAILED'
     | 'ROOM_NOT_FOUND'
     | 'GAME_ALREADY_STARTED'
     | 'GAME_NOT_STARTED'

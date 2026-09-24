@@ -50,11 +50,37 @@ button {
 }
 
 .hero-actions,
-.turn-actions,
 .inline-field {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.account-panel {
+  width: min(100%, 430px);
+  margin: 16px auto 0;
+  text-align: left;
+}
+
+.account-panel p {
+  margin: 8px 0 14px;
+}
+
+.account-form {
+  display: grid;
+  gap: 12px;
+}
+
+.account-switch {
+  margin-top: 12px;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  text-decoration: underline;
+}
+
+.auth-error {
+  color: #fca5a5;
 }
 
 .primary-link,
@@ -107,6 +133,16 @@ label {
   gap: 8px;
 }
 
+.checkbox-field {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-field input {
+  width: auto;
+  margin: 0;
+}
+
 input,
 select {
   width: 100%;
@@ -123,12 +159,97 @@ select {
   gap: 20px;
 }
 
+.lobby-sidebar,
+.map-shape-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.map-shape-preview {
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  background: #020617;
+}
+
+.map-shape-panel p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
 .game-layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 320px;
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 20px;
   align-items: start;
   margin: 20px 0;
+}
+
+.game-result {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 22px 26px;
+  border: 2px solid #facc15;
+  border-radius: 18px;
+  background: linear-gradient(110deg, #713f12, #1e293b 75%);
+  box-shadow: 0 16px 40px rgba(250, 204, 21, 0.15);
+}
+
+.game-result-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 50%;
+  background: #facc15;
+  color: #422006;
+  font-size: 2.5rem;
+}
+
+.game-result-copy {
+  flex: 1 1 230px;
+}
+
+.game-result-copy small {
+  color: #fde68a;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.game-result-copy h1 {
+  margin: 2px 0;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+}
+
+.game-result-copy p {
+  margin: 0;
+}
+
+.game-result-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.game-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  min-width: 0;
+}
+
+.game-sidebar {
+  display: grid;
+  align-content: start;
+  gap: 16px;
 }
 
 .panel {
@@ -256,11 +377,166 @@ select {
   flex-wrap: wrap;
 }
 
-.card-grid,
-.market-grid {
+.card-grid {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.hand-card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(145px, 180px));
+}
+
+.market-panel {
+  min-width: 0;
+}
+
+.market-carousel-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+.market-carousel-controls > div {
+  display: flex;
+  gap: 6px;
+}
+
+.market-carousel-controls button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.market-carousel {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  margin-top: 8px;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.market-carousel:focus-visible {
+  outline: 2px solid #f8fafc;
+  outline-offset: 2px;
+}
+
+.game-card.market-card {
+  flex: 0 0 180px;
+  min-height: 112px;
+  gap: 0;
+  scroll-snap-align: start;
+}
+
+.market-card .game-card__inner {
+  padding-top: 9px;
+}
+
+.market-card .game-card__topline,
+.market-card .game-card__art,
+.market-card .game-card__description {
+  display: none;
+}
+
+.market-card .game-card__name {
+  min-height: 0;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.market-card .game-card__effect strong {
+  font-size: 1.25rem;
+}
+
+.market-card .game-card__footer {
+  margin-top: 8px;
+}
+
+.hand-movement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.hand-header-details {
+  display: grid;
+  gap: 2px;
+}
+
+.hand-movement span {
+  border: 1px solid #475569;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.8rem;
+}
+
+.played-player {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #334155;
+}
+
+.played-player > small {
+  display: block;
+  margin-top: 7px;
+  color: #94a3b8;
+}
+
+.mini-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.mini-card {
+  --mini-accent: #86efac;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 78px;
+  border: 1px solid var(--mini-accent);
+  border-radius: 9px;
+  padding: 5px 6px;
+  background: #1e293b;
+  color: var(--mini-accent);
+  line-height: 1.1;
+}
+
+.mini-card[data-movement='BLUE'] {
+  --mini-accent: #7dd3fc;
+}
+
+.mini-card[data-movement='YELLOW'] {
+  --mini-accent: #fde047;
+}
+
+.mini-card[data-movement='WILD'] {
+  --mini-accent: #d8b4fe;
+}
+
+.mini-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.66rem;
+}
+
+.mini-card span {
+  margin-top: auto;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.mini-card small {
+  font-size: 0.61rem;
 }
 
 .card {
@@ -318,6 +594,37 @@ select {
 
 .game-card:disabled {
   opacity: 0.7;
+}
+
+.hand-card:hover {
+  box-shadow:
+    inset 0 0 0 3px rgba(15, 23, 42, 0.75),
+    0 12px 24px var(--card-glow);
+}
+
+.hand-card .game-card__inner {
+  height: auto;
+}
+
+.hand-card-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+
+.hand-card-actions button {
+  min-width: 0;
+  padding: 6px 4px;
+  border-color: var(--card-accent);
+  color: var(--card-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.hand-card-actions button:focus-visible {
+  outline: 2px solid #f8fafc;
+  outline-offset: 2px;
 }
 
 .game-card__inner {
@@ -444,9 +751,23 @@ select {
   border: 1px solid rgba(248, 113, 113, 0.4);
 }
 
-@media (max-width: 1080px) {
-  .layout.two-column,
-  .game-layout {
+@media (max-width: 800px) {
+  .layout.two-column {
     grid-template-columns: 1fr;
+  }
+
+  .game-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .game-main {
+    order: 1;
+    width: 100%;
+  }
+
+  .game-sidebar {
+    order: 2;
+    width: 100%;
   }
 }

@@ -1,21 +1,45 @@
 services:
+  mongo:
+    image: mongo:8
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'mongosh',
+          '--quiet',
+          '--eval',
+          'db.adminCommand({ ping: 1 }).ok',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
   server:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
     command: sh -c "npm install && npm run dev -w @travel-game/server"
+    environment:
+      MONGO_URL: mongodb://mongo:27017/travel_game
+    depends_on:
+      mongo:
+        condition: service_healthy
     ports:
-      - '3000:3000'
+      - '127.0.0.1:3000:3000'
     volumes:
       - .:/app
       - /app/node_modules
+
   web:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
     command: sh -c "npm install && npm run dev -w @travel-game/web -- --host 0.0.0.0"
     environment:
-      VITE_SERVER_URL: http://localhost:3000
+      VITE_API_PROXY_TARGET: http://server:3000
     depends_on:
       - server
     ports:
@@ -23,3 +47,6 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+volumes:
+  mongo-data:

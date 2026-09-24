@@ -16,6 +16,7 @@ import {
   createCardInstance,
 } from '../../shared/src/index.js'
 import {
+  axialDistance,
   generateMap,
   getNeighbors,
   SeededRandom,
@@ -187,6 +188,7 @@ export const createGameState = (
       playedCards: [],
       availableMovement: createMovementPool(),
       availableGold: 0,
+      hasBoughtThisTurn: false,
       isReady: true,
       connected: true,
     }
@@ -207,6 +209,7 @@ export const createGameState = (
     market: marketDrawPile.splice(0, 4),
     marketDrawPile,
     marketCycle: 0,
+    roundPlayedCards: [],
   }
 }
 
@@ -250,8 +253,15 @@ export const playCard = (
   }
   player.hand.splice(cardIndex, 1)
   player.playedCards.push(card!)
+  gameState.roundPlayedCards ??= []
+  gameState.roundPlayedCards.push({
+    instanceId: card!.instanceId,
+    playerId,
+    cardId: cardDefinition.id,
+    mode,
+  })
   if (mode === 'GOLD') {
-    player.availableGold += cardDefinition.id === 'coin' ? 2 : 1
+    player.availableGold += cardDefinition.goldValue
   } else {
     player.availableMovement[cardDefinition.movementType] +=
       cardDefinition.movementValue
@@ -277,6 +287,14 @@ export const movePlayer = (
   if (targetTile.isBlocked || targetTile.terrain === 'MOUNTAIN') {
     error('HEX_BLOCKED', 'That hex is blocked.')
   }
+  if (
+    gameState.settings.allowSharedTiles === false &&
+    gameState.players.some(
+      (other) => other.id !== playerId && other.position === targetHexId,
+    )
+  ) {
+    error('HEX_OCCUPIED', 'That hex is occupied by another player.')
+  }
   if (!canAffordMove(player, targetTile)) {
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement for the selected hex.')
   }
@@ -298,6 +316,9 @@ export const buyCard = (
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
+  if (player.hasBoughtThisTurn) {
+    error('PURCHASE_LIMIT', 'You can buy only one card per turn.')
+  }
   const definition = CARD_BY_ID[cardId]
   if (!definition || !gameState.market.includes(cardId)) {
     error('INVALID_ACTION', 'That card is not available in the market.')
@@ -312,6 +333,7 @@ export const buyCard = (
     `${playerId}-buy-${gameState.turnNumber}-${player.discardPile.length}`,
   )
   player.discardPile.push(nextCard)
+  player.hasBoughtThisTurn = true
   gameState.market = gameState.market.filter((entry) => entry !== cardId)
   replenishMarket(gameState)
   return gameState
@@ -324,8 +346,12 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.playedCards = []
   player.availableMovement = createMovementPool()
   player.availableGold = 0
+  player.hasBoughtThisTurn = false
   gameState.turnNumber += 1
   gameState.currentPlayerId = nextPlayerId(gameState)
+  if (gameState.currentPlayerId === gameState.players[0]?.id) {
+    gameState.roundPlayedCards = []
+  }
   const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
   if (nextPlayer.hand.length < 4) {
     drawCards(
@@ -337,46 +363,143 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   return gameState
 }
 
+export const removePlayer = (
+  gameState: GameState,
+  playerId: string,
+): GameState => {
+  if (gameState.status !== 'ACTIVE') {
+    return gameState
+  }
+  const leavingPlayer = findPlayer(gameState, playerId)
+  if (gameState.currentPlayerId === playerId && gameState.players.length > 1) {
+    endTurn(gameState, playerId)
+  }
+  gameState.players = gameState.players.filter(
+    (player) => player !== leavingPlayer,
+  )
+  gameState.roundPlayedCards = gameState.roundPlayedCards.filter(
+    (entry) => entry.playerId !== playerId,
+  )
+  if (gameState.players.length === 1) {
+    gameState.status = 'FINISHED'
+    gameState.winnerId = gameState.players[0]!.id
+  }
+  return gameState
+}
+
 const maskPile = (count: number, prefix: string): CardInstance[] =>
   Array.from({ length: count }, (_, index) => ({
     instanceId: `${prefix}-${index}`,
     cardId: 'hidden',
   }))
 
+const hideSpecialType = (tile: HexTile): HexTile => {
+  const { specialType, ...rest } = tile
+  void specialType
+  return rest
+}
+
 export const serializePublicGameState = (
   gameState: GameState,
   viewerPlayerId: string,
-): GameState => ({
-  ...gameState,
-  marketDrawPile: [],
-  players: gameState.players.map((player) => {
-    if (player.id === viewerPlayerId) {
+): GameState => {
+  const viewer = findPlayer(gameState, viewerPlayerId)
+  const currentTile = findTile(gameState.map, viewer.position)
+  const fogMode = gameState.settings.fogMode ?? 'NONE'
+  const visibleTiles = gameState.map.tiles.flatMap((tile) => {
+    if (fogMode === 'NONE') return [tile]
+    if (fogMode === 'PETAL') {
+      return tile.petalId === currentTile.petalId
+        ? [tile]
+        : [
+            {
+              ...hideSpecialType(tile),
+              terrain: 'UNKNOWN' as const,
+              difficulty: -1,
+              isBlocked: true,
+            },
+          ]
+    }
+    const distance = axialDistance(currentTile, tile)
+    const fullRange = fogMode === 'MEDIUM' ? 2 : 1
+    const terrainRange = fogMode === 'MEDIUM' ? 4 : 2
+    if (distance <= fullRange) return [tile]
+    if (distance <= terrainRange) {
+      return [{ ...hideSpecialType(tile), difficulty: -1 }]
+    }
+    return []
+  })
+  const visibleIds = new Set(
+    visibleTiles
+      .filter((tile) => tile.terrain !== 'UNKNOWN')
+      .map((tile) => tile.id),
+  )
+  const fullyVisibleIds = new Set(
+    visibleTiles
+      .filter((tile) => tile.terrain !== 'UNKNOWN' && tile.difficulty >= 0)
+      .map((tile) => tile.id),
+  )
+  return {
+    ...gameState,
+    map:
+      fogMode === 'NONE'
+        ? gameState.map
+        : {
+            ...gameState.map,
+            tiles: visibleTiles,
+            startHexId: visibleIds.has(gameState.map.startHexId)
+              ? gameState.map.startHexId
+              : '',
+            goalHexId: visibleIds.has(gameState.map.goalHexId)
+              ? gameState.map.goalHexId
+              : '',
+            stats: {
+              shortestPathLength: 0,
+              routeCount: 0,
+              junglePercent: 0,
+              waterPercent: 0,
+              villagePercent: 0,
+              mountainPercent: 0,
+              difficultyScore: 0,
+            },
+          },
+    marketDrawPile: [],
+    players: gameState.players.map((player) => {
+      const position = fullyVisibleIds.has(player.position)
+        ? player.position
+        : ''
+      if (player.id === viewerPlayerId) {
+        return {
+          ...player,
+          drawPile: player.drawPile.map<CardInstance>((card) => ({ ...card })),
+          hand: player.hand.map<CardInstance>((card) => ({ ...card })),
+          discardPile: player.discardPile.map<CardInstance>((card) => ({
+            ...card,
+          })),
+          removedCards: player.removedCards.map<CardInstance>((card) => ({
+            ...card,
+          })),
+          playedCards: player.playedCards.map<CardInstance>((card) => ({
+            ...card,
+          })),
+        }
+      }
+
       return {
         ...player,
-        drawPile: player.drawPile.map<CardInstance>((card) => ({ ...card })),
-        hand: player.hand.map<CardInstance>((card) => ({ ...card })),
-        discardPile: player.discardPile.map<CardInstance>((card) => ({
-          ...card,
-        })),
-        removedCards: player.removedCards.map<CardInstance>((card) => ({
-          ...card,
-        })),
-        playedCards: player.playedCards.map<CardInstance>((card) => ({
-          ...card,
-        })),
+        position,
+        drawPile: maskPile(player.drawPile.length, `${player.id}-draw`),
+        hand: maskPile(player.hand.length, `${player.id}-hand`),
+        discardPile: maskPile(
+          player.discardPile.length,
+          `${player.id}-discard`,
+        ),
+        removedCards: maskPile(
+          player.removedCards.length,
+          `${player.id}-removed`,
+        ),
+        playedCards: maskPile(player.playedCards.length, `${player.id}-played`),
       }
-    }
-
-    return {
-      ...player,
-      drawPile: maskPile(player.drawPile.length, `${player.id}-draw`),
-      hand: maskPile(player.hand.length, `${player.id}-hand`),
-      discardPile: maskPile(player.discardPile.length, `${player.id}-discard`),
-      removedCards: maskPile(
-        player.removedCards.length,
-        `${player.id}-removed`,
-      ),
-      playedCards: maskPile(player.playedCards.length, `${player.id}-played`),
-    }
-  }),
-})
+    }),
+  }
+}

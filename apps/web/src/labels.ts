@@ -8,6 +8,7 @@ export const movementLabels: Record<MovementType, string> = {
 }
 
 export const terrainLabels: Record<TerrainType, string> = {
+  UNKNOWN: 'Nieodkryte',
   START: 'Start',
   GOAL: 'Cel',
   JUNGLE: 'Dżungla',
@@ -35,15 +36,15 @@ export const cardLabels: Record<string, { name: string; description: string }> =
     },
     coin: {
       name: 'Moneta',
-      description: 'Daje 1 żółty punkt ruchu i 1 sztukę złota.',
+      description: 'Daje 1 żółty punkt ruchu albo 2 sztuki złota.',
     },
     trader: {
       name: 'Kupiec',
-      description: 'Daje 2 żółte punkty ruchu i 2 sztuki złota.',
+      description: 'Daje 2 żółte punkty ruchu albo 1 sztukę złota.',
     },
     master_trader: {
       name: 'Mistrz kupiecki',
-      description: 'Daje 3 żółte punkty ruchu i 3 sztuki złota.',
+      description: 'Daje 3 żółte punkty ruchu albo 1 sztukę złota.',
     },
     adventurer: {
       name: 'Poszukiwacz przygód',
@@ -57,7 +58,11 @@ export const errorLabels: Record<string, string> = {
   NOT_ENOUGH_MOVEMENT: 'Brakuje punktów ruchu odpowiedniego rodzaju.',
   CARD_NOT_IN_HAND: 'Nie masz tej karty na ręce.',
   NOT_ENOUGH_GOLD: 'Brakuje złota na zakup tej karty.',
+  PURCHASE_LIMIT: 'Możesz kupić tylko jedną kartę w swojej turze.',
   HEX_BLOCKED: 'To pole jest zablokowane.',
+  HEX_OCCUPIED: 'To pole jest zajęte przez innego gracza.',
+  LEAVE_FAILED:
+    'Nie udało się opuścić pokoju. Sprawdź połączenie i spróbuj ponownie.',
   ROOM_NOT_FOUND: 'Nie znaleziono pokoju.',
   GAME_ALREADY_STARTED: 'Gra już się rozpoczęła.',
   GAME_NOT_STARTED: 'Gra jeszcze się nie rozpoczęła.',

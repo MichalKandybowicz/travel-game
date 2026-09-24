@@ -1,6 +1,8 @@
-import { useEffect, useMemo } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { defaultSettings, useGameStore } from '../store.js'
+import { errorLabels } from '../labels.js'
+import { MapShapePreview } from '../components/MapShapePreview.js'
 
 const randomSeed = (): string => `PATH-${Math.floor(Math.random() * 100000)}`
 
@@ -10,15 +12,22 @@ export function RoomPage() {
   const room = useGameStore((state) => state.room)
   const game = useGameStore((state) => state.game)
   const session = useGameStore((state) => state.session)
+  const account = useGameStore((state) => state.account)
+  const error = useGameStore((state) => state.error)
   const reconnect = useGameStore((state) => state.reconnectToRoom)
+  const leaveRoom = useGameStore((state) => state.leaveRoom)
   const startGame = useGameStore((state) => state.startGame)
   const updateSettings = useGameStore((state) => state.updateSettings)
+  const [leaving, setLeaving] = useState(false)
 
   useEffect(() => {
-    if (session?.roomCode === roomCode && !room) {
+    if (
+      !room &&
+      (session?.roomCode === roomCode || account?.activeRoomCode === roomCode)
+    ) {
       reconnect(roomCode)
     }
-  }, [reconnect, room, roomCode, session?.roomCode])
+  }, [account?.activeRoomCode, reconnect, room, roomCode, session?.roomCode])
 
   useEffect(() => {
     if (game && roomCode === game.roomCode) {
@@ -41,22 +50,51 @@ export function RoomPage() {
           <h1>Poczekalnia</h1>
           <p>Pokój: {room?.roomCode ?? roomCode}</p>
         </div>
-        <Link to="/">Strona główna</Link>
+        <button
+          type="button"
+          disabled={leaving || session?.roomCode !== roomCode}
+          onClick={async () => {
+            setLeaving(true)
+            if (await leaveRoom()) {
+              navigate('/')
+            } else {
+              setLeaving(false)
+            }
+          }}
+        >
+          {leaving ? 'Opuszczanie…' : 'Opuść pokój'}
+        </button>
       </div>
+      {error && (
+        <div className="error-banner" role="alert">
+          {errorLabels[error.code] ?? error.message}
+        </div>
+      )}
       <div className="layout two-column">
-        <section className="panel">
-          <div className="panel-header">
-            <strong>Gracze</strong>
-          </div>
-          <ul className="player-list">
-            {room?.players.map((player) => (
-              <li key={player.id}>
-                {player.name} –{' '}
-                {player.connected ? 'połączony' : 'łączy się ponownie'}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div className="lobby-sidebar">
+          <section className="panel">
+            <div className="panel-header">
+              <strong>Gracze</strong>
+            </div>
+            <ul className="player-list">
+              {room?.players.map((player) => (
+                <li key={player.id}>
+                  {player.name} –{' '}
+                  {player.connected ? 'połączony' : 'łączy się ponownie'}
+                </li>
+              ))}
+            </ul>
+          </section>
+          {room && (
+            <section className="panel map-shape-panel">
+              <div className="panel-header">
+                <strong>Kształt mapy</strong>
+              </div>
+              <MapShapePreview shape={room.mapShape} />
+              <p>Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.</p>
+            </section>
+          )}
+        </div>
         <section className="panel">
           <div className="panel-header">
             <strong>Ustawienia mapy</strong>
@@ -87,6 +125,53 @@ export function RoomPage() {
                 <option value="SMALL">Mała</option>
                 <option value="MEDIUM">Średnia</option>
                 <option value="LARGE">Duża</option>
+              </select>
+            </label>
+            <label>
+              Liczba połączonych płatków
+              <select
+                value={settings.petalCount}
+                disabled={!isHost}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    petalCount: Number(event.target.value),
+                  })
+                }
+              >
+                {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                  (count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label>
+              Mgła wojny
+              <select
+                value={settings.fogMode}
+                disabled={!isHost}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    fogMode: event.target.value as typeof settings.fogMode,
+                  })
+                }
+              >
+                <option value="NONE">
+                  Brak — cała mapa z typami i kosztami
+                </option>
+                <option value="PETAL">
+                  Płatek — szczegóły tylko na bieżącym płatku
+                </option>
+                <option value="MEDIUM">
+                  Średnia — szczegóły do 2 pól, typy do 4
+                </option>
+                <option value="FULL">
+                  Pełna — szczegóły sąsiadów, typy do 2 pól
+                </option>
               </select>
             </label>
             <label>
@@ -122,6 +207,20 @@ export function RoomPage() {
                   })
                 }
               />
+            </label>
+            <label className="checkbox-field">
+              <input
+                type="checkbox"
+                checked={settings.allowSharedTiles}
+                disabled={!isHost}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    allowSharedTiles: event.target.checked,
+                  })
+                }
+              />
+              Gracze mogą stać na tym samym polu
             </label>
           </div>
           {isHost && (

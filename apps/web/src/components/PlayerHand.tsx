@@ -6,19 +6,43 @@ interface PlayerHandProps {
   player: PlayerState | undefined
   isActive: boolean
   onPlayCard: (cardInstanceId: string, mode: CardPlayMode) => void
+  onEndTurn: () => void
 }
 
-export function PlayerHand({ player, isActive, onPlayCard }: PlayerHandProps) {
+export function PlayerHand({
+  player,
+  isActive,
+  onPlayCard,
+  onEndTurn,
+}: PlayerHandProps) {
   return (
     <div className="panel hand-panel">
       <div className="panel-header">
-        <strong>Ręka</strong>
-        <span>
-          Dobieranie: {player?.drawPile.length ?? 0} / Odrzucone:{' '}
-          {player?.discardPile.length ?? 0}
-        </span>
+        <div className="hand-header-details">
+          <strong>Ręka</strong>
+          <small>
+            Dobieranie: {player?.drawPile.length ?? 0} / Odrzucone:{' '}
+            {player?.discardPile.length ?? 0}
+          </small>
+        </div>
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!isActive}
+          onClick={onEndTurn}
+        >
+          Zakończ turę
+        </button>
       </div>
-      <div className="card-grid">
+      {player && (
+        <div className="hand-movement" aria-label="Twoje dostępne punkty ruchu">
+          <span>Zielone: {player.availableMovement.GREEN}</span>
+          <span>Niebieskie: {player.availableMovement.BLUE}</span>
+          <span>Żółte: {player.availableMovement.YELLOW}</span>
+          <span>Dowolne: {player.availableMovement.WILD}</span>
+        </div>
+      )}
+      <div className="card-grid hand-card-grid">
         {player?.hand.map((card) => {
           const definition = CARD_BY_ID[card.cardId]
           if (!definition) {
@@ -44,7 +68,7 @@ export function PlayerHand({ player, isActive, onPlayCard }: PlayerHandProps) {
                   disabled={!isActive}
                   onClick={() => onPlayCard(card.instanceId, 'GOLD')}
                 >
-                  Złoto +{card.cardId === 'coin' ? 2 : 1}
+                  Złoto +{definition.goldValue}
                 </button>
               </div>
             </div>

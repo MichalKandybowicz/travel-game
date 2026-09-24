@@ -40,17 +40,57 @@ npm run lint
    ```bash
    npm install
    ```
-2. Start the server and web app:
+2. Start MongoDB:
+   ```bash
+   docker compose up -d mongo
+   ```
+3. Start the server and web app:
    ```bash
    npm run dev
    ```
-3. Open the client at `http://localhost:5173`.
+4. Open the client at `http://localhost:5173`.
 
-The server listens on `http://localhost:3000`.
+The server listens on `http://localhost:3000`. By default it connects to `mongodb://127.0.0.1:27017/travel_game`; set `MONGO_URL` to use another MongoDB instance.
+
+## Test z osobą przez internet
+
+Uruchom `docker compose up --build`. Klient jest dostępny pod `http://localhost:5173`, a połączenia API i Socket.IO przechodzą przez ten sam adres. Do krótkiego testu możesz udostępnić jeden port na dwa sposoby:
+
+- **Tunel:** zainstaluj `cloudflared`, uruchom `cloudflared tunnel --url http://localhost:5173` i wyślij drugiej osobie wygenerowany adres `https://…trycloudflare.com`. Tunel działa, dopóki działają kontenery i proces `cloudflared`.
+- **Publiczne IP:** przekieruj w routerze port TCP `5173` na komputer z grą i wyślij adres `http://TWOJE_PUBLICZNE_IP:5173`. To wymaga publicznego adresu IP i reguły zapory zezwalającej na ten port.
+
+Porty MongoDB i API w Docker Compose są dostępne tylko lokalnie. Udostępniony klient Vite jest przeznaczony do krótkich testów, nie do stałego hostowania.
+
+## Konta i powrót do gry
+
+Na stronie głównej można założyć konto z nazwą gracza i hasłem albo zalogować się do istniejącego konta. Po zalogowaniu przycisk **Wróć do gry** prowadzi do aktywnego pokoju. Odświeżenie strony i chwilowa utrata połączenia powodują automatyczną próbę ponownego dołączenia. Gra bez konta nadal działa w tej samej przeglądarce dzięki zapisanemu tokenowi sesji.
+
+Konta, pokoje i stan gry są przechowywane w MongoDB. Kontener `mongo` w Docker Compose używa trwałego wolumenu `mongo-data`, więc restart serwera nie usuwa rozgrywki. Hasła są zapisywane jako skróty, a nie w postaci jawnej.
+
+Przycisk **Opuść pokój** w poczekalni lub **Opuść grę** podczas rozgrywki usuwa bieżące powiązanie z pokojem i przenosi na stronę główną. Pusty pokój w poczekalni jest usuwany. W grze dwuosobowej odejście gracza kończy partię zwycięstwem drugiego; przy większej liczbie graczy rozgrywka trwa dalej.
 
 ## Zasady ruchu i terenów
 
-W swojej turze gracz zagrywa karty z ręki, aby otrzymać punkty ruchu. Może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte do wioski. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju. Zagranie żółtej karty daje również złoto; wydanie żółtych punktów na ruch zmniejsza dostępną ilość złota.
+Rozmiar mapy określa rozmiar pojedynczego heksagonalnego **płatka**. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 1 do 12. Generator łączy je długimi bokami w nieregularny łańcuch: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
+
+W poczekalni wszyscy gracze widzą podgląd kształtu wygenerowanej mapy. Podgląd rozróżnia płatki, ale nie pokazuje typów terenów, kosztów ani położenia celu. Zmienia się po aktualizacji ustawień mapy.
+
+W poczekalni można wybrać mgłę wojny:
+
+| Tryb               | Widoczność                                                                                    |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| Brak               | Cała mapa, typy pól i koszty.                                                                 |
+| Płatek             | Zarys całej mapy; typy i koszty tylko na płatku, na którym stoi gracz.                        |
+| Średnia dynamiczna | Typy i koszty do 2 pól od gracza; na odległości 3–4 tylko typy. Reszta mapy jest niewidoczna. |
+| Pełna dynamiczna   | Typy i koszty pól sąsiednich; na odległości 2 tylko typy. Reszta mapy jest niewidoczna.       |
+
+Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z nim. W trybach dynamicznych wcześniej widziane, ale obecnie odległe pola są ponownie zakrywane.
+
+W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Moneta zamieniona na złoto daje **2 sztuki**, każda inna karta daje **1 sztukę**. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
+
+Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte do wioski. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju.
+
+Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
 
 | Teren     | Koszt wejścia                                     | Efekt                                                                  |
 | --------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
@@ -63,9 +103,9 @@ W swojej turze gracz zagrywa karty z ręki, aby otrzymać punkty ruchu. Może we
 | Start     | 1 punkt dowolnego koloru przy ponownym wejściu    | Miejsce początkowe graczy.                                             |
 | Cel       | 1 punkt dowolnego koloru                          | Wejście kończy grę zwycięstwem.                                        |
 
-Zakup karty na rynku wymaga żółtych punktów ruchu i odpowiadającej im ilości złota. Kupiona karta trafia na stos odrzuconych. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
+Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku kolejnej tury gracz dobiera karty do stanu 4 na ręce. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
-Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Do kart dostępnych na rynku należą także **Doświadczony żeglarz** (+2 niebieskie punkty ruchu, koszt 4) i **Mistrz kupiecki** (+3 żółte punkty ruchu oraz 3 sztuki złota, koszt 5).
+Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Do kart dostępnych na rynku należą także **Doświadczony żeglarz** (+2 niebieskie punkty ruchu, koszt 4) i **Mistrz kupiecki** (+3 żółte punkty ruchu, koszt 5).
 
 ## Docker
 

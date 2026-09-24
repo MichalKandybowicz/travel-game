@@ -1,15 +1,19 @@
 import cors from '@fastify/cors'
 import Fastify from 'fastify'
 import { randomUUID } from 'node:crypto'
+import { MongoServerError } from 'mongodb'
 import { Server, type Socket } from 'socket.io'
+import { z } from 'zod'
 import {
   buyCard,
   createGameState,
   endTurn,
   movePlayer,
   playCard,
+  removePlayer,
   serializePublicGameState,
 } from '../../../packages/game-engine/src/index.js'
+import { generateMap } from '../../../packages/map-generator/src/index.js'
 import {
   EVENTS,
   roomCodeSchema,
@@ -20,33 +24,51 @@ import {
   movePlayerSchema,
   buyCardSchema,
   type GameError,
-  type GameState,
-  type MapSettings,
   type RoomState,
   type SessionState,
 } from '../../../packages/shared/src/index.js'
+import {
+  findAccountByToken,
+  hashToken,
+  loginAccount,
+  registerAccount,
+} from './auth.js'
+import {
+  connectStorage,
+  type AccountRecord,
+  type RoomPlayerRecord,
+  type RoomRecord,
+} from './storage.js'
 
-interface RoomPlayerRecord {
-  id: string
-  name: string
-  sessionToken: string
-  connected: boolean
-  socketId?: string
-}
-
-interface RoomRecord {
-  id: string
-  roomCode: string
-  hostPlayerId: string
-  players: RoomPlayerRecord[]
-  settings: MapSettings
-  status: RoomState['status']
-  seed: string
-  gameState?: GameState
-}
-
-const roomStore = new Map<string, RoomRecord>()
+const storage = await connectStorage(
+  process.env.MONGO_URL ?? 'mongodb://127.0.0.1:27017/travel_game',
+)
+const roomStore = new Map<string, RoomRecord>(
+  (await storage.loadRooms()).map((room) => [room.roomCode, room]),
+)
 const MAX_PLAYERS_PER_ROOM = 4
+const shapeCache = new WeakMap<
+  RoomRecord,
+  { settingsKey: string; shape: NonNullable<RoomState['mapShape']> }
+>()
+
+const getRoomMapShape = (room: RoomRecord): RoomState['mapShape'] => {
+  if (room.status !== 'LOBBY') return undefined
+  const settingsKey = JSON.stringify(room.settings)
+  const cached = shapeCache.get(room)
+  if (cached?.settingsKey === settingsKey) return cached.shape
+  try {
+    const shape = generateMap(room.settings).tiles.map(({ q, r, petalId }) => ({
+      q,
+      r,
+      petalId: petalId ?? 0,
+    }))
+    shapeCache.set(room, { settingsKey, shape })
+    return shape
+  } catch {
+    return undefined
+  }
+}
 
 const buildRoomCode = (): string =>
   Math.random().toString(36).slice(2, 7).toUpperCase()
@@ -64,9 +86,11 @@ const serializeRoom = (room: RoomRecord): RoomState => ({
   settings: room.settings,
   status: room.status,
   seed: room.seed,
+  mapShape: getRoomMapShape(room),
 })
 
-const emitRoom = (io: Server, room: RoomRecord): void => {
+const emitRoom = async (io: Server, room: RoomRecord): Promise<void> => {
+  await storage.saveRoom(room)
   io.to(room.roomCode).emit(EVENTS.roomUpdate, serializeRoom(room))
   if (room.gameState) {
     for (const player of room.players) {
@@ -97,15 +121,26 @@ const resolveRoomPlayer = (
   room: RoomRecord,
   playerId: string,
   sessionToken?: string,
+  accountId?: string,
 ): RoomPlayerRecord | undefined =>
   room.players.find(
     (player) =>
-      player.id === playerId ||
-      (sessionToken !== undefined && player.sessionToken === sessionToken),
+      (accountId !== undefined && player.accountId === accountId) ||
+      (player.accountId === undefined &&
+        player.id === playerId &&
+        sessionToken !== undefined &&
+        player.sessionTokenHash === hashToken(sessionToken)),
   )
 
-const detachSocketFromRooms = (socketId: string, socket: Socket): void => {
+const detachSocketFromRooms = async (
+  socketId: string,
+  socket: Socket,
+  exceptRoomCode?: string,
+): Promise<void> => {
   for (const room of roomStore.values()) {
+    if (room.roomCode === exceptRoomCode) {
+      continue
+    }
     const player = room.players.find((entry) => entry.socketId === socketId)
     if (!player) {
       continue
@@ -121,7 +156,7 @@ const detachSocketFromRooms = (socketId: string, socket: Socket): void => {
       }
     }
     socket.leave(room.roomCode)
-    emitRoom(io, room)
+    await emitRoom(io, room)
   }
 }
 
@@ -139,6 +174,86 @@ await fastify.register(cors, { origin: true })
 
 fastify.get('/health', async () => ({ ok: true }))
 
+const credentialsSchema = z.object({
+  username: z.string().trim().min(3).max(24),
+  password: z.string().min(8).max(128),
+})
+
+const activeRoomFor = (accountId: string): RoomRecord | undefined =>
+  [...roomStore.values()]
+    .filter(
+      (room) =>
+        room.status !== 'FINISHED' &&
+        room.players.some((player) => player.accountId === accountId),
+    )
+    .sort((left, right) => right.updatedAt - left.updatedAt)[0]
+
+const authResponse = (account: AccountRecord, token?: string) => ({
+  user: { id: account.id, username: account.username },
+  activeRoomCode: activeRoomFor(account.id)?.roomCode,
+  ...(token ? { token } : {}),
+})
+
+fastify.post('/auth/register', async (request, reply) => {
+  const parsed = credentialsSchema.safeParse(request.body)
+  if (!parsed.success) {
+    return reply.code(400).send({ message: 'Nieprawidłowa nazwa lub hasło.' })
+  }
+  try {
+    const { account, token } = await registerAccount(
+      storage,
+      parsed.data.username,
+      parsed.data.password,
+    )
+    return authResponse(account, token)
+  } catch (caught) {
+    if (caught instanceof MongoServerError && caught.code === 11000) {
+      return reply
+        .code(409)
+        .send({ message: 'Ta nazwa gracza jest już zajęta.' })
+    }
+    throw caught
+  }
+})
+
+fastify.post('/auth/login', async (request, reply) => {
+  const parsed = credentialsSchema.safeParse(request.body)
+  if (!parsed.success) {
+    return reply.code(400).send({ message: 'Nieprawidłowa nazwa lub hasło.' })
+  }
+  const result = await loginAccount(
+    storage,
+    parsed.data.username,
+    parsed.data.password,
+  )
+  if (!result) {
+    return reply.code(401).send({ message: 'Nieprawidłowa nazwa lub hasło.' })
+  }
+  return authResponse(result.account, result.token)
+})
+
+fastify.get('/auth/me', async (request, reply) => {
+  const token = request.headers.authorization?.replace(/^Bearer\s+/i, '')
+  const account = await findAccountByToken(storage, token)
+  if (!account) {
+    return reply.code(401).send({ message: 'Sesja konta wygasła.' })
+  }
+  return authResponse(account)
+})
+
+fastify.post('/auth/logout', async (request, reply) => {
+  const token = request.headers.authorization?.replace(/^Bearer\s+/i, '')
+  const account = await findAccountByToken(storage, token)
+  if (!account) {
+    return reply.code(401).send({ message: 'Sesja konta wygasła.' })
+  }
+  await storage.accounts.updateOne(
+    { id: account.id },
+    { $set: { authTokenHash: hashToken(randomUUID()) } },
+  )
+  return { ok: true }
+})
+
 const io = new Server(fastify.server, {
   cors: {
     origin: '*',
@@ -146,7 +261,7 @@ const io = new Server(fastify.server, {
 })
 
 io.on('connection', (socket) => {
-  socket.on(EVENTS.roomCreate, (payload: unknown) => {
+  socket.on(EVENTS.roomCreate, async (payload: unknown) => {
     const parsed = roomCreateSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -155,13 +270,22 @@ io.on('connection', (socket) => {
       })
       return
     }
-    detachSocketFromRooms(socket.id, socket)
+    const account = await findAccountByToken(storage, parsed.data.authToken)
+    if (parsed.data.authToken && !account) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'Account session has expired.',
+      })
+      return
+    }
+    await detachSocketFromRooms(socket.id, socket)
     let roomCode = buildRoomCode()
     while (roomStore.has(roomCode)) {
       roomCode = buildRoomCode()
     }
-    const playerId = randomUUID()
+    const playerId = account?.id ?? randomUUID()
     const sessionToken = randomUUID()
+    const playerName = account?.username ?? parsed.data.playerName
     const room: RoomRecord = {
       id: randomUUID(),
       roomCode,
@@ -169,8 +293,9 @@ io.on('connection', (socket) => {
       players: [
         {
           id: playerId,
-          name: parsed.data.playerName,
-          sessionToken,
+          name: playerName,
+          sessionTokenHash: hashToken(sessionToken),
+          ...(account ? { accountId: account.id } : {}),
           connected: true,
           socketId: socket.id,
         },
@@ -178,19 +303,20 @@ io.on('connection', (socket) => {
       settings: parsed.data.settings,
       status: 'LOBBY',
       seed: parsed.data.settings.seed,
+      updatedAt: Date.now(),
     }
     roomStore.set(roomCode, room)
     socket.join(roomCode)
     emitSession(socket.id, io, {
       playerId,
-      playerName: parsed.data.playerName,
+      playerName,
       roomCode,
       sessionToken,
     })
-    emitRoom(io, room)
+    await emitRoom(io, room)
   })
 
-  socket.on(EVENTS.roomJoin, (payload: unknown) => {
+  socket.on(EVENTS.roomJoin, async (payload: unknown) => {
     const parsed = roomJoinSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -199,7 +325,15 @@ io.on('connection', (socket) => {
       })
       return
     }
-    detachSocketFromRooms(socket.id, socket)
+    const account = await findAccountByToken(storage, parsed.data.authToken)
+    if (parsed.data.authToken && !account) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'Account session has expired.',
+      })
+      return
+    }
+    await detachSocketFromRooms(socket.id, socket, parsed.data.roomCode)
     const room = roomStore.get(parsed.data.roomCode)
     if (!room) {
       sendError(socket.id, io, {
@@ -213,7 +347,9 @@ io.on('connection', (socket) => {
       room,
       parsed.data.playerId ?? '',
       parsed.data.sessionToken,
+      account?.id,
     )
+    const isNewPlayer = !player
     if (!player) {
       if (room.status !== 'LOBBY') {
         sendError(socket.id, io, {
@@ -229,17 +365,39 @@ io.on('connection', (socket) => {
         })
         return
       }
-      player = {
-        id: randomUUID(),
-        name: parsed.data.playerName,
-        sessionToken: randomUUID(),
+      const newPlayer: RoomPlayerRecord = {
+        id: account?.id ?? randomUUID(),
+        name: account?.username ?? parsed.data.playerName,
+        sessionTokenHash: '',
+        ...(account ? { accountId: account.id } : {}),
         connected: true,
         socketId: socket.id,
       }
-      room.players.push(player)
+      room.players.push(newPlayer)
+      player = newPlayer
     }
 
-    player.name = parsed.data.playerName || player.name
+    if (account && !player.accountId) {
+      if (
+        room.players.some(
+          (entry) => entry.id !== player.id && entry.accountId === account.id,
+        )
+      ) {
+        sendError(socket.id, io, {
+          code: 'INVALID_ACTION',
+          message: 'This account already joined the room.',
+        })
+        return
+      }
+      player.accountId = account.id
+    }
+
+    const sessionToken =
+      account || isNewPlayer
+        ? randomUUID()
+        : (parsed.data.sessionToken ?? randomUUID())
+    player.sessionTokenHash = hashToken(sessionToken)
+    player.name = account?.username ?? parsed.data.playerName
     player.connected = true
     player.socketId = socket.id
     if (room.gameState) {
@@ -248,6 +406,7 @@ io.on('connection', (socket) => {
       )
       if (gamePlayer) {
         gamePlayer.connected = true
+        gamePlayer.name = player.name
       }
     }
     socket.join(room.roomCode)
@@ -255,42 +414,68 @@ io.on('connection', (socket) => {
       playerId: player.id,
       playerName: player.name,
       roomCode: room.roomCode,
-      sessionToken: player.sessionToken,
+      sessionToken,
     })
-    emitRoom(io, room)
+    await emitRoom(io, room)
   })
 
-  socket.on(EVENTS.roomLeave, (payload: unknown) => {
-    const parsed = roomCodeSchema.safeParse(payload)
-    if (!parsed.success) {
-      return
-    }
-    const room = roomStore.get(parsed.data.roomCode)
-    if (!room) {
-      return
-    }
-    const player = room.players.find(
-      (entry) =>
-        entry.id === parsed.data.playerId && entry.socketId === socket.id,
-    )
-    if (!player) {
-      return
-    }
-    room.players = room.players.filter(
-      (player) => player.id !== parsed.data.playerId,
-    )
-    socket.leave(room.roomCode)
-    if (room.players.length === 0) {
-      roomStore.delete(room.roomCode)
-      return
-    }
-    if (room.hostPlayerId === parsed.data.playerId) {
-      room.hostPlayerId = room.players[0]!.id
-    }
-    emitRoom(io, room)
-  })
+  socket.on(
+    EVENTS.roomLeave,
+    async (
+      payload: unknown,
+      acknowledge?: (result: { ok: boolean }) => void,
+    ) => {
+      const parsed = roomCodeSchema.safeParse(payload)
+      if (!parsed.success) {
+        acknowledge?.({ ok: false })
+        return
+      }
+      const room = roomStore.get(parsed.data.roomCode)
+      if (!room) {
+        acknowledge?.({ ok: false })
+        return
+      }
+      const player = room.players.find(
+        (entry) =>
+          entry.id === parsed.data.playerId && entry.socketId === socket.id,
+      )
+      if (!player) {
+        acknowledge?.({ ok: false })
+        return
+      }
+      if (room.status === 'FINISHED') {
+        player.connected = false
+        delete player.socketId
+        socket.leave(room.roomCode)
+        await emitRoom(io, room)
+        acknowledge?.({ ok: true })
+        return
+      }
+      room.players = room.players.filter(
+        (player) => player.id !== parsed.data.playerId,
+      )
+      if (room.gameState) {
+        removePlayer(room.gameState, parsed.data.playerId)
+        if (room.gameState.status === 'FINISHED') {
+          room.status = 'FINISHED'
+        }
+      }
+      socket.leave(room.roomCode)
+      if (room.players.length === 0) {
+        roomStore.delete(room.roomCode)
+        await storage.deleteRoom(room.roomCode)
+        acknowledge?.({ ok: true })
+        return
+      }
+      if (room.hostPlayerId === parsed.data.playerId) {
+        room.hostPlayerId = room.players[0]!.id
+      }
+      await emitRoom(io, room)
+      acknowledge?.({ ok: true })
+    },
+  )
 
-  socket.on(EVENTS.roomUpdateSettings, (payload: unknown) => {
+  socket.on(EVENTS.roomUpdateSettings, async (payload: unknown) => {
     const parsed = roomUpdateSettingsSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -330,10 +515,10 @@ io.on('connection', (socket) => {
     }
     room.settings = parsed.data.settings
     room.seed = parsed.data.settings.seed
-    emitRoom(io, room)
+    await emitRoom(io, room)
   })
 
-  socket.on(EVENTS.gameStart, (payload: unknown) => {
+  socket.on(EVENTS.gameStart, async (payload: unknown) => {
     const parsed = roomCodeSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -377,10 +562,10 @@ io.on('connection', (socket) => {
       room.players.map((player) => ({ id: player.id, name: player.name })),
     )
     room.status = 'IN_GAME'
-    emitRoom(io, room)
+    await emitRoom(io, room)
   })
 
-  socket.on(EVENTS.gamePlayCard, (payload: unknown) => {
+  socket.on(EVENTS.gamePlayCard, async (payload: unknown) => {
     const parsed = playCardSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -411,13 +596,13 @@ io.on('connection', (socket) => {
         parsed.data.cardInstanceId,
         parsed.data.mode,
       )
-      emitRoom(io, room)
+      await emitRoom(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
   })
 
-  socket.on(EVENTS.gameMove, (payload: unknown) => {
+  socket.on(EVENTS.gameMove, async (payload: unknown) => {
     const parsed = movePlayerSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -446,13 +631,13 @@ io.on('connection', (socket) => {
       if (room.gameState.status === 'FINISHED') {
         room.status = 'FINISHED'
       }
-      emitRoom(io, room)
+      await emitRoom(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
   })
 
-  socket.on(EVENTS.gameBuyCard, (payload: unknown) => {
+  socket.on(EVENTS.gameBuyCard, async (payload: unknown) => {
     const parsed = buyCardSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -478,13 +663,13 @@ io.on('connection', (socket) => {
         return
       }
       buyCard(room.gameState, parsed.data.playerId, parsed.data.cardId)
-      emitRoom(io, room)
+      await emitRoom(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
   })
 
-  socket.on(EVENTS.gameEndTurn, (payload: unknown) => {
+  socket.on(EVENTS.gameEndTurn, async (payload: unknown) => {
     const parsed = roomCodeSchema.safeParse(payload)
     if (!parsed.success) {
       sendError(socket.id, io, {
@@ -510,13 +695,13 @@ io.on('connection', (socket) => {
         return
       }
       endTurn(room.gameState, parsed.data.playerId)
-      emitRoom(io, room)
+      await emitRoom(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
   })
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     for (const room of roomStore.values()) {
       const player = room.players.find((entry) => entry.socketId === socket.id)
       if (!player) {
@@ -532,7 +717,7 @@ io.on('connection', (socket) => {
           gamePlayer.connected = false
         }
       }
-      emitRoom(io, room)
+      await emitRoom(io, room)
     }
   })
 })
