@@ -9,6 +9,7 @@ export type TerrainType =
   | 'GOAL'
 
 export type MovementType = 'GREEN' | 'BLUE' | 'YELLOW' | 'WILD'
+export type CardPlayMode = 'MOVEMENT' | 'GOLD'
 export type CardType = 'MOVEMENT'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
@@ -102,6 +103,8 @@ export interface GameState {
   currentPlayerId: string
   turnNumber: number
   market: string[]
+  marketDrawPile: string[]
+  marketCycle: number
   winnerId?: string
 }
 

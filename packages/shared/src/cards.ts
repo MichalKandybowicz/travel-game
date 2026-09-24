@@ -47,6 +47,15 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     description: 'Gain 1 blue movement.',
   },
   {
+    id: 'seasoned_sailor',
+    name: 'Seasoned Sailor',
+    type: 'MOVEMENT',
+    movementType: 'BLUE',
+    movementValue: 2,
+    purchaseCost: 4,
+    description: 'Gain 2 blue movement.',
+  },
+  {
     id: 'captain',
     name: 'Captain',
     type: 'MOVEMENT',
@@ -74,6 +83,15 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     description: 'Gain 2 yellow movement and 2 gold.',
   },
   {
+    id: 'master_trader',
+    name: 'Master Trader',
+    type: 'MOVEMENT',
+    movementType: 'YELLOW',
+    movementValue: 3,
+    purchaseCost: 5,
+    description: 'Gain 3 yellow movement and 3 gold.',
+  },
+  {
     id: 'adventurer',
     name: 'Adventurer',
     type: 'MOVEMENT',
@@ -99,7 +117,9 @@ export const MARKET_CARD_IDS = [
   'scout',
   'ranger',
   'sailor',
+  'seasoned_sailor',
   'trader',
+  'master_trader',
   'adventurer',
 ]
 

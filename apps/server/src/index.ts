@@ -405,7 +405,12 @@ io.on('connection', (socket) => {
         })
         return
       }
-      playCard(room.gameState, parsed.data.playerId, parsed.data.cardInstanceId)
+      playCard(
+        room.gameState,
+        parsed.data.playerId,
+        parsed.data.cardInstanceId,
+        parsed.data.mode,
+      )
       emitRoom(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)

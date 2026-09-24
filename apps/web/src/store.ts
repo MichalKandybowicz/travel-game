@@ -2,6 +2,7 @@ import { io, type Socket } from 'socket.io-client'
 import { create } from 'zustand'
 import {
   EVENTS,
+  type CardPlayMode,
   type GameError,
   type GameState,
   type MapSettings,
@@ -37,7 +38,7 @@ interface GameStore {
   reconnectToRoom: (roomCode: string) => void
   updateSettings: (settings: MapSettings) => void
   startGame: () => void
-  playCard: (cardInstanceId: string) => void
+  playCard: (cardInstanceId: string, mode: CardPlayMode) => void
   movePlayer: (targetHexId: string) => void
   buyCard: (cardId: string) => void
   endTurn: () => void
@@ -138,7 +139,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerId: session.playerId,
     })
   },
-  playCard: (cardInstanceId) => {
+  playCard: (cardInstanceId, mode) => {
     const { session } = get()
     if (!session) {
       return
@@ -147,6 +148,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomCode: session.roomCode,
       playerId: session.playerId,
       cardInstanceId,
+      mode,
     })
   },
   movePlayer: (targetHexId) => {

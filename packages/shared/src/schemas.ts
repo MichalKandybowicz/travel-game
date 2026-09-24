@@ -51,6 +51,7 @@ export const playCardSchema = z.object({
     .transform((value) => value.toUpperCase()),
   playerId: z.string(),
   cardInstanceId: z.string(),
+  mode: z.enum(['MOVEMENT', 'GOLD']).default('MOVEMENT'),
 })
 
 export const movePlayerSchema = z.object({
