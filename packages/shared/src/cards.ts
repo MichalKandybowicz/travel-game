@@ -42,6 +42,16 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     description: 'Gain 3 green movement.',
   },
   {
+    id: 'pathfinder',
+    name: 'Pathfinder',
+    type: 'MOVEMENT',
+    movementType: 'GREEN',
+    movementValue: 4,
+    goldValue: 1,
+    purchaseCost: 7,
+    description: 'Gain 4 green movement, or exchange for 1 gold.',
+  },
+  {
     id: 'sailor',
     name: 'Sailor',
     type: 'MOVEMENT',
@@ -66,10 +76,10 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     name: 'Captain',
     type: 'MOVEMENT',
     movementType: 'BLUE',
-    movementValue: 2,
+    movementValue: 3,
     goldValue: 1,
-    purchaseCost: 4,
-    description: 'Gain 2 blue movement.',
+    purchaseCost: 6,
+    description: 'Gain 3 blue movement, or exchange for 1 gold.',
   },
   {
     id: 'coin',
@@ -102,6 +112,16 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     description: 'Gain 3 yellow movement, or exchange for 1 gold.',
   },
   {
+    id: 'caravan',
+    name: 'Caravan',
+    type: 'MOVEMENT',
+    movementType: 'YELLOW',
+    movementValue: 4,
+    goldValue: 1,
+    purchaseCost: 7,
+    description: 'Gain 4 yellow movement, or exchange for 1 gold.',
+  },
+  {
     id: 'adventurer',
     name: 'Adventurer',
     type: 'MOVEMENT',
@@ -111,6 +131,16 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     purchaseCost: 4,
     description: 'Gain 1 wild movement.',
   },
+  {
+    id: 'trailblazer',
+    name: 'Trailblazer',
+    type: 'MOVEMENT',
+    movementType: 'WILD',
+    movementValue: 2,
+    goldValue: 1,
+    purchaseCost: 7,
+    description: 'Gain 2 wild movement, or exchange for 1 gold.',
+  },
 ]
 
 export const CARD_BY_ID = Object.fromEntries(
@@ -118,20 +148,24 @@ export const CARD_BY_ID = Object.fromEntries(
 ) as Record<string, CardDefinition>
 
 export const STARTING_DECK: Array<{ cardId: string; count: number }> = [
-  { cardId: 'explorer', count: 3 },
+  { cardId: 'explorer', count: 4 },
   { cardId: 'sailor', count: 1 },
-  { cardId: 'coin', count: 4 },
+  { cardId: 'coin', count: 3 },
 ]
 
 export const MARKET_CARD_IDS = [
   'explorer',
   'scout',
   'ranger',
+  'pathfinder',
   'sailor',
   'seasoned_sailor',
+  'captain',
   'trader',
   'master_trader',
+  'caravan',
   'adventurer',
+  'trailblazer',
 ]
 
 export const createCardInstance = (

@@ -11,6 +11,7 @@ import {
   removePlayer,
   serializePublicGameState,
 } from './GameEngine.js'
+import { buildStartingDeck } from './Deck.js'
 
 const settings: MapSettings = {
   seed: 'ARENA-42',
@@ -53,6 +54,25 @@ const findReachableTile = (
 }
 
 describe('GameEngine', () => {
+  it('builds an eight-card starting deck with four green, three yellow and one blue card', () => {
+    const deck = buildStartingDeck('p1', 'STARTER-42')
+    const movementTypes = deck.map(
+      (card) => CARD_BY_ID[card.cardId]!.movementType,
+    )
+
+    expect(deck).toHaveLength(8)
+    expect(movementTypes.filter((type) => type === 'GREEN')).toHaveLength(4)
+    expect(movementTypes.filter((type) => type === 'YELLOW')).toHaveLength(3)
+    expect(movementTypes.filter((type) => type === 'BLUE')).toHaveLength(1)
+    expect(
+      deck.every(
+        (card) =>
+          CARD_BY_ID[card.cardId]!.goldValue ===
+          (card.cardId === 'coin' ? 2 : 1),
+      ),
+    ).toBe(true)
+  })
+
   it('draws a fresh hand for the next player when their draw pile must reshuffle', () => {
     const game = buildTestGame()
     const nextPlayer = game.players[1]!
@@ -179,6 +199,10 @@ describe('GameEngine', () => {
     expect(game.marketCycle).toBeGreaterThan(0)
     expect(seenOffers.has('seasoned_sailor')).toBe(true)
     expect(seenOffers.has('master_trader')).toBe(true)
+    expect(seenOffers.has('pathfinder')).toBe(true)
+    expect(seenOffers.has('captain')).toBe(true)
+    expect(seenOffers.has('caravan')).toBe(true)
+    expect(seenOffers.has('trailblazer')).toBe(true)
     expect(serializePublicGameState(game, 'p1').marketDrawPile).toEqual([])
   })
 

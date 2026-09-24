@@ -105,7 +105,9 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 
 Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku kolejnej tury gracz dobiera karty do stanu 4 na ręce. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
-Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Do kart dostępnych na rynku należą także **Doświadczony żeglarz** (+2 niebieskie punkty ruchu, koszt 4) i **Mistrz kupiecki** (+3 żółte punkty ruchu, koszt 5).
+Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte) i **1 Żeglarza** (niebieski).
+
+Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Wśród mocniejszych kart są **Przewodnik** (+4 zielone punkty ruchu, koszt 7), **Kapitan** (+3 niebieskie, koszt 6), **Karawana** (+4 żółte, koszt 7) i **Pionier** (+2 dowolne, koszt 7). Każdą z nich można zamiast ruchu zamienić na 1 sztukę złota.
 
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
 

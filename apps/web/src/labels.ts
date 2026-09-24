@@ -25,6 +25,10 @@ export const cardLabels: Record<string, { name: string; description: string }> =
     explorer: { name: 'Odkrywca', description: 'Daje 1 zielony punkt ruchu.' },
     scout: { name: 'Zwiadowca', description: 'Daje 2 zielone punkty ruchu.' },
     ranger: { name: 'Łowca', description: 'Daje 3 zielone punkty ruchu.' },
+    pathfinder: {
+      name: 'Przewodnik',
+      description: 'Daje 4 zielone punkty ruchu albo 1 sztukę złota.',
+    },
     sailor: { name: 'Żeglarz', description: 'Daje 1 niebieski punkt ruchu.' },
     seasoned_sailor: {
       name: 'Doświadczony żeglarz',
@@ -32,7 +36,7 @@ export const cardLabels: Record<string, { name: string; description: string }> =
     },
     captain: {
       name: 'Kapitan',
-      description: 'Daje 2 niebieskie punkty ruchu.',
+      description: 'Daje 3 niebieskie punkty ruchu albo 1 sztukę złota.',
     },
     coin: {
       name: 'Moneta',
@@ -46,9 +50,17 @@ export const cardLabels: Record<string, { name: string; description: string }> =
       name: 'Mistrz kupiecki',
       description: 'Daje 3 żółte punkty ruchu albo 1 sztukę złota.',
     },
+    caravan: {
+      name: 'Karawana',
+      description: 'Daje 4 żółte punkty ruchu albo 1 sztukę złota.',
+    },
     adventurer: {
       name: 'Poszukiwacz przygód',
       description: 'Daje 1 dowolny punkt ruchu.',
+    },
+    trailblazer: {
+      name: 'Pionier',
+      description: 'Daje 2 dowolne punkty ruchu albo 1 sztukę złota.',
     },
   }
 
