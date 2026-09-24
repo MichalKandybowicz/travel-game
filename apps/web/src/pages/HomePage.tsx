@@ -5,15 +5,15 @@ export function HomePage() {
     <main className="page shell hero-page">
       <h1>Travel Game</h1>
       <p>
-        Race across an original procedural hex map with deck-building movement
-        cards.
+        Ścigaj się po mapie heksagonalnej. Zagrywaj karty, by zdobywać punkty
+        ruchu i rozwijać swoją talię.
       </p>
       <div className="hero-actions">
         <Link className="primary-link" to="/create">
-          Create Game
+          Utwórz grę
         </Link>
         <Link className="secondary-link" to="/join">
-          Join Game
+          Dołącz do gry
         </Link>
       </div>
     </main>

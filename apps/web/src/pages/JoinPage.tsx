@@ -8,9 +8,7 @@ export function JoinPage() {
   const session = useGameStore((state) => state.session)
   const joinRoom = useGameStore((state) => state.joinRoom)
   const [roomCode, setRoomCode] = useState('')
-  const [playerName, setPlayerName] = useState(
-    session?.playerName ?? 'Player 2',
-  )
+  const [playerName, setPlayerName] = useState(session?.playerName ?? 'Gracz 2')
 
   useEffect(() => {
     if (room?.roomCode && session?.roomCode === room.roomCode) {
@@ -21,19 +19,19 @@ export function JoinPage() {
   return (
     <main className="page shell">
       <div className="page-header">
-        <h1>Join Room</h1>
-        <Link to="/">Back</Link>
+        <h1>Dołącz do pokoju</h1>
+        <Link to="/">Wróć</Link>
       </div>
       <div className="form-grid">
         <label>
-          Room code
+          Kod pokoju
           <input
             value={roomCode}
             onChange={(event) => setRoomCode(event.target.value.toUpperCase())}
           />
         </label>
         <label>
-          Player name
+          Nazwa gracza
           <input
             value={playerName}
             onChange={(event) => setPlayerName(event.target.value)}
@@ -45,7 +43,7 @@ export function JoinPage() {
         className="primary-button"
         onClick={() => joinRoom(roomCode.trim(), playerName.trim())}
       >
-        Join Game
+        Dołącz do gry
       </button>
     </main>
   )

@@ -48,6 +48,25 @@ npm run lint
 
 The server listens on `http://localhost:3000`.
 
+## Zasady ruchu i terenów
+
+W swojej turze gracz zagrywa karty z ręki, aby otrzymać punkty ruchu. Może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte do wioski. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju. Zagranie żółtej karty daje również złoto; wydanie żółtych punktów na ruch zmniejsza dostępną ilość złota.
+
+| Teren     | Koszt wejścia                                     | Efekt                                                                  |
+| --------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| Dżungla   | Liczba na polu, zielone lub uniwersalne punkty    | Brak dodatkowego efektu.                                               |
+| Woda      | Liczba na polu, niebieskie lub uniwersalne punkty | Brak dodatkowego efektu.                                               |
+| Wioska    | Liczba na polu, żółte lub uniwersalne punkty      | Brak dodatkowego efektu.                                               |
+| Rumowisko | Liczba na polu (1–3), punkty dowolnego koloru     | Brak dodatkowego efektu.                                               |
+| Obóz      | 1 punkt dowolnego koloru                          | Obecnie brak dodatkowego efektu. Usuwanie kart z talii jest planowane. |
+| Góry      | Nie można wejść                                   | Pole zablokowane.                                                      |
+| Start     | 1 punkt dowolnego koloru przy ponownym wejściu    | Miejsce początkowe graczy.                                             |
+| Cel       | 1 punkt dowolnego koloru                          | Wejście kończy grę zwycięstwem.                                        |
+
+Zakup karty na rynku wymaga żółtych punktów ruchu i odpowiadającej im ilości złota. Kupiona karta trafia na stos odrzuconych. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
+
+Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Do kart dostępnych na rynku należą także **Doświadczony żeglarz** (+2 niebieskie punkty ruchu, koszt 4) i **Mistrz kupiecki** (+3 żółte punkty ruchu oraz 3 sztuki złota, koszt 5).
+
 ## Docker
 
 ```bash

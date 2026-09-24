@@ -38,31 +38,32 @@ export function RoomPage() {
     <main className="page shell">
       <div className="page-header">
         <div>
-          <h1>Lobby</h1>
-          <p>Room: {room?.roomCode ?? roomCode}</p>
+          <h1>Poczekalnia</h1>
+          <p>Pokój: {room?.roomCode ?? roomCode}</p>
         </div>
-        <Link to="/">Home</Link>
+        <Link to="/">Strona główna</Link>
       </div>
       <div className="layout two-column">
         <section className="panel">
           <div className="panel-header">
-            <strong>Players</strong>
+            <strong>Gracze</strong>
           </div>
           <ul className="player-list">
             {room?.players.map((player) => (
               <li key={player.id}>
-                {player.name} - {player.connected ? 'ready' : 'reconnecting'}
+                {player.name} –{' '}
+                {player.connected ? 'połączony' : 'łączy się ponownie'}
               </li>
             ))}
           </ul>
         </section>
         <section className="panel">
           <div className="panel-header">
-            <strong>Map settings</strong>
+            <strong>Ustawienia mapy</strong>
           </div>
           <div className="form-grid compact-grid">
             <label>
-              Seed
+              Ziarno mapy
               <input
                 value={settings.seed}
                 disabled={!isHost}
@@ -72,7 +73,7 @@ export function RoomPage() {
               />
             </label>
             <label>
-              Map size
+              Rozmiar mapy
               <select
                 value={settings.mapSize}
                 disabled={!isHost}
@@ -83,13 +84,13 @@ export function RoomPage() {
                   })
                 }
               >
-                <option value="SMALL">Small</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LARGE">Large</option>
+                <option value="SMALL">Mała</option>
+                <option value="MEDIUM">Średnia</option>
+                <option value="LARGE">Duża</option>
               </select>
             </label>
             <label>
-              Difficulty
+              Trudność
               <select
                 value={settings.difficulty}
                 disabled={!isHost}
@@ -101,13 +102,13 @@ export function RoomPage() {
                   })
                 }
               >
-                <option value="EASY">Easy</option>
-                <option value="NORMAL">Normal</option>
-                <option value="HARD">Hard</option>
+                <option value="EASY">Łatwa</option>
+                <option value="NORMAL">Normalna</option>
+                <option value="HARD">Trudna</option>
               </select>
             </label>
             <label>
-              Route count
+              Liczba tras
               <input
                 type="number"
                 min={1}
@@ -131,7 +132,7 @@ export function RoomPage() {
                   updateSettings({ ...settings, seed: randomSeed() })
                 }
               >
-                Randomize Seed
+                Losuj ziarno
               </button>
               <button
                 type="button"
@@ -139,7 +140,7 @@ export function RoomPage() {
                 disabled={!canStart}
                 onClick={startGame}
               >
-                Start Game
+                Rozpocznij grę
               </button>
             </div>
           )}

@@ -1,19 +1,20 @@
 import { CARD_BY_ID } from '@shared'
-import type { PlayerState } from '@shared'
+import type { CardPlayMode, PlayerState } from '@shared'
+import { CardFace } from './CardFace.js'
 
 interface PlayerHandProps {
   player: PlayerState | undefined
   isActive: boolean
-  onPlayCard: (cardInstanceId: string) => void
+  onPlayCard: (cardInstanceId: string, mode: CardPlayMode) => void
 }
 
 export function PlayerHand({ player, isActive, onPlayCard }: PlayerHandProps) {
   return (
     <div className="panel hand-panel">
       <div className="panel-header">
-        <strong>Hand</strong>
+        <strong>Ręka</strong>
         <span>
-          Deck {player?.drawPile.length ?? 0} / Discard{' '}
+          Dobieranie: {player?.drawPile.length ?? 0} / Odrzucone:{' '}
           {player?.discardPile.length ?? 0}
         </span>
       </div>
@@ -24,19 +25,29 @@ export function PlayerHand({ player, isActive, onPlayCard }: PlayerHandProps) {
             return null
           }
           return (
-            <button
+            <div
               key={card.instanceId}
-              type="button"
-              className="card"
-              disabled={!isActive}
-              onClick={() => onPlayCard(card.instanceId)}
+              className="card game-card hand-card"
+              data-movement={definition.movementType}
             >
-              <strong>{definition.name}</strong>
-              <span>
-                {definition.movementType} +{definition.movementValue}
-              </span>
-              <small>{definition.description}</small>
-            </button>
+              <CardFace card={definition} />
+              <div className="hand-card-actions">
+                <button
+                  type="button"
+                  disabled={!isActive}
+                  onClick={() => onPlayCard(card.instanceId, 'MOVEMENT')}
+                >
+                  Ruch +{definition.movementValue}
+                </button>
+                <button
+                  type="button"
+                  disabled={!isActive}
+                  onClick={() => onPlayCard(card.instanceId, 'GOLD')}
+                >
+                  Złoto +{card.cardId === 'coin' ? 2 : 1}
+                </button>
+              </div>
+            </div>
           )
         })}
       </div>

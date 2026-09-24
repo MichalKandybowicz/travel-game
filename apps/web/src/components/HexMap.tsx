@@ -1,6 +1,9 @@
-import { canAffordMove } from '@game-engine'
+import { canAffordMove, getTerrainCost } from '@game-engine'
 import type { GameState, HexTile } from '@shared'
 import { useMemo, useState } from 'react'
+import { movementLabels, terrainLabels } from '../labels.js'
+import { playerColor } from '../playerColors.js'
+import { TerrainIcon } from './TerrainIcon.js'
 
 const tileColors: Record<HexTile['terrain'], string> = {
   START: '#60a5fa',
@@ -11,6 +14,29 @@ const tileColors: Record<HexTile['terrain'], string> = {
   RUBBLE: '#a8a29e',
   CAMP: '#c084fc',
   MOUNTAIN: '#334155',
+}
+
+const terrainOrder: HexTile['terrain'][] = [
+  'START',
+  'JUNGLE',
+  'WATER',
+  'VILLAGE',
+  'RUBBLE',
+  'CAMP',
+  'MOUNTAIN',
+  'GOAL',
+]
+
+const terrainRules: Record<HexTile['terrain'], string> = {
+  START: 'Powrót kosztuje 1 punkt dowolnego koloru.',
+  JUNGLE: 'Koszt z pola: zielone lub uniwersalne punkty.',
+  WATER: 'Koszt z pola: niebieskie lub uniwersalne punkty.',
+  VILLAGE: 'Koszt z pola: żółte lub uniwersalne punkty.',
+  RUBBLE:
+    'Koszt z pola (1–3): punkty dowolnego koloru. Bez dodatkowego efektu.',
+  CAMP: 'Koszt 1 punkt dowolnego koloru. Obecnie bez dodatkowego efektu.',
+  MOUNTAIN: 'Pole zablokowane; nie można na nie wejść.',
+  GOAL: 'Wejście kosztuje 1 punkt dowolnego koloru i kończy grę zwycięstwem.',
 }
 
 const hexToPixel = (q: number, r: number, size: number) => {
@@ -31,6 +57,15 @@ const cubeDistance = (left: HexTile, right: HexTile): number =>
     Math.abs(left.r - right.r),
     Math.abs(-(left.q + left.r) + (right.q + right.r)),
   )
+
+const tileDescription = (tile: HexTile): string => {
+  const costType = getTerrainCost(tile.terrain, tile.difficulty)
+  if (tile.isBlocked || costType === 'BLOCKED') {
+    return `${terrainLabels[tile.terrain]}: pole zablokowane`
+  }
+  const color = costType === 'ANY' ? 'dowolny' : movementLabels[costType]
+  return `${terrainLabels[tile.terrain]} — koszt: ${Math.max(1, tile.difficulty)}; rodzaj ruchu: ${color}`
+}
 
 interface HexMapProps {
   game: GameState
@@ -57,6 +92,7 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
         .filter(
           (tile) =>
             cubeDistance(tile, currentTile) === 1 &&
+            !tile.isBlocked &&
             canAffordMove(localPlayer, tile),
         )
         .map((tile) => tile.id),
@@ -66,8 +102,20 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
   return (
     <div className="panel map-panel">
       <div className="panel-header">
-        <strong>Map</strong>
+        <strong>Mapa</strong>
         <div className="map-controls">
+          <button
+            type="button"
+            disabled={!currentTile}
+            onClick={() => {
+              if (currentTile) {
+                const point = hexToPixel(currentTile.q, currentTile.r, 24)
+                setPan({ x: -point.x * zoom, y: -point.y * zoom })
+              }
+            }}
+          >
+            Pokaż mnie
+          </button>
           <button
             type="button"
             onClick={() => setZoom((value) => Math.min(2, value + 0.1))}
@@ -110,7 +158,7 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
         viewBox="-240 -220 480 440"
         className="hex-map"
         role="img"
-        aria-label="Procedural game map"
+        aria-label="Mapa gry"
       >
         <g transform={`translate(${pan.x} ${pan.y}) scale(${zoom})`}>
           {game.map.tiles.map((tile) => {
@@ -120,9 +168,13 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
             )
             const isReachable = reachable.has(tile.id)
             const isSelected = selectedHexId === tile.id
+            const isLocalTile = localPlayer?.position === tile.id
             return (
               <g
                 key={tile.id}
+                className={
+                  isActive && isReachable ? 'reachable-hex' : undefined
+                }
                 onClick={() => {
                   setSelectedHexId(tile.id)
                   if (isActive && isReachable) {
@@ -130,45 +182,111 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
                   }
                 }}
               >
+                <title>{tileDescription(tile)}</title>
                 <polygon
                   points={polygonPoints(x, y, 22)}
                   fill={tileColors[tile.terrain]}
                   stroke={
-                    isSelected ? '#111827' : isReachable ? '#f8fafc' : '#0f172a'
+                    isLocalTile
+                      ? '#fef08a'
+                      : isSelected
+                        ? '#111827'
+                        : isReachable
+                          ? '#f8fafc'
+                          : '#0f172a'
                   }
-                  strokeWidth={isSelected ? 3 : isReachable ? 2.5 : 1}
+                  strokeWidth={
+                    isLocalTile ? 4 : isSelected ? 3 : isReachable ? 2.5 : 1
+                  }
                   opacity={tile.isBlocked ? 0.45 : 1}
                 />
-                <text x={x} y={y - 4} textAnchor="middle" className="hex-label">
-                  {tile.terrain[0]}
-                </text>
+                <g transform={`translate(${x} ${y - 5})`}>
+                  <TerrainIcon terrain={tile.terrain} />
+                </g>
                 <text
                   x={x}
                   y={y + 10}
                   textAnchor="middle"
                   className="hex-difficulty"
                 >
-                  {tile.difficulty}
+                  {tile.terrain === 'MOUNTAIN'
+                    ? '×'
+                    : Math.max(1, tile.difficulty)}
                 </text>
-                {occupiedBy.map((player, index) => (
-                  <circle
-                    key={player.id}
-                    cx={x - 8 + index * 12}
-                    cy={y + 18}
-                    r={5}
-                    fill={player.id === playerId ? '#111827' : '#ffffff'}
-                    stroke="#111827"
-                  />
-                ))}
+                {occupiedBy.map((player, index) => {
+                  const number =
+                    game.players.findIndex((entry) => entry.id === player.id) +
+                    1
+                  const markerX = x + (index - (occupiedBy.length - 1) / 2) * 13
+                  const markerY = y + 17
+                  return (
+                    <g key={player.id} className="map-player-marker">
+                      <title>{`${player.name}${player.id === playerId ? ' (Ty)' : ''}`}</title>
+                      <circle
+                        cx={markerX}
+                        cy={markerY}
+                        r={player.id === playerId ? 9 : 7.5}
+                        fill={playerColor(number - 1)}
+                        stroke={player.id === playerId ? '#fff8cc' : '#0f172a'}
+                        strokeWidth={player.id === playerId ? 2.5 : 1.5}
+                      />
+                      <text x={markerX} y={markerY + 3} textAnchor="middle">
+                        {number}
+                      </text>
+                    </g>
+                  )
+                })}
               </g>
             )
           })}
         </g>
       </svg>
+      <div className="player-location-legend" aria-label="Pozycje graczy">
+        {game.players.map((player, index) => (
+          <span key={player.id} className="player-location-item">
+            <span
+              className="player-number"
+              style={{ backgroundColor: playerColor(index) }}
+            >
+              {index + 1}
+            </span>
+            {player.name}
+            {player.id === playerId ? ' (Ty)' : ''}
+          </span>
+        ))}
+      </div>
+      <div className="terrain-legend" aria-label="Legenda terenów">
+        {terrainOrder.map((terrain) => (
+          <span key={terrain} className="terrain-legend-item">
+            <svg viewBox="-14 -14 28 28" aria-hidden="true">
+              <polygon
+                points={polygonPoints(0, 0, 13)}
+                fill={tileColors[terrain]}
+              />
+              <TerrainIcon terrain={terrain} />
+            </svg>
+            {terrainLabels[terrain]}
+          </span>
+        ))}
+      </div>
+      <details className="terrain-rules">
+        <summary>Zasady terenów</summary>
+        <p>
+          Liczba na polu oznacza koszt wejścia. Można przejść tylko na sąsiednie
+          pole. Uniwersalne punkty ruchu zastępują wymagany kolor.
+        </p>
+        <ul>
+          {terrainOrder.map((terrain) => (
+            <li key={terrain}>
+              <strong>{terrainLabels[terrain]}:</strong> {terrainRules[terrain]}
+            </li>
+          ))}
+        </ul>
+      </details>
       <div className="map-stats">
-        <span>Shortest path: {game.map.stats.shortestPathLength}</span>
-        <span>Routes: {game.map.stats.routeCount}</span>
-        <span>Difficulty: {game.map.stats.difficultyScore}</span>
+        <span>Najkrótsza trasa: {game.map.stats.shortestPathLength}</span>
+        <span>Trasy: {game.map.stats.routeCount}</span>
+        <span>Trudność: {game.map.stats.difficultyScore}</span>
       </div>
     </div>
   )

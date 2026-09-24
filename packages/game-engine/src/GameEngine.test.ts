@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { GameState, HexTile, MapSettings } from '../../shared/src/index.js'
-import { CARD_BY_ID } from '../../shared/src/index.js'
+import { CARD_BY_ID, MARKET_CARD_IDS } from '../../shared/src/index.js'
 import {
   buyCard,
   createGameState,
   endTurn,
   movePlayer,
   playCard,
+  serializePublicGameState,
 } from './GameEngine.js'
 
 const settings: MapSettings = {
@@ -75,17 +76,92 @@ describe('GameEngine', () => {
     expect(player.position).toBe(target.id)
   })
 
+  it('rejects movement without a played card or with the wrong terrain color', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const target = findReachableTile(game, 'JUNGLE')
+    target.difficulty = 1
+    target.isBlocked = false
+
+    expect(() => movePlayer(game, 'p1', target.id)).toThrow()
+    player.availableMovement.BLUE = 2
+    expect(() => movePlayer(game, 'p1', target.id)).toThrow()
+    expect(player.position).toBe(game.map.startHexId)
+  })
+
+  it('requires movement points to enter the zero-difficulty goal', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const goal = game.map.tiles.find((tile) => tile.id === game.map.goalHexId)!
+    const start = game.map.tiles.find((tile) => tile.id === player.position)!
+    goal.q = start.q + 1
+    goal.r = start.r
+
+    expect(() => movePlayer(game, 'p1', goal.id)).toThrow()
+    player.availableMovement.GREEN = 1
+    movePlayer(game, 'p1', goal.id)
+    expect(player.availableMovement.GREEN).toBe(0)
+  })
+
   it('allows buying cards when enough gold is available', () => {
     const game = buildTestGame()
     const player = game.players[0]!
-    player.availableGold = 2
-    player.availableMovement.YELLOW = 2
+    const cardId = game.market[0]!
+    const cost = CARD_BY_ID[cardId]!.purchaseCost
+    player.availableGold = cost
+    player.availableMovement.YELLOW = cost
 
-    buyCard(game, 'p1', 'explorer')
+    buyCard(game, 'p1', cardId)
 
-    expect(player.discardPile.at(-1)?.cardId).toBe('explorer')
+    expect(player.discardPile.at(-1)?.cardId).toBe(cardId)
     expect(player.availableGold).toBe(0)
     expect(player.availableMovement.YELLOW).toBe(0)
+  })
+
+  it('starts with four random offers and replenishes them after each purchase', () => {
+    const game = buildTestGame()
+    const sameSeedGame = buildTestGame()
+    const player = game.players[0]!
+    const seenOffers = new Set(game.market)
+
+    expect(game.market).toHaveLength(4)
+    expect(new Set(game.market).size).toBe(4)
+    expect(game.market).toEqual(sameSeedGame.market)
+    expect(
+      game.market.every((cardId) => MARKET_CARD_IDS.includes(cardId)),
+    ).toBe(true)
+
+    for (let index = 0; index < 12; index += 1) {
+      const cardId = game.market[0]!
+      const cost = CARD_BY_ID[cardId]!.purchaseCost
+      player.availableGold = cost
+      player.availableMovement.YELLOW = cost
+      buyCard(game, 'p1', cardId)
+      game.market.forEach((offer) => seenOffers.add(offer))
+
+      expect(game.market).toHaveLength(4)
+      expect(new Set(game.market).size).toBe(4)
+    }
+    expect(game.marketCycle).toBeGreaterThan(0)
+    expect(seenOffers.has('seasoned_sailor')).toBe(true)
+    expect(seenOffers.has('master_trader')).toBe(true)
+    expect(serializePublicGameState(game, 'p1').marketDrawPile).toEqual([])
+  })
+
+  it('grants the movement and gold printed on the new cards', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.hand.push(
+      { cardId: 'seasoned_sailor', instanceId: 'sailor-test' },
+      { cardId: 'master_trader', instanceId: 'trader-test' },
+    )
+
+    playCard(game, 'p1', 'sailor-test')
+    playCard(game, 'p1', 'trader-test')
+
+    expect(player.availableMovement.BLUE).toBe(2)
+    expect(player.availableMovement.YELLOW).toBe(3)
+    expect(player.availableGold).toBe(3)
   })
 
   it('rotates the turn order to the next player', () => {

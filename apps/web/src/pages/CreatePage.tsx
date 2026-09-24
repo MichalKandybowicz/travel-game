@@ -10,7 +10,7 @@ export function CreatePage() {
   const session = useGameStore((state) => state.session)
   const room = useGameStore((state) => state.room)
   const createRoom = useGameStore((state) => state.createRoom)
-  const [playerName, setPlayerName] = useState('Player 1')
+  const [playerName, setPlayerName] = useState('Gracz 1')
   const [settings, setSettings] = useState<MapSettings>(defaultSettings)
 
   useEffect(() => {
@@ -24,19 +24,19 @@ export function CreatePage() {
   return (
     <main className="page shell">
       <div className="page-header">
-        <h1>Create Room</h1>
-        <Link to="/">Back</Link>
+        <h1>Utwórz pokój</h1>
+        <Link to="/">Wróć</Link>
       </div>
       <div className="form-grid">
         <label>
-          Player name
+          Nazwa gracza
           <input
             value={playerName}
             onChange={(event) => setPlayerName(event.target.value)}
           />
         </label>
         <label>
-          Seed
+          Ziarno mapy
           <div className="inline-field">
             <input
               value={settings.seed}
@@ -48,12 +48,12 @@ export function CreatePage() {
               type="button"
               onClick={() => setSettings({ ...settings, seed: randomSeed() })}
             >
-              Randomize
+              Losuj
             </button>
           </div>
         </label>
         <label>
-          Map size
+          Rozmiar mapy
           <select
             value={settings.mapSize}
             onChange={(event) =>
@@ -63,13 +63,13 @@ export function CreatePage() {
               })
             }
           >
-            <option value="SMALL">Small</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LARGE">Large</option>
+            <option value="SMALL">Mała</option>
+            <option value="MEDIUM">Średnia</option>
+            <option value="LARGE">Duża</option>
           </select>
         </label>
         <label>
-          Difficulty
+          Trudność
           <select
             value={settings.difficulty}
             onChange={(event) =>
@@ -79,13 +79,13 @@ export function CreatePage() {
               })
             }
           >
-            <option value="EASY">Easy</option>
-            <option value="NORMAL">Normal</option>
-            <option value="HARD">Hard</option>
+            <option value="EASY">Łatwa</option>
+            <option value="NORMAL">Normalna</option>
+            <option value="HARD">Trudna</option>
           </select>
         </label>
         <label>
-          Route count
+          Liczba tras
           <input
             type="number"
             min={1}
@@ -106,7 +106,7 @@ export function CreatePage() {
         disabled={!canSubmit}
         onClick={() => createRoom(playerName.trim(), settings)}
       >
-        Create Room
+        Utwórz pokój
       </button>
     </main>
   )

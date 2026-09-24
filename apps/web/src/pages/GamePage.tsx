@@ -1,9 +1,12 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HexMap } from '../components/HexMap.js'
+import { DeckPreview } from '../components/DeckPreview.js'
 import { Market } from '../components/Market.js'
 import { PlayerHand } from '../components/PlayerHand.js'
 import { useGameStore } from '../store.js'
+import { errorLabels } from '../labels.js'
+import { playerColor } from '../playerColors.js'
 
 export function GamePage() {
   const navigate = useNavigate()
@@ -32,7 +35,7 @@ export function GamePage() {
   if (!game) {
     return (
       <main className="page shell">
-        <p>Connecting to room {roomCode}...</p>
+        <p>Łączenie z pokojem {roomCode}...</p>
       </main>
     )
   }
@@ -46,45 +49,54 @@ export function GamePage() {
   return (
     <main className="page shell game-shell">
       <header className="panel top-bar">
-        <span>Room {room?.roomCode ?? game.roomCode}</span>
-        <span>Turn {game.turnNumber}</span>
+        <span>Pokój {room?.roomCode ?? game.roomCode}</span>
+        <span>Tura {game.turnNumber}</span>
         <span>
-          Current{' '}
+          Gra teraz:{' '}
           {
             game.players.find((player) => player.id === game.currentPlayerId)
               ?.name
           }
         </span>
-        <span>Seed {game.seed}</span>
+        <span>Ziarno: {game.seed}</span>
         {game.winnerId && (
           <strong>
-            Winner:{' '}
+            Zwycięzca:{' '}
             {game.players.find((player) => player.id === game.winnerId)?.name}
           </strong>
         )}
       </header>
       {error && (
         <div className="error-banner" role="alert" onClick={clearError}>
-          {error.code}: {error.message}
+          {errorLabels[error.code] ?? error.message}
         </div>
       )}
       <section className="game-layout">
         <aside className="panel sidebar">
           <div className="panel-header">
-            <strong>Players</strong>
+            <strong>Gracze</strong>
           </div>
           <ul className="player-list">
-            {game.players.map((player) => (
+            {game.players.map((player, index) => (
               <li key={player.id}>
-                <strong>{player.name}</strong>
+                <div className="sidebar-player-heading">
+                  <span
+                    className="player-number"
+                    style={{ backgroundColor: playerColor(index) }}
+                  >
+                    {index + 1}
+                  </span>
+                  <strong>{player.name}</strong>
+                  {player.id === session?.playerId && <small>Ty</small>}
+                </div>
                 <div>
-                  Movement: G {player.availableMovement.GREEN} / B{' '}
-                  {player.availableMovement.BLUE} / Y{' '}
-                  {player.availableMovement.YELLOW} / W{' '}
+                  Ruch: zielone {player.availableMovement.GREEN} / niebieskie{' '}
+                  {player.availableMovement.BLUE} / żółte{' '}
+                  {player.availableMovement.YELLOW} / dowolne{' '}
                   {player.availableMovement.WILD}
                 </div>
-                <div>Gold: {player.availableGold}</div>
-                <div>{player.connected ? 'connected' : 'offline'}</div>
+                <div>Złoto: {player.availableGold}</div>
+                <div>{player.connected ? 'połączony' : 'rozłączony'}</div>
               </li>
             ))}
           </ul>
@@ -107,6 +119,7 @@ export function GamePage() {
         isActive={isActive}
         onPlayCard={playCard}
       />
+      <DeckPreview player={localPlayer} />
       <div className="turn-actions">
         <button
           type="button"
@@ -114,7 +127,7 @@ export function GamePage() {
           disabled={!isActive}
           onClick={endTurn}
         >
-          End Turn
+          Zakończ turę
         </button>
       </div>
     </main>
