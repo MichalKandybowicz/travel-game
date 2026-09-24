@@ -1,0 +1,16 @@
+{
+  "name": "@travel-game/server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/apps/server/src/index.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "11.3.0",
+    "fastify": "5.12.5",
+    "socket.io": "4.8.3"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "useDefineForClassFields": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared": ["../../packages/shared/src/index.ts"],
+      "@game-engine": ["../../packages/game-engine/src/index.ts"],
+      "@map-generator": ["../../packages/map-generator/src/index.ts"]
+    }
+  },
+  "include": [
+    "src",
+    "../../packages/shared/src",
+    "../../packages/game-engine/src",
+    "../../packages/map-generator/src"
+  ]
+}
