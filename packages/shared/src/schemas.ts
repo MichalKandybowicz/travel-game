@@ -1,0 +1,72 @@
+import { z } from 'zod'
+
+export const mapSettingsSchema = z.object({
+  seed: z.string().min(1),
+  mapSize: z.enum(['SMALL', 'MEDIUM', 'LARGE']),
+  difficulty: z.enum(['EASY', 'NORMAL', 'HARD']),
+  routeCount: z.number().int().min(1).max(4),
+  jungleDensity: z.number().min(0).max(0.8),
+  waterDensity: z.number().min(0).max(0.6),
+  mountainDensity: z.number().min(0).max(0.4),
+  specialTileDensity: z.number().min(0).max(0.2),
+  chokepointCount: z.number().int().min(0).max(6),
+})
+
+export const roomCreateSchema = z.object({
+  playerName: z.string().min(1).max(24),
+  settings: mapSettingsSchema,
+})
+
+export const roomJoinSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerName: z.string().min(1).max(24),
+  playerId: z.string().optional(),
+  sessionToken: z.string().optional(),
+})
+
+export const roomUpdateSettingsSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  settings: mapSettingsSchema,
+})
+
+export const roomCodeSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+})
+
+export const playCardSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  cardInstanceId: z.string(),
+})
+
+export const movePlayerSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  targetHexId: z.string(),
+})
+
+export const buyCardSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  cardId: z.string(),
+})

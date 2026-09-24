@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "dist",
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../packages/shared/src/**/*.ts",
+    "../../packages/map-generator/src/**/*.ts",
+    "../../packages/game-engine/src/**/*.ts"
+  ]
+}

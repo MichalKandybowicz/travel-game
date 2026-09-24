@@ -1,0 +1,15 @@
+export const EVENTS = {
+  sessionUpdate: 'session:update',
+  roomCreate: 'room:create',
+  roomJoin: 'room:join',
+  roomLeave: 'room:leave',
+  roomUpdate: 'room:update',
+  roomUpdateSettings: 'room:update-settings',
+  gameStart: 'game:start',
+  gameState: 'game:state',
+  gamePlayCard: 'game:play-card',
+  gameMove: 'game:move',
+  gameBuyCard: 'game:buy-card',
+  gameEndTurn: 'game:end-turn',
+  gameError: 'game:error',
+} as const

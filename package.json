@@ -1,0 +1,32 @@
+{
+  "name": "travel-game",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @travel-game/server\" \"npm run dev -w @travel-game/web\"",
+    "build": "npm run build -w @travel-game/shared && npm run build -w @travel-game/map-generator && npm run build -w @travel-game/game-engine && npm run build -w @travel-game/server && npm run build -w @travel-game/web",
+    "test": "npm run test -w @travel-game/map-generator && npm run test -w @travel-game/game-engine",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "24.13.3",
+    "@typescript-eslint/eslint-plugin": "8.70.1",
+    "@typescript-eslint/parser": "8.70.1",
+    "concurrently": "10.0.5",
+    "eslint": "10.11.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.7",
+    "globals": "17.12.0",
+    "prettier": "3.9.9",
+    "tsx": "4.23.15",
+    "typescript": "6.0.2",
+    "vitest": "5.0.1"
+  }
+}
