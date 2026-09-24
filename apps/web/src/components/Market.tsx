@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { CARD_BY_ID } from '@shared'
 import type { GameState, PlayerState } from '@shared'
 import { cardLabels } from '../labels.js'
@@ -12,95 +12,102 @@ interface MarketProps {
 }
 
 export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
-  const carouselRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  const updateScrollButtons = () => {
-    const carousel = carouselRef.current
-    if (!carousel) return
-    setCanScrollLeft(carousel.scrollLeft > 1)
-    setCanScrollRight(
-      carousel.scrollLeft + carousel.clientWidth < carousel.scrollWidth - 1,
-    )
-  }
-
-  useEffect(() => {
-    updateScrollButtons()
-    window.addEventListener('resize', updateScrollButtons)
-    return () => window.removeEventListener('resize', updateScrollButtons)
-  }, [game.market])
-
-  const scrollCards = (direction: -1 | 1) => {
-    const carousel = carouselRef.current
-    const card = carousel?.querySelector<HTMLElement>('.market-card')
-    carousel?.scrollBy({
-      left: direction * ((card?.offsetWidth ?? 180) + 10),
-      behavior: 'smooth',
-    })
-  }
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const availableGold = player?.availableGold ?? 0
+  const hasBoughtThisTurn = player?.hasBoughtThisTurn ?? false
 
   return (
-    <section className="panel market-panel">
-      <div className="panel-header">
-        <strong>Rynek</strong>
-        <span>Złoto: {player?.availableGold ?? 0}</span>
-      </div>
-      <small className="market-hint">
-        {player?.hasBoughtThisTurn
-          ? 'Zakup w tej turze został wykorzystany.'
-          : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
-      </small>
-      <div className="market-carousel-controls">
-        <span>Oferty: {game.market.length}</span>
-        <div>
-          <button
-            type="button"
-            aria-label="Poprzednia karta w sklepie"
-            disabled={!canScrollLeft}
-            onClick={() => scrollCards(-1)}
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            aria-label="Następna karta w sklepie"
-            disabled={!canScrollRight}
-            onClick={() => scrollCards(1)}
-          >
-            ›
-          </button>
-        </div>
-      </div>
-      <div
-        className="market-carousel"
-        ref={carouselRef}
-        onScroll={updateScrollButtons}
-        aria-label="Karty dostępne w sklepie"
-        role="region"
-        tabIndex={0}
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="market-trigger"
+        onClick={() => dialogRef.current?.showModal()}
       >
-        {game.market.map((cardId) => {
-          const card = CARD_BY_ID[cardId]
-          if (!card) {
-            return null
+        <span>
+          <strong>Otwórz sklep</strong>
+          <small>Oferty: {game.market.length}</small>
+        </span>
+        <span className="market-trigger-arrow" aria-hidden="true">
+          →
+        </span>
+      </button>
+      <dialog
+        ref={dialogRef}
+        className="market-dialog"
+        aria-labelledby="market-title"
+        onClose={() => triggerRef.current?.focus()}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            dialogRef.current?.close()
           }
-          const affordable = (player?.availableGold ?? 0) >= card.purchaseCost
-          return (
+        }}
+      >
+        <div className="market-dialog-content">
+          <header className="market-dialog-header">
+            <div>
+              <small>Rynek kart</small>
+              <h2 id="market-title">Sklep</h2>
+            </div>
             <button
-              key={card.id}
               type="button"
-              className="card game-card market-card"
-              data-movement={card.movementType}
-              disabled={!isActive || !affordable || player?.hasBoughtThisTurn}
-              title={cardLabels[card.id]?.description ?? card.description}
-              onClick={() => onBuyCard(card.id)}
+              className="market-dialog-close"
+              aria-label="Zamknij sklep"
+              onClick={() => dialogRef.current?.close()}
             >
-              <CardFace card={card} purchaseCost={card.purchaseCost} />
+              ×
             </button>
-          )
-        })}
-      </div>
-    </section>
+          </header>
+          <div className="market-dialog-summary">
+            <div className="market-gold">
+              <span>Twoje złoto</span>
+              <strong>{availableGold}</strong>
+            </div>
+            <p>
+              {hasBoughtThisTurn
+                ? 'Zakup w tej turze został wykorzystany.'
+                : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
+            </p>
+          </div>
+          <div
+            className="market-card-grid"
+            aria-label="Karty dostępne w sklepie"
+          >
+            {game.market.map((cardId) => {
+              const card = CARD_BY_ID[cardId]
+              if (!card) return null
+              const affordable = availableGold >= card.purchaseCost
+              const canBuy = isActive && affordable && !hasBoughtThisTurn
+              return (
+                <button
+                  key={card.id}
+                  type="button"
+                  className="card game-card market-card"
+                  data-movement={card.movementType}
+                  disabled={!canBuy}
+                  title={cardLabels[card.id]?.description ?? card.description}
+                  onClick={() => {
+                    onBuyCard(card.id)
+                    dialogRef.current?.close()
+                  }}
+                >
+                  <CardFace card={card} purchaseCost={card.purchaseCost} />
+                  <span className="market-card-status">
+                    {hasBoughtThisTurn
+                      ? 'Zakup wykorzystany'
+                      : !isActive
+                        ? 'Poczekaj na swoją turę'
+                        : affordable
+                          ? 'Kup kartę'
+                          : `Brakuje ${card.purchaseCost - availableGold} złota`}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </dialog>
+    </>
   )
 }

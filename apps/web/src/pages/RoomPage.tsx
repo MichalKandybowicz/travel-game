@@ -164,7 +164,7 @@ export function RoomPage() {
                   Brak — cała mapa z typami i kosztami
                 </option>
                 <option value="PETAL">
-                  Płatek — szczegóły tylko na bieżącym płatku
+                  Płatek — bieżący i sąsiedni po dojściu do granicy
                 </option>
                 <option value="MEDIUM">
                   Średnia — szczegóły do 2 pól, typy do 4

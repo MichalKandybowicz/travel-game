@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GameState, HexTile, MapSettings } from '../../shared/src/index.js'
 import { CARD_BY_ID, MARKET_CARD_IDS } from '../../shared/src/index.js'
-import { axialDistance } from '../../map-generator/src/index.js'
+import { axialDistance, getNeighbors } from '../../map-generator/src/index.js'
 import {
   buyCard,
   createGameState,
@@ -321,7 +321,7 @@ describe('GameEngine', () => {
     expect(game.winnerId).toBe('p1')
   })
 
-  it('reveals only the current petal while keeping the whole outline', () => {
+  it('reveals the neighboring petal when the player reaches its border', () => {
     const game = createGameState(
       'ABCDE',
       { ...settings, petalCount: 2, fogMode: 'PETAL' },
@@ -345,11 +345,64 @@ describe('GameEngine', () => {
     expect(view.map.goalHexId).toBe('')
     game.players[1]!.position = game.map.goalHexId
     expect(serializePublicGameState(game, 'p1').players[1]!.position).toBe('')
+    const borderTile = game.map.tiles.find(
+      (tile) =>
+        tile.petalId === 0 &&
+        !tile.isBlocked &&
+        getNeighbors(game.map.tiles, tile).some(
+          (neighbor) => neighbor.petalId === 1,
+        ),
+    )!
+    game.players[0]!.position = borderTile.id
+    const borderView = serializePublicGameState(game, 'p1')
+    expect(
+      borderView.map.tiles
+        .filter((tile) => tile.petalId === 1)
+        .every((tile) => tile.terrain !== 'UNKNOWN' && tile.difficulty >= 0),
+    ).toBe(true)
+    const crossing = getNeighbors(game.map.tiles, borderTile).find(
+      (tile) => tile.petalId === 1,
+    )!
+    expect(
+      borderView.map.tiles.find((tile) => tile.id === crossing.id),
+    ).toEqual(crossing)
+    expect(borderView.map.goalHexId).toBe(game.map.goalHexId)
+    expect(borderView.players[1]!.position).toBe(game.map.goalHexId)
     const otherView = serializePublicGameState(game, 'p2')
     expect(
       otherView.map.tiles
         .filter((tile) => tile.petalId === 1)
         .every((tile) => tile.terrain !== 'UNKNOWN'),
+    ).toBe(true)
+  })
+
+  it('keeps more distant petals hidden at a petal border', () => {
+    const game = createGameState(
+      'ABCDE',
+      { ...settings, petalCount: 3, fogMode: 'PETAL' },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+    )
+    const borderTile = game.map.tiles.find(
+      (tile) =>
+        tile.petalId === 0 &&
+        getNeighbors(game.map.tiles, tile).some(
+          (neighbor) => neighbor.petalId === 1,
+        ),
+    )!
+    game.players[0]!.position = borderTile.id
+    const view = serializePublicGameState(game, 'p1')
+    expect(
+      view.map.tiles
+        .filter((tile) => tile.petalId === 1)
+        .every((tile) => tile.terrain !== 'UNKNOWN'),
+    ).toBe(true)
+    expect(
+      view.map.tiles
+        .filter((tile) => tile.petalId === 2)
+        .every((tile) => tile.terrain === 'UNKNOWN'),
     ).toBe(true)
   })
 

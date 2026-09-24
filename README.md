@@ -77,12 +77,12 @@ W poczekalni wszyscy gracze widzą podgląd kształtu wygenerowanej mapy. Podgl�
 
 W poczekalni można wybrać mgłę wojny:
 
-| Tryb               | Widoczność                                                                                    |
-| ------------------ | --------------------------------------------------------------------------------------------- |
-| Brak               | Cała mapa, typy pól i koszty.                                                                 |
-| Płatek             | Zarys całej mapy; typy i koszty tylko na płatku, na którym stoi gracz.                        |
-| Średnia dynamiczna | Typy i koszty do 2 pól od gracza; na odległości 3–4 tylko typy. Reszta mapy jest niewidoczna. |
-| Pełna dynamiczna   | Typy i koszty pól sąsiednich; na odległości 2 tylko typy. Reszta mapy jest niewidoczna.       |
+| Tryb               | Widoczność                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Brak               | Cała mapa, typy pól i koszty.                                                                                  |
+| Płatek             | Zarys całej mapy; typy i koszty na bieżącym płatku oraz na sąsiednim płatku, gdy gracz stoi przy jego granicy. |
+| Średnia dynamiczna | Typy i koszty do 2 pól od gracza; na odległości 3–4 tylko typy. Reszta mapy jest niewidoczna.                  |
+| Pełna dynamiczna   | Typy i koszty pól sąsiednich; na odległości 2 tylko typy. Reszta mapy jest niewidoczna.                        |
 
 Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z nim. W trybach dynamicznych wcześniej widziane, ale obecnie odległe pola są ponownie zakrywane.
 
@@ -106,6 +106,8 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku kolejnej tury gracz dobiera karty do stanu 4 na ręce. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
 Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Do kart dostępnych na rynku należą także **Doświadczony żeglarz** (+2 niebieskie punkty ruchu, koszt 4) i **Mistrz kupiecki** (+3 żółte punkty ruchu, koszt 5).
+
+Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
 
 ## Docker
 

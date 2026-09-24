@@ -406,10 +406,16 @@ export const serializePublicGameState = (
   const viewer = findPlayer(gameState, viewerPlayerId)
   const currentTile = findTile(gameState.map, viewer.position)
   const fogMode = gameState.settings.fogMode ?? 'NONE'
+  const visiblePetals = new Set([currentTile.petalId])
+  if (fogMode === 'PETAL') {
+    for (const neighbor of getNeighbors(gameState.map.tiles, currentTile)) {
+      visiblePetals.add(neighbor.petalId)
+    }
+  }
   const visibleTiles = gameState.map.tiles.flatMap((tile) => {
     if (fogMode === 'NONE') return [tile]
     if (fogMode === 'PETAL') {
-      return tile.petalId === currentTile.petalId
+      return visiblePetals.has(tile.petalId)
         ? [tile]
         : [
             {
