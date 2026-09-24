@@ -30,7 +30,7 @@ export function RoomPage() {
   const settings = room?.settings ?? defaultSettings
   const playerCount = room?.players.length ?? 0
   const canStart = useMemo(
-    () => Boolean(isHost && playerCount > 0),
+    () => Boolean(isHost && playerCount >= 2),
     [isHost, playerCount],
   )
 

@@ -92,6 +92,7 @@ export function GamePage() {
         <HexMap
           game={game}
           playerId={session?.playerId}
+          isActive={isActive}
           onSelectHex={movePlayer}
         />
         <Market

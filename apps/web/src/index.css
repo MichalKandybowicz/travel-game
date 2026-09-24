@@ -156,9 +156,12 @@ select {
 
 .hex-label,
 .hex-difficulty {
-  fill: #0f172a;
+  fill: #f8fafc;
   font-size: 8px;
   font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(15, 23, 42, 0.8);
+  stroke-width: 2px;
 }
 
 .map-panel {

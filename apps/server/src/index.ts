@@ -1,7 +1,7 @@
 import cors from '@fastify/cors'
 import Fastify from 'fastify'
 import { randomUUID } from 'node:crypto'
-import { Server } from 'socket.io'
+import { Server, type Socket } from 'socket.io'
 import {
   buyCard,
   createGameState,
@@ -46,6 +46,7 @@ interface RoomRecord {
 }
 
 const roomStore = new Map<string, RoomRecord>()
+const MAX_PLAYERS_PER_ROOM = 4
 
 const buildRoomCode = (): string =>
   Math.random().toString(36).slice(2, 7).toUpperCase()
@@ -68,10 +69,15 @@ const serializeRoom = (room: RoomRecord): RoomState => ({
 const emitRoom = (io: Server, room: RoomRecord): void => {
   io.to(room.roomCode).emit(EVENTS.roomUpdate, serializeRoom(room))
   if (room.gameState) {
-    io.to(room.roomCode).emit(
-      EVENTS.gameState,
-      serializePublicGameState(room.gameState),
-    )
+    for (const player of room.players) {
+      if (!player.socketId) {
+        continue
+      }
+      io.to(player.socketId).emit(
+        EVENTS.gameState,
+        serializePublicGameState(room.gameState, player.id),
+      )
+    }
   }
 }
 
@@ -98,6 +104,36 @@ const resolveRoomPlayer = (
       (sessionToken !== undefined && player.sessionToken === sessionToken),
   )
 
+const detachSocketFromRooms = (socketId: string, socket: Socket): void => {
+  for (const room of roomStore.values()) {
+    const player = room.players.find((entry) => entry.socketId === socketId)
+    if (!player) {
+      continue
+    }
+    player.connected = false
+    delete player.socketId
+    if (room.gameState) {
+      const gamePlayer = room.gameState.players.find(
+        (entry) => entry.id === player.id,
+      )
+      if (gamePlayer) {
+        gamePlayer.connected = false
+      }
+    }
+    socket.leave(room.roomCode)
+    emitRoom(io, room)
+  }
+}
+
+const authorizeRoomPlayer = (
+  room: RoomRecord,
+  socketId: string,
+  playerId: string,
+): RoomPlayerRecord | undefined =>
+  room.players.find(
+    (entry) => entry.id === playerId && entry.socketId === socketId,
+  )
+
 const fastify = Fastify({ logger: true })
 await fastify.register(cors, { origin: true })
 
@@ -119,6 +155,7 @@ io.on('connection', (socket) => {
       })
       return
     }
+    detachSocketFromRooms(socket.id, socket)
     let roomCode = buildRoomCode()
     while (roomStore.has(roomCode)) {
       roomCode = buildRoomCode()
@@ -162,6 +199,7 @@ io.on('connection', (socket) => {
       })
       return
     }
+    detachSocketFromRooms(socket.id, socket)
     const room = roomStore.get(parsed.data.roomCode)
     if (!room) {
       sendError(socket.id, io, {
@@ -184,6 +222,13 @@ io.on('connection', (socket) => {
         })
         return
       }
+      if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
+        sendError(socket.id, io, {
+          code: 'ROOM_FULL',
+          message: 'This room already has the maximum number of players.',
+        })
+        return
+      }
       player = {
         id: randomUUID(),
         name: parsed.data.playerName,
@@ -197,6 +242,14 @@ io.on('connection', (socket) => {
     player.name = parsed.data.playerName || player.name
     player.connected = true
     player.socketId = socket.id
+    if (room.gameState) {
+      const gamePlayer = room.gameState.players.find(
+        (entry) => entry.id === player.id,
+      )
+      if (gamePlayer) {
+        gamePlayer.connected = true
+      }
+    }
     socket.join(room.roomCode)
     emitSession(socket.id, io, {
       playerId: player.id,
@@ -214,6 +267,13 @@ io.on('connection', (socket) => {
     }
     const room = roomStore.get(parsed.data.roomCode)
     if (!room) {
+      return
+    }
+    const player = room.players.find(
+      (entry) =>
+        entry.id === parsed.data.playerId && entry.socketId === socket.id,
+    )
+    if (!player) {
       return
     }
     room.players = room.players.filter(
@@ -247,6 +307,20 @@ io.on('connection', (socket) => {
       })
       return
     }
+    if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Socket is not authorized for this player.',
+      })
+      return
+    }
+    if (room.status !== 'LOBBY' || room.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_ALREADY_STARTED',
+        message: 'Cannot update settings after the game has started.',
+      })
+      return
+    }
     if (room.hostPlayerId !== parsed.data.playerId) {
       sendError(socket.id, io, {
         code: 'INVALID_ACTION',
@@ -276,10 +350,24 @@ io.on('connection', (socket) => {
       })
       return
     }
+    if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Socket is not authorized for this player.',
+      })
+      return
+    }
     if (room.hostPlayerId !== parsed.data.playerId) {
       sendError(socket.id, io, {
         code: 'INVALID_ACTION',
         message: 'Only the host can start the game.',
+      })
+      return
+    }
+    if (room.status !== 'LOBBY' || room.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_ALREADY_STARTED',
+        message: 'This room has already started a game.',
       })
       return
     }
@@ -310,6 +398,13 @@ io.on('connection', (socket) => {
       return
     }
     try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
       playCard(room.gameState, parsed.data.playerId, parsed.data.cardInstanceId)
       emitRoom(io, room)
     } catch (caught) {
@@ -335,6 +430,13 @@ io.on('connection', (socket) => {
       return
     }
     try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
       movePlayer(room.gameState, parsed.data.playerId, parsed.data.targetHexId)
       if (room.gameState.status === 'FINISHED') {
         room.status = 'FINISHED'
@@ -363,6 +465,13 @@ io.on('connection', (socket) => {
       return
     }
     try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
       buyCard(room.gameState, parsed.data.playerId, parsed.data.cardId)
       emitRoom(io, room)
     } catch (caught) {
@@ -388,6 +497,13 @@ io.on('connection', (socket) => {
       return
     }
     try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
       endTurn(room.gameState, parsed.data.playerId)
       emitRoom(io, room)
     } catch (caught) {

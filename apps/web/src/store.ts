@@ -67,10 +67,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         set({ session, error: undefined })
       })
       client.on(EVENTS.roomUpdate, (room: RoomState) => {
-        set({ room, error: undefined })
+        set((state) => ({
+          room,
+          game: state.game?.roomCode === room.roomCode ? state.game : undefined,
+          error: undefined,
+        }))
       })
       client.on(EVENTS.gameState, (game: GameState) => {
-        set({ game, error: undefined })
+        set((state) => ({
+          game,
+          room: state.room?.roomCode === game.roomCode ? state.room : undefined,
+          error: undefined,
+        }))
       })
       client.on(EVENTS.gameError, (error: GameError) => {
         set({ error })
@@ -83,10 +91,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
   createRoom: (playerName, settings) => {
+    set({ room: undefined, game: undefined, error: undefined })
     getSocket().emit(EVENTS.roomCreate, { playerName, settings })
   },
   joinRoom: (roomCode, playerName) => {
     const session = get().session
+    set({ room: undefined, game: undefined, error: undefined })
     getSocket().emit(EVENTS.roomJoin, {
       roomCode: roomCode.toUpperCase(),
       playerName,
@@ -99,6 +109,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!session) {
       return
     }
+    set({ room: undefined, game: undefined, error: undefined })
     getSocket().emit(EVENTS.roomJoin, {
       roomCode: roomCode.toUpperCase(),
       playerName: session.playerName,

@@ -35,10 +35,11 @@ const cubeDistance = (left: HexTile, right: HexTile): number =>
 interface HexMapProps {
   game: GameState
   playerId: string | undefined
+  isActive: boolean
   onSelectHex: (hexId: string) => void
 }
 
-export function HexMap({ game, playerId, onSelectHex }: HexMapProps) {
+export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [selectedHexId, setSelectedHexId] = useState<string>()
@@ -124,7 +125,9 @@ export function HexMap({ game, playerId, onSelectHex }: HexMapProps) {
                 key={tile.id}
                 onClick={() => {
                   setSelectedHexId(tile.id)
-                  onSelectHex(tile.id)
+                  if (isActive && isReachable) {
+                    onSelectHex(tile.id)
+                  }
                 }}
               >
                 <polygon

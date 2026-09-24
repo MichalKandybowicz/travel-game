@@ -67,9 +67,6 @@ export const applyTerrain = (
 ): HexTile[] => {
   const tiles = grid.map((tile) => ({ ...tile }))
   const protectedIds = new Set<string>([startId, goalId])
-  const routeTiles = tiles.filter(
-    (tile) => routes.has(tile.id) && !protectedIds.has(tile.id),
-  )
   const offRouteTiles = tiles.filter(
     (tile) => !routes.has(tile.id) && !protectedIds.has(tile.id),
   )
@@ -84,16 +81,26 @@ export const applyTerrain = (
   const traversable = tiles.filter(
     (tile) => !tile.isBlocked && !protectedIds.has(tile.id),
   )
+  const routeTraversable = traversable.filter((tile) => routes.has(tile.id))
+  const offRouteTraversable = traversable.filter((tile) => !routes.has(tile.id))
   const campCount = Math.floor(traversable.length * settings.specialTileDensity)
-  const campCandidates = random.shuffle(routeTiles).slice(0, campCount)
+  const campCandidates = random.shuffle(routeTraversable).slice(0, campCount)
   for (const tile of campCandidates) {
     tile.terrain = 'CAMP'
     tile.specialType = 'CAMP'
     tile.difficulty = 1
   }
 
-  for (const tile of traversable) {
-    if (tile.terrain === 'CAMP') {
+  for (const tile of routeTraversable) {
+    if (tile.isBlocked || tile.terrain === 'CAMP') {
+      continue
+    }
+    tile.terrain = random.pick(['JUNGLE', 'WATER', 'VILLAGE'] as const)
+    tile.difficulty = Math.min(2, pickDifficulty(random, settings.difficulty))
+  }
+
+  for (const tile of offRouteTraversable) {
+    if (tile.isBlocked) {
       continue
     }
     tile.terrain = pickWeightedTerrain(random, settings)

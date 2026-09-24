@@ -11,14 +11,20 @@ const chooseStep = (
   grid: HexTile[],
   random: SeededRandom,
 ): HexTile => {
-  const candidates = getNeighbors(grid, current).sort(
-    (left, right) => axialDistance(left, target) - axialDistance(right, target),
+  const currentDistance = axialDistance(current, target)
+  const candidates = getNeighbors(grid, current).filter(
+    (candidate) => axialDistance(candidate, target) < currentDistance,
   )
-  const bestDistance = axialDistance(candidates[0]!, target)
-  const closeChoices = candidates.filter(
-    (candidate) => axialDistance(candidate, target) <= bestDistance + 1,
+  if (candidates.length === 0) {
+    throw new Error('Unable to trace a contiguous path to the target.')
+  }
+  const bestDistance = Math.min(
+    ...candidates.map((candidate) => axialDistance(candidate, target)),
   )
-  return random.pick(closeChoices)
+  const bestChoices = candidates.filter(
+    (candidate) => axialDistance(candidate, target) === bestDistance,
+  )
+  return random.pick(bestChoices)
 }
 
 export const tracePath = (
@@ -41,7 +47,7 @@ export const tracePath = (
     safety -= 1
   }
   if (path[path.length - 1]!.id !== to.id) {
-    path.push(to)
+    throw new Error('Failed to build a contiguous path segment.')
   }
   return path
 }

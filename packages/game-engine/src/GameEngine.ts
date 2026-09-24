@@ -68,7 +68,7 @@ const spendColor = (
 
 const spendAny = (player: PlayerState, amount: number): number => {
   let remaining = amount
-  for (const movementType of ['GREEN', 'BLUE', 'YELLOW', 'WILD'] as const) {
+  for (const movementType of ['GREEN', 'BLUE', 'WILD', 'YELLOW'] as const) {
     remaining = spendColor(player, movementType, remaining)
     if (remaining === 0) {
       return 0
@@ -273,7 +273,10 @@ export const buyCard = (
     error('INVALID_ACTION', 'That card is not available in the market.')
   }
   const cardDefinition = definition!
-  if (player.availableGold < cardDefinition.purchaseCost) {
+  if (
+    player.availableGold < cardDefinition.purchaseCost ||
+    player.availableMovement.YELLOW < cardDefinition.purchaseCost
+  ) {
     error('NOT_ENOUGH_GOLD', 'Not enough gold to buy that card.')
   }
   player.availableGold -= cardDefinition.purchaseCost
@@ -297,26 +300,58 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.playedCards = []
   player.availableMovement = createMovementPool()
   player.availableGold = 0
-  drawCards(
-    player,
-    4,
-    `${gameState.seed}:${player.id}:turn:${gameState.turnNumber}`,
-  )
-  gameState.currentPlayerId = nextPlayerId(gameState)
   gameState.turnNumber += 1
+  gameState.currentPlayerId = nextPlayerId(gameState)
+  const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
+  if (nextPlayer.hand.length < 4) {
+    drawCards(
+      nextPlayer,
+      4 - nextPlayer.hand.length,
+      `${gameState.seed}:${nextPlayer.id}:turn:${gameState.turnNumber}`,
+    )
+  }
   return gameState
 }
 
-export const serializePublicGameState = (gameState: GameState): GameState => ({
+const maskPile = (count: number, prefix: string): CardInstance[] =>
+  Array.from({ length: count }, (_, index) => ({
+    instanceId: `${prefix}-${index}`,
+    cardId: 'hidden',
+  }))
+
+export const serializePublicGameState = (
+  gameState: GameState,
+  viewerPlayerId: string,
+): GameState => ({
   ...gameState,
-  players: gameState.players.map((player) => ({
-    ...player,
-    drawPile: player.drawPile.map<CardInstance>((card) => ({ ...card })),
-    hand: player.hand.map<CardInstance>((card) => ({ ...card })),
-    discardPile: player.discardPile.map<CardInstance>((card) => ({ ...card })),
-    removedCards: player.removedCards.map<CardInstance>((card) => ({
-      ...card,
-    })),
-    playedCards: player.playedCards.map<CardInstance>((card) => ({ ...card })),
-  })),
+  players: gameState.players.map((player) => {
+    if (player.id === viewerPlayerId) {
+      return {
+        ...player,
+        drawPile: player.drawPile.map<CardInstance>((card) => ({ ...card })),
+        hand: player.hand.map<CardInstance>((card) => ({ ...card })),
+        discardPile: player.discardPile.map<CardInstance>((card) => ({
+          ...card,
+        })),
+        removedCards: player.removedCards.map<CardInstance>((card) => ({
+          ...card,
+        })),
+        playedCards: player.playedCards.map<CardInstance>((card) => ({
+          ...card,
+        })),
+      }
+    }
+
+    return {
+      ...player,
+      drawPile: maskPile(player.drawPile.length, `${player.id}-draw`),
+      hand: maskPile(player.hand.length, `${player.id}-hand`),
+      discardPile: maskPile(player.discardPile.length, `${player.id}-discard`),
+      removedCards: maskPile(
+        player.removedCards.length,
+        `${player.id}-removed`,
+      ),
+      playedCards: maskPile(player.playedCards.length, `${player.id}-played`),
+    }
+  }),
 })

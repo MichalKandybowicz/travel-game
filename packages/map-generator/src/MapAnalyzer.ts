@@ -4,6 +4,27 @@ import { getNeighbors } from './HexGrid.js'
 const traversable = (tile: HexTile): boolean =>
   !tile.isBlocked && tile.terrain !== 'MOUNTAIN'
 
+const buildReachableFromGoal = (map: GameMap): Set<string> => {
+  const goal = map.tiles.find((tile) => tile.id === map.goalHexId)!
+  const queue: HexTile[] = [goal]
+  const visited = new Set<string>([goal.id])
+  let queueIndex = 0
+
+  while (queueIndex < queue.length) {
+    const current = queue[queueIndex]!
+    queueIndex += 1
+    for (const neighbor of getNeighbors(map.tiles, current)) {
+      if (!traversable(neighbor) || visited.has(neighbor.id)) {
+        continue
+      }
+      visited.add(neighbor.id)
+      queue.push(neighbor)
+    }
+  }
+
+  return visited
+}
+
 const bfsDistance = (map: GameMap): number => {
   const start = map.tiles.find((tile) => tile.id === map.startHexId)!
   const goal = map.tiles.find((tile) => tile.id === map.goalHexId)!
@@ -11,9 +32,11 @@ const bfsDistance = (map: GameMap): number => {
     { tile: start, distance: 0 },
   ]
   const visited = new Set<string>([start.id])
+  let queueIndex = 0
 
-  while (queue.length > 0) {
-    const current = queue.shift()!
+  while (queueIndex < queue.length) {
+    const current = queue[queueIndex]!
+    queueIndex += 1
     if (current.tile.id === goal.id) {
       return current.distance
     }
@@ -31,29 +54,10 @@ const bfsDistance = (map: GameMap): number => {
 
 export const countDistinctRoutesFromStart = (map: GameMap): number => {
   const start = map.tiles.find((tile) => tile.id === map.startHexId)!
-  const goalId = map.goalHexId
-
-  const canReachGoal = (source: HexTile): boolean => {
-    const queue: HexTile[] = [source]
-    const visited = new Set<string>([map.startHexId, source.id])
-    while (queue.length > 0) {
-      const current = queue.shift()!
-      if (current.id === goalId) {
-        return true
-      }
-      for (const neighbor of getNeighbors(map.tiles, current)) {
-        if (!traversable(neighbor) || visited.has(neighbor.id)) {
-          continue
-        }
-        visited.add(neighbor.id)
-        queue.push(neighbor)
-      }
-    }
-    return false
-  }
+  const reachableFromGoal = buildReachableFromGoal(map)
 
   return getNeighbors(map.tiles, start).filter(
-    (neighbor) => traversable(neighbor) && canReachGoal(neighbor),
+    (neighbor) => traversable(neighbor) && reachableFromGoal.has(neighbor.id),
   ).length
 }
 

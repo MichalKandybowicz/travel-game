@@ -2,6 +2,15 @@ import type { CardDefinition, CardInstance } from './types.js'
 
 export const CARD_DEFINITIONS: CardDefinition[] = [
   {
+    id: 'hidden',
+    name: 'Hidden Card',
+    type: 'MOVEMENT',
+    movementType: 'WILD',
+    movementValue: 0,
+    purchaseCost: 0,
+    description: 'Placeholder card for hidden information.',
+  },
+  {
     id: 'explorer',
     name: 'Explorer',
     type: 'MOVEMENT',

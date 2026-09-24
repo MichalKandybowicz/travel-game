@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { MapSettings } from '../../shared/src/index.js'
-import { analyzeMap } from './MapAnalyzer.js'
+import type { GameMap, MapSettings } from '../../shared/src/index.js'
+import { analyzeMap, countDistinctRoutesFromStart } from './MapAnalyzer.js'
 import { generateMap } from './MapGenerator.js'
 
 const settings: MapSettings = {
@@ -36,5 +36,73 @@ describe('generateMap', () => {
 
     expect(analysis.shortestPathLength).toBeGreaterThan(0)
     expect(analysis.routeCount).toBeGreaterThanOrEqual(2)
+  })
+
+  it('counts distinct reachable branches from the start on a handcrafted map', () => {
+    const map: GameMap = {
+      startHexId: 'start',
+      goalHexId: 'goal',
+      stats: {
+        shortestPathLength: 0,
+        routeCount: 0,
+        junglePercent: 0,
+        waterPercent: 0,
+        villagePercent: 0,
+        mountainPercent: 0,
+        difficultyScore: 0,
+      },
+      tiles: [
+        {
+          id: 'start',
+          q: 0,
+          r: 0,
+          terrain: 'START',
+          difficulty: 0,
+          isBlocked: false,
+        },
+        {
+          id: 'a',
+          q: 1,
+          r: 0,
+          terrain: 'JUNGLE',
+          difficulty: 1,
+          isBlocked: false,
+        },
+        {
+          id: 'b',
+          q: 0,
+          r: 1,
+          terrain: 'WATER',
+          difficulty: 1,
+          isBlocked: false,
+        },
+        {
+          id: 'mid-a',
+          q: 1,
+          r: 1,
+          terrain: 'VILLAGE',
+          difficulty: 1,
+          isBlocked: false,
+        },
+        {
+          id: 'mid-b',
+          q: 2,
+          r: 0,
+          terrain: 'RUBBLE',
+          difficulty: 1,
+          isBlocked: false,
+        },
+        {
+          id: 'goal',
+          q: 2,
+          r: 1,
+          terrain: 'GOAL',
+          difficulty: 0,
+          isBlocked: false,
+        },
+      ],
+    }
+
+    expect(countDistinctRoutesFromStart(map)).toBe(2)
   })
 })

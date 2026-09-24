@@ -47,16 +47,16 @@ const findReachableTile = (
 }
 
 describe('GameEngine', () => {
-  it('reshuffles the discard pile when the draw pile is empty at end of turn', () => {
+  it('draws a fresh hand for the next player when their draw pile must reshuffle', () => {
     const game = buildTestGame()
-    const player = game.players[0]!
-    player.drawPile = []
-    player.discardPile = [...player.hand]
-    player.hand = []
+    const nextPlayer = game.players[1]!
+    nextPlayer.drawPile = []
+    nextPlayer.discardPile = [...nextPlayer.hand]
+    nextPlayer.hand = []
 
     endTurn(game, 'p1')
 
-    expect(player.hand).toHaveLength(4)
+    expect(nextPlayer.hand).toHaveLength(4)
   })
 
   it('moves only when the correct movement is available', () => {
@@ -78,24 +78,28 @@ describe('GameEngine', () => {
   it('allows buying cards when enough gold is available', () => {
     const game = buildTestGame()
     const player = game.players[0]!
-    const coinCards = player.hand.filter((card) => card.cardId === 'coin')
-    for (const card of coinCards) {
-      playCard(game, 'p1', card.instanceId)
-    }
+    player.availableGold = 2
+    player.availableMovement.YELLOW = 2
 
     buyCard(game, 'p1', 'explorer')
 
     expect(player.discardPile.at(-1)?.cardId).toBe('explorer')
-    expect(player.availableGold).toBeGreaterThanOrEqual(0)
+    expect(player.availableGold).toBe(0)
+    expect(player.availableMovement.YELLOW).toBe(0)
   })
 
   it('rotates the turn order to the next player', () => {
     const game = buildTestGame()
+    const player = game.players[0]!
+    player.availableMovement.YELLOW = 2
+    player.availableGold = 2
 
     endTurn(game, 'p1')
 
     expect(game.currentPlayerId).toBe('p2')
     expect(game.turnNumber).toBe(2)
+    expect(player.availableMovement.YELLOW).toBe(0)
+    expect(player.availableGold).toBe(0)
   })
 
   it('detects a winner when the goal is reached', () => {
