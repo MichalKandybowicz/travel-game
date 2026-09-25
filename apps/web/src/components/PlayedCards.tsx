@@ -1,7 +1,7 @@
 import { CARD_BY_ID } from '@shared'
 import type { GameState } from '@shared'
 import { cardLabels, movementLabels } from '../labels.js'
-import { playerColor } from '../playerColors.js'
+import { PlayerBadge } from './PlayerBadge.js'
 
 export function PlayedCards({ game }: { game: GameState }) {
   const roundNumber = Math.ceil(game.turnNumber / game.players.length)
@@ -20,12 +20,11 @@ export function PlayedCards({ game }: { game: GameState }) {
         return (
           <div key={player.id} className="played-player">
             <div className="sidebar-player-heading">
-              <span
-                className="player-number"
-                style={{ backgroundColor: playerColor(index) }}
-              >
-                {index + 1}
-              </span>
+              <PlayerBadge
+                index={index}
+                color={player.color}
+                symbol={player.symbol}
+              />
               <strong>{player.name}</strong>
             </div>
             {playerPlays.length === 0 ? (

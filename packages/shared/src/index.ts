@@ -1,4 +1,5 @@
 export * from './cards.js'
 export * from './events.js'
+export * from './playerAppearance.js'
 export * from './schemas.js'
 export * from './types.js'

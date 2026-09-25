@@ -3,11 +3,15 @@ import type {
   GameState,
   MapSettings,
   RoomState,
+  PlayerColor,
+  PlayerSymbol,
 } from '../../../packages/shared/src/index.js'
 
 export interface RoomPlayerRecord {
   id: string
   name: string
+  color?: PlayerColor
+  symbol?: PlayerSymbol
   sessionTokenHash: string
   accountId?: string
   connected: boolean
@@ -81,6 +85,9 @@ export async function connectStorage(url: string): Promise<Storage> {
           ...room,
           settings: {
             ...room.settings,
+            difficulty:
+              room.status === 'LOBBY' ? 'NORMAL' : room.settings.difficulty,
+            routeCount: room.status === 'LOBBY' ? 1 : room.settings.routeCount,
             allowSharedTiles: room.settings.allowSharedTiles ?? true,
             petalCount: room.settings.petalCount ?? 1,
             fogMode: room.settings.fogMode ?? 'NONE',

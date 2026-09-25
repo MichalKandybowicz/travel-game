@@ -9,6 +9,8 @@ import type {
   MovementPool,
   PlayerState,
   TerrainType,
+  PlayerColor,
+  PlayerSymbol,
 } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
@@ -160,6 +162,8 @@ const nextPlayerId = (gameState: GameState): string => {
 export interface PlayerSetup {
   id: string
   name: string
+  color?: PlayerColor
+  symbol?: PlayerSymbol
 }
 
 export const createGameState = (
@@ -179,6 +183,8 @@ export const createGameState = (
     const state: PlayerState = {
       id: player.id,
       name: player.name,
+      ...(player.color ? { color: player.color } : {}),
+      ...(player.symbol ? { symbol: player.symbol } : {}),
       position: '',
       drawPile,
       hand: [],

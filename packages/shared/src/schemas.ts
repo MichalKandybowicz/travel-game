@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { PLAYER_COLORS, PLAYER_SYMBOLS } from './playerAppearance.js'
 
 export const mapSettingsSchema = z.object({
   seed: z.string().min(1),
@@ -39,6 +40,16 @@ export const roomUpdateSettingsSchema = z.object({
     .transform((value) => value.toUpperCase()),
   playerId: z.string(),
   settings: mapSettingsSchema,
+})
+
+export const roomUpdateAppearanceSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  color: z.enum(PLAYER_COLORS),
+  symbol: z.enum(PLAYER_SYMBOLS),
 })
 
 export const roomCodeSchema = z.object({

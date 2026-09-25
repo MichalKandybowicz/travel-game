@@ -7,6 +7,8 @@ import {
   type GameError,
   type GameState,
   type MapSettings,
+  type PlayerColor,
+  type PlayerSymbol,
   type RoomState,
   type SessionState,
 } from '@shared'
@@ -15,7 +17,7 @@ const defaultSettings: MapSettings = {
   seed: 'JUNGLE-92841',
   mapSize: 'MEDIUM',
   difficulty: 'NORMAL',
-  routeCount: 3,
+  routeCount: 1,
   jungleDensity: 0.4,
   waterDensity: 0.2,
   mountainDensity: 0.15,
@@ -83,6 +85,7 @@ interface GameStore {
   joinRoom: (roomCode: string, playerName: string) => void
   reconnectToRoom: (roomCode: string) => void
   updateSettings: (settings: MapSettings) => void
+  updateAppearance: (color: PlayerColor, symbol: PlayerSymbol) => void
   startGame: () => void
   chooseStart: (hexId: string) => void
   playCard: (cardInstanceId: string, mode: CardPlayMode) => void
@@ -247,6 +250,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomCode: session.roomCode,
       playerId: session.playerId,
       settings,
+    })
+  },
+  updateAppearance: (color, symbol) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.roomUpdateAppearance, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      color,
+      symbol,
     })
   },
   startGame: () => {

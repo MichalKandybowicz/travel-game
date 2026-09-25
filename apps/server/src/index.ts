@@ -17,10 +17,13 @@ import {
 import { generateMap } from '../../../packages/map-generator/src/index.js'
 import {
   EVENTS,
+  PLAYER_COLORS,
+  PLAYER_SYMBOLS,
   roomCodeSchema,
   roomCreateSchema,
   roomJoinSchema,
   roomUpdateSettingsSchema,
+  roomUpdateAppearanceSchema,
   playCardSchema,
   movePlayerSchema,
   buyCardSchema,
@@ -82,6 +85,8 @@ const serializeRoom = (room: RoomRecord): RoomState => ({
   players: room.players.map((player) => ({
     id: player.id,
     name: player.name,
+    ...(player.color ? { color: player.color } : {}),
+    ...(player.symbol ? { symbol: player.symbol } : {}),
     connected: player.connected,
     isReady: true,
   })),
@@ -296,13 +301,19 @@ io.on('connection', (socket) => {
         {
           id: playerId,
           name: playerName,
+          color: PLAYER_COLORS[0],
+          symbol: PLAYER_SYMBOLS[0],
           sessionTokenHash: hashToken(sessionToken),
           ...(account ? { accountId: account.id } : {}),
           connected: true,
           socketId: socket.id,
         },
       ],
-      settings: parsed.data.settings,
+      settings: {
+        ...parsed.data.settings,
+        difficulty: 'NORMAL',
+        routeCount: 1,
+      },
       status: 'LOBBY',
       seed: parsed.data.settings.seed,
       updatedAt: Date.now(),
@@ -370,6 +381,11 @@ io.on('connection', (socket) => {
       const newPlayer: RoomPlayerRecord = {
         id: account?.id ?? randomUUID(),
         name: account?.username ?? parsed.data.playerName,
+        color:
+          PLAYER_COLORS.find((color) =>
+            room.players.every((entry) => entry.color !== color),
+          ) ?? PLAYER_COLORS[0],
+        symbol: PLAYER_SYMBOLS[room.players.length],
         sessionTokenHash: '',
         ...(account ? { accountId: account.id } : {}),
         connected: true,
@@ -515,8 +531,57 @@ io.on('connection', (socket) => {
       })
       return
     }
-    room.settings = parsed.data.settings
+    room.settings = {
+      ...parsed.data.settings,
+      difficulty: 'NORMAL',
+      routeCount: 1,
+    }
     room.seed = parsed.data.settings.seed
+    await emitRoom(io, room)
+  })
+
+  socket.on(EVENTS.roomUpdateAppearance, async (payload: unknown) => {
+    const parsed = roomUpdateAppearanceSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room || room.status !== 'LOBBY') {
+      sendError(socket.id, io, {
+        code: 'ROOM_NOT_FOUND',
+        message: 'The waiting room is no longer available.',
+      })
+      return
+    }
+    if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Socket is not authorized for this player.',
+      })
+      return
+    }
+    if (
+      room.players.some(
+        (player) =>
+          player.id !== parsed.data.playerId &&
+          player.color === parsed.data.color,
+      )
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'This color is already taken.',
+      })
+      return
+    }
+    const player = room.players.find(
+      (entry) => entry.id === parsed.data.playerId,
+    )!
+    player.color = parsed.data.color
+    player.symbol = parsed.data.symbol
     await emitRoom(io, room)
   })
 
@@ -558,10 +623,16 @@ io.on('connection', (socket) => {
       })
       return
     }
+    room.settings = { ...room.settings, difficulty: 'NORMAL', routeCount: 1 }
     room.gameState = createGameState(
       room.roomCode,
       room.settings,
-      room.players.map((player) => ({ id: player.id, name: player.name })),
+      room.players.map((player) => ({
+        id: player.id,
+        name: player.name,
+        ...(player.color ? { color: player.color } : {}),
+        ...(player.symbol ? { symbol: player.symbol } : {}),
+      })),
     )
     room.status = 'IN_GAME'
     await emitRoom(io, room)

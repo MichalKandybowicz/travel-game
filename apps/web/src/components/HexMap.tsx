@@ -2,7 +2,9 @@ import { canAffordMove, getTerrainCost } from '@game-engine'
 import type { GameState, HexTile } from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { movementLabels, terrainLabels } from '../labels.js'
-import { playerColor } from '../playerColors.js'
+import { playerColor, playerSymbol } from '../playerColors.js'
+import { PlayerBadge } from './PlayerBadge.js'
+import { PlayerSymbol } from './PlayerSymbol.js'
 import { TerrainIcon } from './TerrainIcon.js'
 
 const tilePalette: Record<
@@ -528,13 +530,16 @@ export function HexMap({
                         cx={markerX}
                         cy={markerY}
                         r={player.id === playerId ? 9 : 7.5}
-                        fill={playerColor(number - 1)}
+                        fill={playerColor(number - 1, player.color)}
                         stroke={player.id === playerId ? '#fff8cc' : '#0f172a'}
                         strokeWidth={player.id === playerId ? 2.5 : 1.5}
                       />
-                      <text x={markerX} y={markerY + 3} textAnchor="middle">
-                        {number}
-                      </text>
+                      <PlayerSymbol
+                        symbol={playerSymbol(number - 1, player.symbol)}
+                        size={player.id === playerId ? 13 : 11}
+                        x={markerX - (player.id === playerId ? 6.5 : 5.5)}
+                        y={markerY - (player.id === playerId ? 6.5 : 5.5)}
+                      />
                     </g>
                   )
                 })}
@@ -546,12 +551,11 @@ export function HexMap({
       <div className="player-location-legend" aria-label="Pozycje graczy">
         {game.players.map((player, index) => (
           <span key={player.id} className="player-location-item">
-            <span
-              className="player-number"
-              style={{ backgroundColor: playerColor(index) }}
-            >
-              {index + 1}
-            </span>
+            <PlayerBadge
+              index={index}
+              color={player.color}
+              symbol={player.symbol}
+            />
             {player.name}
             {player.id === playerId ? ' (Ty)' : ''}
           </span>
@@ -587,7 +591,6 @@ export function HexMap({
           ))}
         </ul>
       </details>
-
     </div>
   )
 }

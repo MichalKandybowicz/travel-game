@@ -3,6 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { defaultSettings, useGameStore } from '../store.js'
 import { errorLabels } from '../labels.js'
 import { MapShapePreview } from '../components/MapShapePreview.js'
+import { PlayerBadge } from '../components/PlayerBadge.js'
+import { PlayerSymbol } from '../components/PlayerSymbol.js'
+import { PLAYER_COLORS, PLAYER_SYMBOLS } from '@shared'
+import {
+  playerColor,
+  playerSymbol,
+  playerSymbolLabels,
+} from '../playerColors.js'
 
 const randomSeed = (): string => `PATH-${Math.floor(Math.random() * 100000)}`
 
@@ -18,6 +26,7 @@ export function RoomPage() {
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const startGame = useGameStore((state) => state.startGame)
   const updateSettings = useGameStore((state) => state.updateSettings)
+  const updateAppearance = useGameStore((state) => state.updateAppearance)
   const [leaving, setLeaving] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -39,6 +48,11 @@ export function RoomPage() {
   const isHost = session?.playerId === room?.hostPlayerId
   const settings = room?.settings ?? defaultSettings
   const playerCount = room?.players.length ?? 0
+  const myIndex =
+    room?.players.findIndex((player) => player.id === session?.playerId) ?? -1
+  const me = myIndex >= 0 ? room?.players[myIndex] : undefined
+  const myColor = playerColor(Math.max(0, myIndex), me?.color)
+  const mySymbol = playerSymbol(Math.max(0, myIndex), me?.symbol)
   const canStart = useMemo(
     () => Boolean(isHost && playerCount >= 2),
     [isHost, playerCount],
@@ -123,9 +137,11 @@ export function RoomPage() {
             <ul className="player-list">
               {room?.players.map((player, index) => (
                 <li key={player.id}>
-                  <span className="lobby-player-avatar" aria-hidden="true">
-                    {index + 1}
-                  </span>
+                  <PlayerBadge
+                    index={index}
+                    color={player.color}
+                    symbol={player.symbol}
+                  />
                   <span className="lobby-player-copy">
                     <strong>{player.name}</strong>
                     <small>
@@ -141,6 +157,56 @@ export function RoomPage() {
             <p className="lobby-player-hint">
               Do rozpoczęcia gry potrzeba co najmniej dwóch graczy.
             </p>
+            {me && room?.status === 'LOBBY' && (
+              <div className="player-appearance-picker">
+                <strong>Twój pionek</strong>
+                <span>Kolor</span>
+                <div
+                  className="appearance-options"
+                  role="group"
+                  aria-label="Kolor pionka"
+                >
+                  {PLAYER_COLORS.map((color) => {
+                    const taken = room.players.some(
+                      (player) => player.id !== me.id && player.color === color,
+                    )
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        className="appearance-color"
+                        style={{ backgroundColor: color }}
+                        aria-label={`Kolor ${PLAYER_COLORS.indexOf(color) + 1}${taken ? ' — zajęty' : ''}`}
+                        aria-pressed={myColor === color}
+                        disabled={taken}
+                        onClick={() => updateAppearance(color, mySymbol)}
+                      />
+                    )
+                  })}
+                </div>
+                <span>Symbol</span>
+                <div
+                  className="appearance-options"
+                  role="group"
+                  aria-label="Symbol pionka"
+                >
+                  {PLAYER_SYMBOLS.map((symbol) => (
+                    <button
+                      key={symbol}
+                      type="button"
+                      className="appearance-symbol"
+                      style={{ backgroundColor: myColor }}
+                      aria-label={playerSymbolLabels[symbol]}
+                      aria-pressed={mySymbol === symbol}
+                      title={playerSymbolLabels[symbol]}
+                      onClick={() => updateAppearance(myColor, symbol)}
+                    >
+                      <PlayerSymbol symbol={symbol} size={19} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
           {room && (
             <section className="panel map-shape-panel">
@@ -241,40 +307,6 @@ export function RoomPage() {
                   Pełna — szczegóły sąsiadów, typy do 2 pól
                 </option>
               </select>
-            </label>
-            <label>
-              Trudność
-              <select
-                value={settings.difficulty}
-                disabled={!isHost}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    difficulty: event.target
-                      .value as typeof settings.difficulty,
-                  })
-                }
-              >
-                <option value="EASY">Łatwa</option>
-                <option value="NORMAL">Normalna</option>
-                <option value="HARD">Trudna</option>
-              </select>
-            </label>
-            <label>
-              Liczba tras
-              <input
-                type="number"
-                min={1}
-                max={4}
-                value={settings.routeCount}
-                disabled={!isHost}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    routeCount: Number(event.target.value),
-                  })
-                }
-              />
             </label>
             <label className="checkbox-field">
               <input

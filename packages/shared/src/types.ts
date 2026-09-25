@@ -17,6 +17,7 @@ export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
 export type RoomStatus = 'LOBBY' | 'IN_GAME' | 'FINISHED'
 export type GameStatus = 'LOBBY' | 'CHOOSING_START' | 'ACTIVE' | 'FINISHED'
+import type { PlayerColor, PlayerSymbol } from './playerAppearance.js'
 
 export interface MapSettings {
   seed: string
@@ -88,6 +89,8 @@ export interface MovementPool {
 export interface PlayerState {
   id: string
   name: string
+  color?: PlayerColor
+  symbol?: PlayerSymbol
   position: string
   drawPile: CardInstance[]
   hand: CardInstance[]
@@ -127,6 +130,8 @@ export interface GameState {
 export interface LobbyPlayer {
   id: string
   name: string
+  color?: PlayerColor
+  symbol?: PlayerSymbol
   isReady: boolean
   connected: boolean
 }

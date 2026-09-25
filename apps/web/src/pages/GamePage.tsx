@@ -7,7 +7,7 @@ import { PlayedCards } from '../components/PlayedCards.js'
 import { PlayerHand } from '../components/PlayerHand.js'
 import { useGameStore } from '../store.js'
 import { errorLabels } from '../labels.js'
-import { playerColor } from '../playerColors.js'
+import { PlayerBadge } from '../components/PlayerBadge.js'
 
 export function GamePage() {
   const navigate = useNavigate()
@@ -173,12 +173,11 @@ export function GamePage() {
               {game.players.map((player, index) => (
                 <li key={player.id}>
                   <div className="sidebar-player-heading">
-                    <span
-                      className="player-number"
-                      style={{ backgroundColor: playerColor(index) }}
-                    >
-                      {index + 1}
-                    </span>
+                    <PlayerBadge
+                      index={index}
+                      color={player.color}
+                      symbol={player.symbol}
+                    />
                     <strong>{player.name}</strong>
                     {player.id === session?.playerId && <small>Ty</small>}
                   </div>
