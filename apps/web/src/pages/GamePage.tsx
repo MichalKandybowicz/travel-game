@@ -60,38 +60,6 @@ export function GamePage() {
 
   return (
     <main className="page shell game-shell">
-      <header className="panel top-bar">
-        <span>Pokój {room?.roomCode ?? game.roomCode}</span>
-        <span>Tura {game.turnNumber}</span>
-        {game.status === 'FINISHED' ? (
-          <strong>Gra zakończona</strong>
-        ) : (
-          <span>
-            Gra teraz:{' '}
-            {
-              game.players.find((player) => player.id === game.currentPlayerId)
-                ?.name
-            }
-          </span>
-        )}
-        {game.settings.fogMode === 'NONE' && <span>Ziarno: {game.seed}</span>}
-        {game.status !== 'FINISHED' && (
-          <button
-            type="button"
-            disabled={leaving}
-            onClick={async () => {
-              setLeaving(true)
-              if (await leaveRoom()) {
-                navigate('/')
-              } else {
-                setLeaving(false)
-              }
-            }}
-          >
-            {leaving ? 'Opuszczanie…' : 'Opuść grę'}
-          </button>
-        )}
-      </header>
       {game.status === 'FINISHED' && (
         <section className="game-result" role="status" aria-live="polite">
           <div className="game-result-icon" aria-hidden="true">
@@ -134,6 +102,39 @@ export function GamePage() {
         </div>
       )}
       <section className="game-layout">
+        <header className="panel top-bar">
+          <span>Pokój {room?.roomCode ?? game.roomCode}</span>
+          <span>Tura {game.turnNumber}</span>
+          {game.status === 'FINISHED' ? (
+            <strong>Gra zakończona</strong>
+          ) : (
+            <span>
+              Gra teraz:{' '}
+              {
+                game.players.find(
+                  (player) => player.id === game.currentPlayerId,
+                )?.name
+              }
+            </span>
+          )}
+          {game.settings.fogMode === 'NONE' && <span>Ziarno: {game.seed}</span>}
+          {game.status !== 'FINISHED' && (
+            <button
+              type="button"
+              disabled={leaving}
+              onClick={async () => {
+                setLeaving(true)
+                if (await leaveRoom()) {
+                  navigate('/')
+                } else {
+                  setLeaving(false)
+                }
+              }}
+            >
+              {leaving ? 'Opuszczanie…' : 'Opuść grę'}
+            </button>
+          )}
+        </header>
         <div className="game-sidebar">
           <aside className="panel sidebar">
             <div className="panel-header">

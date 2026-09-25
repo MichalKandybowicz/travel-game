@@ -108,13 +108,25 @@ button:disabled {
 
 .page-header,
 .panel-header,
-.top-bar,
 .map-stats {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.top-bar {
+  grid-area: info;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.top-bar button {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .form-grid {
@@ -182,6 +194,10 @@ select {
 .game-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-areas:
+    'info main'
+    'sidebar main';
+  grid-template-rows: auto 1fr;
   gap: 20px;
   align-items: start;
   margin: 20px 0;
@@ -239,6 +255,7 @@ select {
 }
 
 .game-main {
+  grid-area: main;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 16px;
@@ -247,6 +264,7 @@ select {
 }
 
 .game-sidebar {
+  grid-area: sidebar;
   display: grid;
   align-content: start;
   gap: 16px;
@@ -887,17 +905,11 @@ select {
   }
 
   .game-layout {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .game-main {
-    order: 1;
-    width: 100%;
-  }
-
-  .game-sidebar {
-    order: 2;
-    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'info'
+      'main'
+      'sidebar';
+    grid-template-rows: auto;
   }
 }
