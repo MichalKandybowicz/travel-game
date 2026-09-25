@@ -147,7 +147,7 @@ const spendAny = (player: PlayerState, amount: number): number => {
 export const getTerrainCost = (
   terrain: TerrainType,
   difficulty: number,
-): keyof MovementPool | 'ANY' | 'BLOCKED' => {
+): Exclude<keyof MovementPool, 'WILD'> | 'ANY' | 'BLOCKED' => {
   switch (terrain) {
     case 'JUNGLE':
       return 'GREEN'

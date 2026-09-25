@@ -69,11 +69,10 @@ export function PlayerTokens({
 
   return (
     <section className="player-tokens" aria-label="Twoje żetony">
+      <div>
+        <strong>Żetony obozowe</strong>
+      </div>
       <div className="player-tokens-heading">
-        <div>
-          <strong>Żetony obozowe</strong>
-          <small>Obozy odwiedzone: {player.claimedCampIds?.length ?? 0}</small>
-        </div>
         <small>
           {usedThisRound
             ? 'Żeton wykorzystany w tej rundzie'

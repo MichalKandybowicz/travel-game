@@ -1,7 +1,7 @@
 import type { CardDefinition, MovementType } from '@shared'
 import { cardLabels, movementUnitLabel } from '../labels.js'
 
-function MovementGlyph({ type }: { type: MovementType }) {
+export function MovementGlyph({ type }: { type: MovementType }) {
   return (
     <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
       {type === 'GREEN' && (

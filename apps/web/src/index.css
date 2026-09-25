@@ -612,7 +612,7 @@ select {
 
 .game-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 230px minmax(0, 1fr);
   grid-template-areas:
     'info main'
     'sidebar main';
@@ -879,7 +879,40 @@ select {
 }
 
 .hand-card-grid {
-  grid-template-columns: repeat(auto-fill, minmax(145px, 180px));
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  gap: 0;
+  padding: 30px 22px 12px 4px;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: thin;
+}
+
+.hand-card-grid .hand-card {
+  width: clamp(145px, 16vw, 180px);
+  flex: 0 0 clamp(145px, 16vw, 180px);
+  transform-origin: center bottom;
+}
+
+.hand-card-grid .hand-card + .hand-card {
+  margin-left: clamp(-58px, -4.2vw, -38px);
+}
+
+.hand-card-grid .hand-card:hover,
+.hand-card-grid .hand-card:focus-within {
+  z-index: 10;
+  transform: translateY(-22px) scale(1.035);
+}
+
+.hand-card-grid .hand-card:has(+ .hand-card:hover),
+.hand-card-grid .hand-card:has(+ .hand-card:focus-within) {
+  transform: translateX(-12px);
+}
+
+.hand-card-grid .hand-card:hover ~ .hand-card,
+.hand-card-grid .hand-card:focus-within ~ .hand-card {
+  transform: translateX(20px);
 }
 
 .market-trigger {
@@ -1031,15 +1064,15 @@ select {
   }
 }
 
-.hand-movement {
+.hand-resources {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
 }
 
 .hand-header-details {
   display: grid;
-  gap: 2px;
+  gap: 8px;
 }
 
 .hand-turn-actions {
@@ -1052,11 +1085,67 @@ select {
   padding: 9px 12px;
 }
 
-.hand-movement span {
-  border: 1px solid #475569;
-  border-radius: 999px;
-  padding: 3px 9px;
-  font-size: 0.8rem;
+.hand-resource {
+  display: inline-flex;
+  min-width: 78px;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px 5px 6px;
+  border: 1px solid color-mix(in srgb, var(--resource-color) 62%, #dce3d4);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--resource-color) 22%, #081c20);
+}
+
+.hand-resource[data-resource='green'] {
+  --resource-color: #4e9973;
+}
+
+.hand-resource[data-resource='blue'] {
+  --resource-color: #57a9b7;
+}
+
+.hand-resource[data-resource='yellow'],
+.hand-resource[data-resource='gold'] {
+  --resource-color: #d6a548;
+}
+
+.hand-resource[data-resource='wild'] {
+  --resource-color: #a286a9;
+}
+
+.hand-resource-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: none;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--resource-color);
+  color: #fff8dc;
+}
+
+.hand-resource-icon svg {
+  width: 23px;
+  height: 23px;
+  stroke: currentColor;
+  stroke-width: 3;
+}
+
+.hand-resource > span:last-child {
+  display: grid;
+  line-height: 1;
+}
+
+.hand-resource small {
+  color: #c6d3cc;
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.hand-resource strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.1rem;
+  color: #fff8dc;
 }
 
 .played-player {
@@ -1181,7 +1270,15 @@ select {
 .hand-card:hover {
   box-shadow:
     inset 0 0 0 3px rgba(15, 23, 42, 0.75),
-    0 12px 24px var(--card-glow);
+    0 5px 9px rgba(0, 0, 0, 0.34),
+    0 0 7px color-mix(in srgb, var(--card-accent) 42%, transparent);
+}
+
+.hand-card:focus-within {
+  box-shadow:
+    inset 0 0 0 3px rgba(15, 23, 42, 0.75),
+    0 5px 9px rgba(0, 0, 0, 0.34),
+    0 0 7px color-mix(in srgb, var(--card-accent) 42%, transparent);
 }
 
 .hand-card--used {
@@ -1390,6 +1487,13 @@ select {
 .hand-panel {
   display: grid;
   gap: 12px;
+}
+
+.hand-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
+  align-items: start;
+  gap: 14px;
 }
 
 .player-tokens {
@@ -2008,7 +2112,7 @@ select {
 .game-shell .game-layout,
 .game-shell .game-result,
 .game-shell .deck-preview {
-  max-width: 1280px;
+  max-width: 1520px;
 }
 
 .game-shell .game-layout {
@@ -2135,6 +2239,10 @@ select {
 }
 
 @media (max-width: 900px) {
+  .hand-content {
+    grid-template-columns: 1fr;
+  }
+
   .join-layout {
     grid-template-columns: 1fr;
   }
@@ -2206,8 +2314,14 @@ select {
     grid-column: 1 / -1;
   }
   .game-shell .hand-card-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    padding-top: 24px;
+  }
+  .game-shell .hand-card-grid .hand-card {
+    width: 145px;
+    flex-basis: 145px;
+  }
+  .game-shell .hand-card-grid .hand-card + .hand-card {
+    margin-left: -34px;
   }
   .player-tokens-heading {
     align-items: flex-start;
