@@ -107,7 +107,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 2,
     goldValue: 2,
-    purchaseCost: 1,
+    purchaseCost: 2,
   },
   {
     id: 'trader',
