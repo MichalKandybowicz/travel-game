@@ -48,6 +48,58 @@ describe('generateMap', () => {
     expect(second.tiles).not.toEqual(first.tiles)
   })
 
+  it('places four start fields on the edge opposite the neighboring petal', () => {
+    for (const mapSize of ['SMALL', 'MEDIUM', 'LARGE'] as const) {
+      const map = generateMap({ ...settings, mapSize, petalCount: 3 })
+      const starts = map.startHexIds!.map((id) =>
+        map.tiles.find((tile) => tile.id === id)!,
+      )
+      expect(starts).toHaveLength(4)
+      expect(new Set(starts.map((tile) => tile.id)).size).toBe(4)
+      expect(
+        starts.every(
+          (tile) =>
+            tile.terrain === 'START' &&
+            tile.difficulty === 0 &&
+            tile.petalId === 0,
+        ),
+      ).toBe(true)
+      const onOneSide = [
+        starts.every((tile) => tile.q === starts[0]!.q),
+        starts.every((tile) => tile.r === starts[0]!.r),
+        starts.every((tile) => tile.q + tile.r === starts[0]!.q + starts[0]!.r),
+      ]
+      expect(onOneSide.some(Boolean)).toBe(true)
+      const contacts = map.tiles.filter(
+        (tile) =>
+          tile.petalId === 0 &&
+          getNeighbors(map.tiles, tile).some(
+            (neighbor) => neighbor.petalId === 1,
+          ),
+      )
+      const center = map.tiles
+        .filter((tile) => tile.petalId === 0)
+        .reduce((sum, tile) => ({ q: sum.q + tile.q, r: sum.r + tile.r }), {
+          q: 0,
+          r: 0,
+        })
+      const count = map.tiles.filter((tile) => tile.petalId === 0).length
+      const startCenter = {
+        q: starts.reduce((sum, tile) => sum + tile.q, 0) / 4,
+        r: starts.reduce((sum, tile) => sum + tile.r, 0) / 4,
+      }
+      const contactCenter = {
+        q: contacts.reduce((sum, tile) => sum + tile.q, 0) / contacts.length,
+        r: contacts.reduce((sum, tile) => sum + tile.r, 0) / contacts.length,
+      }
+      const petalCenter = { q: center.q / count, r: center.r / count }
+      expect(
+        (startCenter.q - petalCenter.q) * (contactCenter.q - petalCenter.q) +
+          (startCenter.r - petalCenter.r) * (contactCenter.r - petalCenter.r),
+      ).toBeLessThan(0)
+    }
+  })
+
   it('always keeps the goal reachable with at least the requested start branches', () => {
     const map = generateMap(settings)
     const analysis = analyzeMap(map)

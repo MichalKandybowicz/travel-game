@@ -84,6 +84,7 @@ interface GameStore {
   reconnectToRoom: (roomCode: string) => void
   updateSettings: (settings: MapSettings) => void
   startGame: () => void
+  chooseStart: (hexId: string) => void
   playCard: (cardInstanceId: string, mode: CardPlayMode) => void
   movePlayer: (targetHexId: string) => void
   buyCard: (cardId: string) => void
@@ -256,6 +257,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     getSocket().emit(EVENTS.gameStart, {
       roomCode: session.roomCode,
       playerId: session.playerId,
+    })
+  },
+  chooseStart: (hexId) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.gameChooseStart, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      hexId,
     })
   },
   playCard: (cardInstanceId, mode) => {

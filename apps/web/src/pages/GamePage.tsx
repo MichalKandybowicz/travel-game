@@ -22,6 +22,7 @@ export function GamePage() {
   const reconnect = useGameStore((state) => state.reconnectToRoom)
   const playCard = useGameStore((state) => state.playCard)
   const movePlayer = useGameStore((state) => state.movePlayer)
+  const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
   const endTurn = useGameStore((state) => state.endTurn)
   const leaveFinishedGame = useGameStore((state) => state.leaveFinishedGame)
@@ -57,6 +58,10 @@ export function GamePage() {
     connected &&
     game.currentPlayerId === session?.playerId &&
     game.status === 'ACTIVE'
+  const isChoosingStart = game.status === 'CHOOSING_START'
+  const isMyStartChoice =
+    connected && isChoosingStart && game.currentPlayerId === session?.playerId
+  const startIds = game.map.startHexIds ?? [game.map.startHexId]
 
   return (
     <main className="page shell game-shell">
@@ -104,12 +109,14 @@ export function GamePage() {
       <section className="game-layout">
         <header className="panel top-bar">
           <span>Pokój {room?.roomCode ?? game.roomCode}</span>
-          <span>Tura {game.turnNumber}</span>
+          <span>
+            {isChoosingStart ? 'Wybór startu' : `Tura ${game.turnNumber}`}
+          </span>
           {game.status === 'FINISHED' ? (
             <strong>Gra zakończona</strong>
           ) : (
             <span>
-              Gra teraz:{' '}
+              {isChoosingStart ? 'Wybiera pole: ' : 'Gra teraz: '}
               {
                 game.players.find(
                   (player) => player.id === game.currentPlayerId,
@@ -159,25 +166,62 @@ export function GamePage() {
             </ul>
           </aside>
           <PlayedCards game={game} />
-          <Market
-            game={game}
-            player={localPlayer}
-            isActive={isActive}
-            onBuyCard={buyCard}
-          />
+          {!isChoosingStart && (
+            <Market
+              game={game}
+              player={localPlayer}
+              isActive={isActive}
+              onBuyCard={buyCard}
+            />
+          )}
         </div>
         <div className="game-main">
-          <PlayerHand
-            player={localPlayer}
-            isActive={isActive}
-            onPlayCard={playCard}
-            onEndTurn={endTurn}
-          />
+          {isChoosingStart && (
+            <section className="panel start-choice" aria-live="polite">
+              <strong>
+                {isMyStartChoice
+                  ? 'Wybierz pole startowe'
+                  : 'Czekamy na wybór pola startowego'}
+              </strong>
+              <p>
+                Gracze wybierają kolejno. Ostatnia osoba wybierająca rozpocznie
+                grę, a tury pójdą w odwrotnej kolejności.
+              </p>
+              <div className="start-choice-options">
+                {startIds.map((hexId, index) => {
+                  const occupant = game.players.find(
+                    (player) => player.position === hexId,
+                  )
+                  return (
+                    <button
+                      key={hexId}
+                      type="button"
+                      disabled={!isMyStartChoice || !!occupant}
+                      onClick={() => chooseStart(hexId)}
+                    >
+                      Pole {index + 1}
+                      {occupant ? ` — ${occupant.name}` : ''}
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+          {!isChoosingStart && (
+            <PlayerHand
+              player={localPlayer}
+              isActive={isActive}
+              onPlayCard={playCard}
+              onEndTurn={endTurn}
+            />
+          )}
           <HexMap
             game={game}
             playerId={session?.playerId}
             isActive={isActive}
+            canChooseStart={isMyStartChoice}
             onSelectHex={movePlayer}
+            onChooseStart={chooseStart}
           />
         </div>
       </section>

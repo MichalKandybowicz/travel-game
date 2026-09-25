@@ -4,7 +4,12 @@ import type {
   MapSettings,
   MapSize,
 } from '../../shared/src/index.js'
-import { axialDistance, createHexGrid, HEX_DIRECTIONS } from './HexGrid.js'
+import {
+  axialDistance,
+  createHexGrid,
+  getNeighbors,
+  HEX_DIRECTIONS,
+} from './HexGrid.js'
 import { analyzeMap } from './MapAnalyzer.js'
 import { createRouteSet } from './PathGenerator.js'
 import { SeededRandom } from './SeededRandom.js'
@@ -22,14 +27,50 @@ const getEndpointTiles = (
   radius: number,
   centers: Array<{ q: number; r: number }>,
   random: SeededRandom,
-): { start: HexTile; goal: HexTile } => {
+): { starts: HexTile[]; goal: HexTile } => {
+  const firstPetal = grid.filter((tile) => tile.petalId === 0)
+  const center = centers[0]!
+  const sides = [
+    firstPetal.filter((tile) => tile.q === center.q + radius),
+    firstPetal.filter((tile) => tile.q === center.q - radius),
+    firstPetal.filter((tile) => tile.r === center.r + radius),
+    firstPetal.filter((tile) => tile.r === center.r - radius),
+    firstPetal.filter(
+      (tile) => tile.q + tile.r === center.q + center.r + radius,
+    ),
+    firstPetal.filter(
+      (tile) => tile.q + tile.r === center.q + center.r - radius,
+    ),
+  ]
+  const contactSide =
+    centers.length === 1
+      ? 0
+      : sides.reduce(
+          (best, side, index) => {
+            const contacts = side.reduce(
+              (sum, tile) =>
+                sum +
+                getNeighbors(grid, tile).filter(
+                  (neighbor) => neighbor.petalId === 1,
+                ).length,
+              0,
+            )
+            return contacts > best.contacts ? { index, contacts } : best
+          },
+          { index: 0, contacts: -1 },
+        ).index
+  const oppositeSide = contactSide % 2 === 0 ? contactSide + 1 : contactSide - 1
+  const sideTiles = sides[oppositeSide]!.sort((a, b) => a.q - b.q || a.r - b.r)
+  const starts = sideTiles.slice(
+    Math.floor((sideTiles.length - 4) / 2),
+    Math.floor((sideTiles.length - 4) / 2) + 4,
+  )
+  if (starts.length !== 4)
+    throw new Error('Unable to determine four START tiles.')
   if (centers.length === 1) {
-    const start = grid.find((tile) => tile.q === -radius && tile.r === 0)
     const goal = grid.find((tile) => tile.q === radius && tile.r === 0)
-    if (!start || !goal) {
-      throw new Error('Unable to determine START and GOAL tiles.')
-    }
-    return { start, goal }
+    if (!goal) throw new Error('Unable to determine GOAL tile.')
+    return { starts, goal }
   }
   const chooseOuterTile = (
     petalId: number,
@@ -46,7 +87,7 @@ const getEndpointTiles = (
     )
   }
   return {
-    start: chooseOuterTile(0, centers[centers.length - 1]!),
+    starts,
     goal: chooseOuterTile(centers.length - 1, centers[0]!),
   }
 }
@@ -117,26 +158,28 @@ export const generateMap = (settings: MapSettings): GameMap => {
       settings.petalCount ?? 1,
       random,
     )
-    const { start, goal } = getEndpointTiles(grid, radius, centers, random)
+    const { starts, goal } = getEndpointTiles(grid, radius, centers, random)
     const routes = createRouteSet(
-      start,
+      starts[0]!,
       goal,
       grid,
       settings.routeCount,
       random,
     )
+    for (const start of starts.slice(1)) routes.add(start.id)
     const tiles = applyTerrain(
       grid,
       routes,
       settings,
       random,
-      start.id,
+      starts.map((start) => start.id),
       goal.id,
     )
     const provisionalMap: GameMap = {
       tiles,
       petalCount: settings.petalCount ?? 1,
-      startHexId: start.id,
+      startHexId: starts[0]!.id,
+      startHexIds: starts.map((start) => start.id),
       goalHexId: goal.id,
       stats: {
         shortestPathLength: 0,

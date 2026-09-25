@@ -200,12 +200,12 @@ export const applyTerrain = (
   routes: Set<string>,
   settings: MapSettings,
   random: SeededRandom,
-  startId: string,
+  startIds: string[],
   goalId: string,
 ): HexTile[] => {
   const tiles = grid.map((tile) => ({ ...tile }))
   const neighborsOf = buildNeighborLookup(tiles)
-  const protectedIds = new Set([startId, goalId])
+  const protectedIds = new Set([...startIds, goalId])
 
   placeMountainGroups(
     tiles,
@@ -227,9 +227,9 @@ export const applyTerrain = (
     neighborsOf,
   )
 
-  const startTile = tiles.find((tile) => tile.id === startId)!
+  const startTiles = tiles.filter((tile) => startIds.includes(tile.id))
   const goalTile = tiles.find((tile) => tile.id === goalId)!
-  startTile.terrain = 'START'
+  for (const startTile of startTiles) startTile.terrain = 'START'
   goalTile.terrain = 'GOAL'
   if (settings.specialTileDensity > 0) {
     placeCamps(tiles, routes, settings.petalCount ?? 1, random)
@@ -244,10 +244,12 @@ export const applyTerrain = (
       )
     }
   }
-  startTile.difficulty = 0
+  for (const startTile of startTiles) startTile.difficulty = 0
   goalTile.difficulty = 0
-  for (const tile of neighborsOf(startTile)) {
-    if (!tile.isBlocked) tile.difficulty = Math.min(tile.difficulty, 2)
+  for (const startTile of startTiles) {
+    for (const tile of neighborsOf(startTile)) {
+      if (!tile.isBlocked) tile.difficulty = Math.min(tile.difficulty, 2)
+    }
   }
 
   return tiles

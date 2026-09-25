@@ -6,6 +6,7 @@ import { Server, type Socket } from 'socket.io'
 import { z } from 'zod'
 import {
   buyCard,
+  chooseStart,
   createGameState,
   endTurn,
   movePlayer,
@@ -23,6 +24,7 @@ import {
   playCardSchema,
   movePlayerSchema,
   buyCardSchema,
+  chooseStartSchema,
   type GameError,
   type RoomState,
   type SessionState,
@@ -563,6 +565,38 @@ io.on('connection', (socket) => {
     )
     room.status = 'IN_GAME'
     await emitRoom(io, room)
+  })
+
+  socket.on(EVENTS.gameChooseStart, async (payload: unknown) => {
+    const parsed = chooseStartSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room?.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_NOT_STARTED',
+        message: 'Game has not started.',
+      })
+      return
+    }
+    if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Socket is not authorized for this player.',
+      })
+      return
+    }
+    try {
+      chooseStart(room.gameState, parsed.data.playerId, parsed.data.hexId)
+      await emitRoom(io, room)
+    } catch (caught) {
+      sendError(socket.id, io, caught as GameError)
+    }
   })
 
   socket.on(EVENTS.gamePlayCard, async (payload: unknown) => {

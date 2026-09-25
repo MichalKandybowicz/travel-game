@@ -171,7 +171,6 @@ export const createGameState = (
   const marketDrawPile = new SeededRandom(
     `${settings.seed}:${roomCode}:market:0`,
   ).shuffle(MARKET_CARD_IDS)
-  const startHexId = map.startHexId
   const gamePlayers: PlayerState[] = players.map((player, index) => {
     const drawPile = buildStartingDeck(
       player.id,
@@ -180,7 +179,7 @@ export const createGameState = (
     const state: PlayerState = {
       id: player.id,
       name: player.name,
-      position: startHexId,
+      position: '',
       drawPile,
       hand: [],
       discardPile: [],
@@ -199,18 +198,52 @@ export const createGameState = (
   return {
     id: `${roomCode}-${settings.seed}`,
     roomCode,
-    status: 'ACTIVE',
+    status: 'CHOOSING_START',
     settings,
     seed: settings.seed,
     map,
     players: gamePlayers,
     currentPlayerId: gamePlayers[0]!.id,
+    startSelectionOrder: gamePlayers.map((player) => player.id),
     turnNumber: 1,
     market: marketDrawPile.splice(0, 4),
     marketDrawPile,
     marketCycle: 0,
     roundPlayedCards: [],
   }
+}
+
+export const chooseStart = (
+  gameState: GameState,
+  playerId: string,
+  hexId: string,
+): GameState => {
+  if (gameState.status !== 'CHOOSING_START') {
+    error('INVALID_ACTION', 'Starting positions are not being selected.')
+  }
+  if (gameState.currentPlayerId !== playerId) {
+    error('NOT_YOUR_TURN', 'It is not your turn to choose a starting position.')
+  }
+  const startIds = gameState.map.startHexIds ?? [gameState.map.startHexId]
+  if (!startIds.includes(hexId)) {
+    error('INVALID_MOVE', 'This is not a starting position.')
+  }
+  if (gameState.players.some((player) => player.position === hexId)) {
+    error('HEX_OCCUPIED', 'This starting position is occupied.')
+  }
+  findPlayer(gameState, playerId).position = hexId
+  const order =
+    gameState.startSelectionOrder ??
+    gameState.players.map((player) => player.id)
+  const nextChooser = order.find((id) => !findPlayer(gameState, id).position)
+  if (nextChooser) {
+    gameState.currentPlayerId = nextChooser
+  } else {
+    gameState.players.sort((a, b) => order.indexOf(b.id) - order.indexOf(a.id))
+    gameState.currentPlayerId = gameState.players[0]!.id
+    gameState.status = 'ACTIVE'
+  }
+  return gameState
 }
 
 const replenishMarket = (gameState: GameState): void => {
@@ -367,6 +400,36 @@ export const removePlayer = (
   gameState: GameState,
   playerId: string,
 ): GameState => {
+  if (gameState.status === 'CHOOSING_START') {
+    findPlayer(gameState, playerId)
+    gameState.players = gameState.players.filter(
+      (player) => player.id !== playerId,
+    )
+    gameState.startSelectionOrder = (
+      gameState.startSelectionOrder ??
+      gameState.players.map((player) => player.id)
+    ).filter((id) => id !== playerId)
+    if (gameState.players.length <= 1) {
+      gameState.status = 'FINISHED'
+      if (gameState.players[0]) gameState.winnerId = gameState.players[0].id
+    } else {
+      const order =
+        gameState.startSelectionOrder ??
+        gameState.players.map((player) => player.id)
+      const nextChooser = order.find(
+        (id) => !findPlayer(gameState, id).position,
+      )
+      if (nextChooser) gameState.currentPlayerId = nextChooser
+      else {
+        gameState.players.sort(
+          (a, b) => order.indexOf(b.id) - order.indexOf(a.id),
+        )
+        gameState.currentPlayerId = gameState.players[0]!.id
+        gameState.status = 'ACTIVE'
+      }
+    }
+    return gameState
+  }
   if (gameState.status !== 'ACTIVE') {
     return gameState
   }
@@ -404,7 +467,10 @@ export const serializePublicGameState = (
   viewerPlayerId: string,
 ): GameState => {
   const viewer = findPlayer(gameState, viewerPlayerId)
-  const currentTile = findTile(gameState.map, viewer.position)
+  const currentTile = findTile(
+    gameState.map,
+    viewer.position || gameState.map.startHexId,
+  )
   const fogMode = gameState.settings.fogMode ?? 'NONE'
   const visiblePetals = new Set([currentTile.petalId])
   if (fogMode === 'PETAL') {
@@ -413,6 +479,8 @@ export const serializePublicGameState = (
     }
   }
   const visibleTiles = gameState.map.tiles.flatMap((tile) => {
+    if (gameState.status === 'CHOOSING_START' && tile.petalId === 0)
+      return [tile]
     if (fogMode === 'NONE') return [tile]
     if (fogMode === 'PETAL') {
       return visiblePetals.has(tile.petalId)
@@ -456,6 +524,13 @@ export const serializePublicGameState = (
             startHexId: visibleIds.has(gameState.map.startHexId)
               ? gameState.map.startHexId
               : '',
+            ...(gameState.map.startHexIds
+              ? {
+                  startHexIds: gameState.map.startHexIds.filter((id) =>
+                    visibleIds.has(id),
+                  ),
+                }
+              : {}),
             goalHexId: visibleIds.has(gameState.map.goalHexId)
               ? gameState.map.goalHexId
               : '',

@@ -68,6 +68,15 @@ export const movePlayerSchema = z.object({
   targetHexId: z.string(),
 })
 
+export const chooseStartSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  hexId: z.string(),
+})
+
 export const buyCardSchema = z.object({
   roomCode: z
     .string()

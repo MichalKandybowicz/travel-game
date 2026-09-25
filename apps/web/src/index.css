@@ -263,6 +263,36 @@ select {
   min-width: 0;
 }
 
+.start-choice {
+  display: grid;
+  gap: 10px;
+}
+
+.start-choice p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.start-choice-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.start-choice-options button {
+  border: 1px solid #60a5fa;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #1e3a5f;
+  color: #f8fafc;
+  cursor: pointer;
+}
+
+.start-choice-options button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .game-sidebar {
   grid-area: sidebar;
   display: grid;

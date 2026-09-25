@@ -76,10 +76,19 @@ interface HexMapProps {
   game: GameState
   playerId: string | undefined
   isActive: boolean
+  canChooseStart: boolean
   onSelectHex: (hexId: string) => void
+  onChooseStart: (hexId: string) => void
 }
 
-export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
+export function HexMap({
+  game,
+  playerId,
+  isActive,
+  canChooseStart,
+  onSelectHex,
+  onChooseStart,
+}: HexMapProps) {
   const [view, setView] = useState({ zoom: 1, pan: { x: 0, y: 0 } })
   const { zoom, pan } = view
   const [selectedHexId, setSelectedHexId] = useState<string>()
@@ -360,18 +369,30 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
               (player) => player.position === tile.id,
             )
             const isReachable = reachable.has(tile.id)
+            const isAvailableStart =
+              canChooseStart &&
+              game.status === 'CHOOSING_START' &&
+              game.currentPlayerId === playerId &&
+              (game.map.startHexIds ?? [game.map.startHexId]).includes(
+                tile.id,
+              ) &&
+              occupiedBy.length === 0
             const isSelected = selectedHexId === tile.id
             const isLocalTile = localPlayer?.position === tile.id
             return (
               <g
                 key={tile.id}
                 className={
-                  isActive && isReachable ? 'reachable-hex' : undefined
+                  (isActive && isReachable) || isAvailableStart
+                    ? 'reachable-hex'
+                    : undefined
                 }
                 onClick={() => {
                   setSelectedHexId(tile.id)
                   if (isActive && isReachable) {
                     onSelectHex(tile.id)
+                  } else if (isAvailableStart) {
+                    onChooseStart(tile.id)
                   }
                 }}
               >
@@ -380,16 +401,26 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
                   points={polygonPoints(x, y, 22)}
                   fill={tileColors[tile.terrain]}
                   stroke={
-                    isLocalTile
-                      ? '#fef08a'
-                      : isSelected
-                        ? '#111827'
-                        : isReachable
-                          ? '#f8fafc'
-                          : '#0f172a'
+                    isAvailableStart
+                      ? '#facc15'
+                      : isLocalTile
+                        ? '#fef08a'
+                        : isSelected
+                          ? '#111827'
+                          : isReachable
+                            ? '#f8fafc'
+                            : '#0f172a'
                   }
                   strokeWidth={
-                    isLocalTile ? 4 : isSelected ? 3 : isReachable ? 2.5 : 1
+                    isAvailableStart
+                      ? 4
+                      : isLocalTile
+                        ? 4
+                        : isSelected
+                          ? 3
+                          : isReachable
+                            ? 2.5
+                            : 1
                   }
                   opacity={
                     tile.terrain === 'UNKNOWN'
@@ -410,11 +441,16 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
                 >
                   {tile.terrain === 'UNKNOWN'
                     ? ''
-                    : tile.difficulty < 0
-                      ? '?'
-                      : tile.terrain === 'MOUNTAIN'
-                        ? '×'
-                        : Math.max(1, tile.difficulty)}
+                    : game.status === 'CHOOSING_START' &&
+                        tile.terrain === 'START'
+                      ? (game.map.startHexIds ?? [game.map.startHexId]).indexOf(
+                          tile.id,
+                        ) + 1
+                      : tile.difficulty < 0
+                        ? '?'
+                        : tile.terrain === 'MOUNTAIN'
+                          ? '×'
+                          : Math.max(1, tile.difficulty)}
                 </text>
                 {occupiedBy.map((player, index) => {
                   const number =

@@ -4,6 +4,7 @@ import { CARD_BY_ID, MARKET_CARD_IDS } from '../../shared/src/index.js'
 import { axialDistance, getNeighbors } from '../../map-generator/src/index.js'
 import {
   buyCard,
+  chooseStart,
   createGameState,
   endTurn,
   movePlayer,
@@ -28,11 +29,16 @@ const settings: MapSettings = {
   fogMode: 'NONE',
 }
 
-const buildTestGame = (): GameState =>
-  createGameState('ABCDE', settings, [
+const buildTestGame = (): GameState => {
+  const game = createGameState('ABCDE', settings, [
     { id: 'p1', name: 'Player 1' },
     { id: 'p2', name: 'Player 2' },
   ])
+  game.status = 'ACTIVE'
+  game.players[0]!.position = game.map.startHexIds![0]!
+  game.players[1]!.position = game.map.startHexIds![1]!
+  return game
+}
 
 const findReachableTile = (
   game: GameState,
@@ -54,6 +60,57 @@ const findReachableTile = (
 }
 
 describe('GameEngine', () => {
+  it('lets players choose distinct starts, then plays in reverse selection order', () => {
+    const game = createGameState('ABCDE', settings, [
+      { id: 'p1', name: 'Player 1' },
+      { id: 'p2', name: 'Player 2' },
+      { id: 'p3', name: 'Player 3' },
+      { id: 'p4', name: 'Player 4' },
+    ])
+    const starts = game.map.startHexIds!
+    expect(game.status).toBe('CHOOSING_START')
+    expect(game.players.every((player) => player.position === '')).toBe(true)
+    expect(() => chooseStart(game, 'p2', starts[0]!)).toThrow()
+    expect(() =>
+      playCard(game, 'p1', game.players[0]!.hand[0]!.instanceId),
+    ).toThrow()
+    chooseStart(game, 'p1', starts[0]!)
+    expect(game.currentPlayerId).toBe('p2')
+    expect(() => chooseStart(game, 'p2', starts[0]!)).toThrow()
+    expect(() => chooseStart(game, 'p2', game.map.goalHexId)).toThrow()
+    chooseStart(game, 'p2', starts[1]!)
+    chooseStart(game, 'p3', starts[2]!)
+    chooseStart(game, 'p4', starts[3]!)
+    expect(game.status).toBe('ACTIVE')
+    expect(game.players.map((player) => player.id)).toEqual([
+      'p4',
+      'p3',
+      'p2',
+      'p1',
+    ])
+    expect(game.currentPlayerId).toBe('p4')
+    endTurn(game, 'p4')
+    expect(game.currentPlayerId).toBe('p3')
+    endTurn(game, 'p3')
+    expect(game.currentPlayerId).toBe('p2')
+    endTurn(game, 'p2')
+    expect(game.currentPlayerId).toBe('p1')
+  })
+
+  it('continues start selection when the next chooser leaves', () => {
+    const game = createGameState('ABCDE', settings, [
+      { id: 'p1', name: 'Player 1' },
+      { id: 'p2', name: 'Player 2' },
+      { id: 'p3', name: 'Player 3' },
+    ])
+    chooseStart(game, 'p1', game.map.startHexIds![0]!)
+    removePlayer(game, 'p2')
+    expect(game.currentPlayerId).toBe('p3')
+    chooseStart(game, 'p3', game.map.startHexIds![1]!)
+    expect(game.status).toBe('ACTIVE')
+    expect(game.players.map((player) => player.id)).toEqual(['p3', 'p1'])
+  })
+
   it('builds an eight-card starting deck with four green, three yellow and one blue card', () => {
     const deck = buildStartingDeck('p1', 'STARTER-42')
     const movementTypes = deck.map(
@@ -316,6 +373,10 @@ describe('GameEngine', () => {
       { id: 'p2', name: 'Player 2' },
       { id: 'p3', name: 'Player 3' },
     ])
+    game.status = 'ACTIVE'
+    game.players.forEach((player, index) => {
+      player.position = game.map.startHexIds![index]!
+    })
 
     removePlayer(game, 'p1')
 
@@ -360,6 +421,8 @@ describe('GameEngine', () => {
         { id: 'p2', name: 'Player 2' },
       ],
     )
+    game.status = 'ACTIVE'
+    game.players[0]!.position = game.map.startHexId
     const view = serializePublicGameState(game, 'p1')
     expect(view.map.tiles).toHaveLength(game.map.tiles.length)
     expect(
@@ -415,6 +478,8 @@ describe('GameEngine', () => {
         { id: 'p2', name: 'Player 2' },
       ],
     )
+    game.status = 'ACTIVE'
+    game.players[0]!.position = game.map.startHexId
     const borderTile = game.map.tiles.find(
       (tile) =>
         tile.petalId === 0 &&
@@ -450,6 +515,8 @@ describe('GameEngine', () => {
           { id: 'p2', name: 'Player 2' },
         ],
       )
+      game.status = 'ACTIVE'
+      game.players[0]!.position = game.map.startHexId
       const view = serializePublicGameState(game, 'p1')
       const start = game.map.tiles.find(
         (tile) => tile.id === game.map.startHexId,

@@ -16,7 +16,7 @@ export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
 export type RoomStatus = 'LOBBY' | 'IN_GAME' | 'FINISHED'
-export type GameStatus = 'LOBBY' | 'ACTIVE' | 'FINISHED'
+export type GameStatus = 'LOBBY' | 'CHOOSING_START' | 'ACTIVE' | 'FINISHED'
 
 export interface MapSettings {
   seed: string
@@ -58,6 +58,7 @@ export interface GameMap {
   tiles: HexTile[]
   petalCount?: number
   startHexId: string
+  startHexIds?: string[]
   goalHexId: string
   stats: MapAnalysis
 }
@@ -109,6 +110,7 @@ export interface GameState {
   map: GameMap
   players: PlayerState[]
   currentPlayerId: string
+  startSelectionOrder?: string[]
   turnNumber: number
   market: string[]
   marketDrawPile: string[]

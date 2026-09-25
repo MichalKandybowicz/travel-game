@@ -92,6 +92,8 @@ Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wej
 
 Mapę można przesuwać przeciąganiem myszą, a przybliżać i oddalać kółkiem myszy. Przyciski kierunkowe i skali pozostają dostępne.
 
+Pierwszy płatek ma **cztery pola startowe** na krawędzi przeciwnej do sąsiedniego płatka. Po uruchomieniu gry gracze wybierają wolne pola kolejno, w kolejności z poczekalni. Można kliknąć pole na mapie lub przycisk nad nią. Ostatni wybierający wykonuje pierwszą turę; dalsza kolejność tur jest odwrotna do kolejności wyboru pól.
+
 Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
 
 | Teren     | Koszt wejścia                                  | Efekt                                                                  |
@@ -102,7 +104,7 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 | Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                               |
 | Obóz      | 1–5 punktów dowolnego koloru                   | Obecnie brak dodatkowego efektu. Usuwanie kart z talii jest planowane. |
 | Góry      | Nie można wejść                                | Pole zablokowane.                                                      |
-| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Miejsce początkowe graczy.                                             |
+| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z czterech pól początkowych, wybieranych przed pierwszą turą.    |
 | Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                                        |
 
 Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego obozu na płatek mapy. Obozy dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
