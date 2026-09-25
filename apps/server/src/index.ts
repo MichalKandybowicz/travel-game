@@ -24,6 +24,7 @@ import {
   roomJoinSchema,
   roomUpdateSettingsSchema,
   roomUpdateAppearanceSchema,
+  roomUpdatePlayerNameSchema,
   playCardSchema,
   movePlayerSchema,
   buyCardSchema,
@@ -582,6 +583,37 @@ io.on('connection', (socket) => {
     )!
     player.color = parsed.data.color
     player.symbol = parsed.data.symbol
+    await emitRoom(io, room)
+  })
+
+  socket.on(EVENTS.roomUpdatePlayerName, async (payload: unknown) => {
+    const parsed = roomUpdatePlayerNameSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room || room.status !== 'LOBBY') {
+      sendError(socket.id, io, {
+        code: 'ROOM_NOT_FOUND',
+        message: 'The waiting room is no longer available.',
+      })
+      return
+    }
+    if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Socket is not authorized for this player.',
+      })
+      return
+    }
+    const player = room.players.find(
+      (entry) => entry.id === parsed.data.playerId,
+    )!
+    player.name = parsed.data.playerName
     await emitRoom(io, room)
   })
 

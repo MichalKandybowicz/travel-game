@@ -12,12 +12,9 @@ COPY apps/web/tsconfig*.json ./
 ARG VITE_SERVER_URL
 ENV VITE_SERVER_URL=$VITE_SERVER_URL
 
-# Install and build only web
 RUN npm ci && \
     npm run build --workspace=@travel-game/web
 
-RUN npm install -g http-server
-
 EXPOSE 8080
 
-CMD ["sh", "-c", "http-server apps/web/dist -p \"${PORT:-8080}\" --gzip -c-1"]
+CMD ["npm", "run", "start", "--workspace=@travel-game/web"]

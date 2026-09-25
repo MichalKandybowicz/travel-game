@@ -52,6 +52,15 @@ export const roomUpdateAppearanceSchema = z.object({
   symbol: z.enum(PLAYER_SYMBOLS),
 })
 
+export const roomUpdatePlayerNameSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  playerName: z.string().trim().min(1).max(24),
+})
+
 export const roomCodeSchema = z.object({
   roomCode: z
     .string()

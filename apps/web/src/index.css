@@ -1746,6 +1746,27 @@ select {
   font-weight: 700;
 }
 
+.lobby-player-name {
+  display: grid;
+  gap: 6px;
+}
+
+.lobby-player-name label {
+  color: #bed0c1;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.lobby-player-name > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.lobby-player-name input {
+  min-width: 0;
+}
+
 .appearance-options {
   display: flex;
   flex-wrap: wrap;

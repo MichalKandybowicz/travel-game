@@ -21,7 +21,6 @@ export function HomePage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [playerName, setPlayerName] = useState(session?.playerName ?? 'Gracz 1')
   const [busy, setBusy] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [createRequested, setCreateRequested] = useState(false)
@@ -89,31 +88,18 @@ export function HomePage() {
                 if (!connected || (createRequested && !error)) return
                 previousRoomCode.current = session?.roomCode
                 setCreateRequested(true)
-                createRoom((account?.username ?? playerName).trim(), {
+                createRoom(account?.username ?? 'Gracz', {
                   ...defaultSettings,
                   seed: `PATH-${Math.floor(Math.random() * 1000000)}`,
                 })
               }}
             >
-              {!account && (
-                <label className="home-name-field">
-                  Twoja nazwa w grze
-                  <input
-                    value={playerName}
-                    minLength={1}
-                    maxLength={24}
-                    onChange={(event) => setPlayerName(event.target.value)}
-                    required
-                  />
-                </label>
-              )}
               <div className="home-hero-actions">
                 <button
                   className="home-create-button"
                   type="submit"
                   disabled={
                     !connected ||
-                    !(account?.username ?? playerName).trim() ||
                     (createRequested && !error)
                   }
                 >

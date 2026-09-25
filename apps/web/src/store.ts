@@ -86,6 +86,7 @@ interface GameStore {
   reconnectToRoom: (roomCode: string) => void
   updateSettings: (settings: MapSettings) => void
   updateAppearance: (color: PlayerColor, symbol: PlayerSymbol) => void
+  updatePlayerName: (playerName: string) => void
   startGame: () => void
   chooseStart: (hexId: string) => void
   playCard: (cardInstanceId: string, mode: CardPlayMode) => void
@@ -140,18 +141,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
         })
       })
       client.on(EVENTS.roomUpdate, (room: RoomState) => {
-        set((state) =>
-          state.session?.roomCode === room.roomCode
-            ? {
-                room,
-                game:
-                  state.game?.roomCode === room.roomCode
-                    ? state.game
-                    : undefined,
-                error: undefined,
-              }
-            : state,
-        )
+        set((state) => {
+          if (state.session?.roomCode !== room.roomCode) return state
+          const player = room.players.find(
+            (entry) => entry.id === state.session?.playerId,
+          )
+          const session = player
+            ? { ...state.session, playerName: player.name }
+            : state.session
+          localStorage.setItem(sessionStorageKey, JSON.stringify(session))
+          return {
+            room,
+            session,
+            game:
+              state.game?.roomCode === room.roomCode ? state.game : undefined,
+            error: undefined,
+          }
+        })
       })
       client.on(EVENTS.gameState, (game: GameState) => {
         set((state) =>
@@ -260,6 +266,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerId: session.playerId,
       color,
       symbol,
+    })
+  },
+  updatePlayerName: (playerName) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.roomUpdatePlayerName, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      playerName,
     })
   },
   startGame: () => {

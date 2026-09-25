@@ -14,7 +14,6 @@ export function JoinPage() {
   const [roomCode, setRoomCode] = useState(
     (searchParams.get('code') ?? '').toUpperCase().slice(0, 5),
   )
-  const [playerName, setPlayerName] = useState(session?.playerName ?? 'Gracz 2')
   const [requestedRoomCode, setRequestedRoomCode] = useState<string>()
 
   useEffect(() => {
@@ -65,7 +64,7 @@ export function JoinPage() {
               event.preventDefault()
               const code = roomCode.trim()
               setRequestedRoomCode(code)
-              joinRoom(code, (account?.username ?? playerName).trim())
+              joinRoom(code, account?.username ?? 'Gracz')
             }}
           >
             <label>
@@ -80,16 +79,6 @@ export function JoinPage() {
                 onChange={(event) =>
                   setRoomCode(event.target.value.toUpperCase())
                 }
-                required
-              />
-            </label>
-            <label>
-              Nazwa gracza
-              <input
-                value={account?.username ?? playerName}
-                maxLength={24}
-                disabled={Boolean(account)}
-                onChange={(event) => setPlayerName(event.target.value)}
                 required
               />
             </label>

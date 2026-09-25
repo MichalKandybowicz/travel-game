@@ -27,8 +27,10 @@ export function RoomPage() {
   const startGame = useGameStore((state) => state.startGame)
   const updateSettings = useGameStore((state) => state.updateSettings)
   const updateAppearance = useGameStore((state) => state.updateAppearance)
+  const updatePlayerName = useGameStore((state) => state.updatePlayerName)
   const [leaving, setLeaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [playerName, setPlayerName] = useState('')
 
   useEffect(() => {
     if (
@@ -53,6 +55,10 @@ export function RoomPage() {
   const me = myIndex >= 0 ? room?.players[myIndex] : undefined
   const myColor = playerColor(Math.max(0, myIndex), me?.color)
   const mySymbol = playerSymbol(Math.max(0, myIndex), me?.symbol)
+
+  useEffect(() => {
+    if (me?.name) setPlayerName(me.name)
+  }, [me?.name])
   const canStart = useMemo(
     () => Boolean(isHost && playerCount >= 2),
     [isHost, playerCount],
@@ -159,7 +165,35 @@ export function RoomPage() {
             </p>
             {me && room?.status === 'LOBBY' && (
               <div className="player-appearance-picker">
-                <strong>Twój pionek</strong>
+                <strong>Twój gracz</strong>
+                <form
+                  className="lobby-player-name"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const name = playerName.trim()
+                    if (name && name !== me.name) updatePlayerName(name)
+                  }}
+                >
+                  <label htmlFor="lobby-player-name">Nazwa gracza</label>
+                  <div>
+                    <input
+                      id="lobby-player-name"
+                      value={playerName}
+                      minLength={1}
+                      maxLength={24}
+                      onChange={(event) => setPlayerName(event.target.value)}
+                      required
+                    />
+                    <button
+                      type="submit"
+                      disabled={
+                        !playerName.trim() || playerName.trim() === me.name
+                      }
+                    >
+                      Zapisz
+                    </button>
+                  </div>
+                </form>
                 <span>Kolor</span>
                 <div
                   className="appearance-options"
