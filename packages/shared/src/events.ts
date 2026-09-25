@@ -13,6 +13,8 @@ export const EVENTS = {
   gameChooseStart: 'game:choose-start',
   gameState: 'game:state',
   gamePlayCard: 'game:play-card',
+  gameUseActionCard: 'game:use-action-card',
+  gameDiscardCard: 'game:discard-card',
   gameMove: 'game:move',
   gameBuyCard: 'game:buy-card',
   gameUseToken: 'game:use-token',

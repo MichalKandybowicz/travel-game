@@ -259,14 +259,16 @@ export function HexMap({
       game.map.tiles
         .filter(
           (tile) =>
-            cubeDistance(tile, currentTile) === 1 &&
+            (cubeDistance(tile, currentTile) === 1 ||
+              (localPlayer.shortcutMoveAvailable &&
+                cubeDistance(tile, currentTile) === 2)) &&
             !tile.isBlocked &&
             (game.settings.allowSharedTiles !== false ||
               !game.players.some(
                 (player) =>
                   player.id !== localPlayer.id && player.position === tile.id,
               )) &&
-            canAffordMove(localPlayer, currentTile, tile),
+            canAffordMove(localPlayer, currentTile, tile, game.map.tiles),
         )
         .map((tile) => tile.id),
     )

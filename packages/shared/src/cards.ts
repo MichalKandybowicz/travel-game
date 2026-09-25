@@ -172,6 +172,56 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     goldValue: 1,
     purchaseCost: 9,
   },
+  {
+    id: 'shortcut_map',
+    name: 'Shortcut Map',
+    type: 'ACTION',
+    movementType: 'WILD',
+    movementValue: 0,
+    goldValue: 0,
+    purchaseCost: 5,
+    actionEffect: 'MAP_SHORTCUT',
+  },
+  {
+    id: 'second_wind',
+    name: 'Second Wind',
+    type: 'ACTION',
+    movementType: 'WILD',
+    movementValue: 0,
+    goldValue: 0,
+    purchaseCost: 4,
+    actionEffect: 'SECOND_WIND',
+  },
+  {
+    id: 'merchant_caravan',
+    name: 'Merchant Caravan',
+    type: 'ACTION',
+    movementType: 'WILD',
+    movementValue: 0,
+    goldValue: 0,
+    purchaseCost: 5,
+    actionEffect: 'MERCHANT_CARAVAN',
+  },
+  {
+    id: 'steal_plans',
+    name: 'Steal Plans',
+    type: 'ACTION',
+    movementType: 'WILD',
+    movementValue: 0,
+    goldValue: 0,
+    purchaseCost: 6,
+    actionEffect: 'STEAL_PLANS',
+  },
+  {
+    id: 'guide',
+    name: 'Guide',
+    type: 'ACTION',
+    movementType: 'WILD',
+    movementValue: 0,
+    goldValue: 0,
+    purchaseCost: 5,
+    actionEffect: 'GUIDE',
+  },
 ]
 
 export const CARD_BY_ID = Object.fromEntries(
@@ -200,7 +250,16 @@ export const MARKET_CARD_IDS = [
   'adventurer',
   'trailblazer',
   'wayfarer',
+  'shortcut_map',
+  'second_wind',
+  'merchant_caravan',
+  'steal_plans',
+  'guide',
 ]
+
+export const ACTION_CARD_IDS = MARKET_CARD_IDS.filter(
+  (cardId) => CARD_BY_ID[cardId]?.type === 'ACTION',
+)
 
 export const createCardInstance = (
   cardId: string,

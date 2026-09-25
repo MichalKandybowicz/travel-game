@@ -27,8 +27,10 @@ export type TokenType =
   | 'CURSE_REMOVE_CARD'
   | 'CURSE_SKIP_LEADER'
   | 'CURSE_MARKET'
-export type CardPlayMode = 'MOVEMENT' | 'GOLD'
-export type CardType = 'MOVEMENT'
+export type CardPlayMode = 'MOVEMENT' | 'GOLD' | 'ACTION'
+export type CardType = 'MOVEMENT' | 'ACTION'
+export type ActionCardEffect =
+  'MAP_SHORTCUT' | 'SECOND_WIND' | 'MERCHANT_CARAVAN' | 'STEAL_PLANS' | 'GUIDE'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
@@ -91,6 +93,7 @@ export interface CardDefinition {
   movementValue: number
   goldValue: number
   purchaseCost: number
+  actionEffect?: ActionCardEffect
 }
 
 export interface CardInstance {
@@ -125,7 +128,13 @@ export interface PlayerState {
   availableMovement: MovementPool
   availableGold: number
   hasBoughtThisTurn?: boolean
+  purchasesThisTurn?: number
   hasSacrificedCardThisTurn?: boolean
+  hasUsedActionCardThisTurn?: boolean
+  extraPurchaseAvailable?: boolean
+  shortcutMoveAvailable?: boolean
+  guidedMoveAvailable?: boolean
+  pendingDiscardCount?: number
   tokens?: TokenInstance[]
   claimedCampIds?: string[]
   revealedTileIds?: string[]

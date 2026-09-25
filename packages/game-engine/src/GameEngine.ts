@@ -144,6 +144,9 @@ const spendAny = (player: PlayerState, amount: number): number => {
   return remaining
 }
 
+const totalMovement = (player: PlayerState): number =>
+  Object.values(player.availableMovement).reduce((sum, value) => sum + value, 0)
+
 export const getTerrainCost = (
   terrain: TerrainType,
   difficulty: number,
@@ -197,12 +200,51 @@ export const getMoveRequirements = (
   ]
 }
 
+const isShortcutMove = (
+  tiles: HexTile[],
+  from: HexTile,
+  to: HexTile,
+): boolean =>
+  axialDistance(from, to) === 2 &&
+  getNeighbors(tiles, from).some(
+    (neighbor) =>
+      (neighbor.isBlocked || neighbor.terrain === 'MOUNTAIN') &&
+      getNeighbors(tiles, neighbor).some((tile) => tile.id === to.id),
+  )
+
+export const getEffectiveMoveRequirements = (
+  player: PlayerState,
+  from: HexTile,
+  to: HexTile,
+  tiles?: HexTile[],
+): MoveRequirement[] => {
+  if (axialDistance(from, to) === 1) {
+    return player.guidedMoveAvailable
+      ? [{ type: 'ANY', amount: 1 }]
+      : getMoveRequirements(from, to)
+  }
+  if (
+    player.shortcutMoveAvailable &&
+    tiles &&
+    isShortcutMove(tiles, from, to) &&
+    !to.isBlocked &&
+    to.terrain !== 'MOUNTAIN'
+  ) {
+    const type = getTerrainCost(to.terrain, to.difficulty)
+    return type === 'BLOCKED'
+      ? []
+      : [{ type, amount: Math.max(1, to.difficulty) }]
+  }
+  return []
+}
+
 export const canAffordMove = (
   player: PlayerState,
   from: HexTile,
   to: HexTile,
+  tiles?: HexTile[],
 ): boolean => {
-  const requirements = getMoveRequirements(from, to)
+  const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
   if (requirements.length === 0) return false
   const coloredDeficit = requirements
     .filter(
@@ -225,25 +267,27 @@ export const canAffordMove = (
     (sum, requirement) => sum + requirement.amount,
     0,
   )
-  const totalAvailable = Object.values(player.availableMovement).reduce(
-    (sum, value) => sum + value,
-    0,
-  )
+  const totalAvailable = totalMovement(player)
   return (
     coloredDeficit <= player.availableMovement.WILD &&
     totalAvailable >= totalRequired
   )
 }
 
-const spendMove = (player: PlayerState, from: HexTile, to: HexTile): void => {
-  const requirements = getMoveRequirements(from, to)
+const spendMove = (
+  player: PlayerState,
+  from: HexTile,
+  to: HexTile,
+  tiles: HexTile[],
+): void => {
+  const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
   if (requirements.length === 0) {
     error('HEX_BLOCKED', 'That connection is blocked.')
   }
   for (const requirement of requirements) {
     if (requirement.type === 'ANY') continue
-    let remaining = spendColor(player, requirement.type, requirement.amount)
-    if (remaining > 0) remaining = spendColor(player, 'WILD', remaining)
+    const remaining = spendColor(player, requirement.type, requirement.amount)
+    if (remaining > 0) spendColor(player, 'WILD', remaining)
   }
   const anyRequired = requirements
     .filter((requirement) => requirement.type === 'ANY')
@@ -300,6 +344,37 @@ export const routeCostToGoal = (
   return Number.POSITIVE_INFINITY
 }
 
+const isActionCard = (cardId: string): boolean =>
+  CARD_BY_ID[cardId]?.type === 'ACTION'
+
+const hasAffordableMarketCard = (cardIds: string[]): boolean =>
+  cardIds.some((cardId) => (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6)
+
+const takeMarketCards = (
+  drawPile: string[],
+  amount: number,
+  currentMarket: string[] = [],
+): string[] => {
+  const selected: string[] = []
+  while (selected.length < amount) {
+    const offers = [...currentMarket, ...selected]
+    const actionCount = offers.filter(isActionCard).length
+    const mustPickAffordable =
+      !hasAffordableMarketCard(offers) && selected.length === amount - 1
+    const index = drawPile.findIndex((cardId) => {
+      if (offers.includes(cardId)) return false
+      if (isActionCard(cardId) && actionCount >= 2) return false
+      return (
+        !mustPickAffordable ||
+        (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6
+      )
+    })
+    if (index < 0) break
+    selected.push(drawPile.splice(index, 1)[0]!)
+  }
+  return selected
+}
+
 const closestOpponentToGoal = (
   gameState: GameState,
   playerId: string,
@@ -338,6 +413,7 @@ export const createGameState = (
   const marketDrawPile = new SeededRandom(
     `${settings.seed}:${roomCode}:market:0`,
   ).shuffle(MARKET_CARD_IDS)
+  const market = takeMarketCards(marketDrawPile, 4)
   const gamePlayers: PlayerState[] = players.map((player, index) => {
     const drawPile = buildStartingDeck(
       player.id,
@@ -358,7 +434,13 @@ export const createGameState = (
       availableMovement: createMovementPool(),
       availableGold: 0,
       hasBoughtThisTurn: false,
+      purchasesThisTurn: 0,
       hasSacrificedCardThisTurn: false,
+      hasUsedActionCardThisTurn: false,
+      extraPurchaseAvailable: false,
+      shortcutMoveAvailable: false,
+      guidedMoveAvailable: false,
+      pendingDiscardCount: 0,
       tokens: [],
       claimedCampIds: [],
       revealedTileIds: [],
@@ -382,7 +464,7 @@ export const createGameState = (
     startSelectionOrder: gamePlayers.map((player) => player.id),
     turnNumber: 1,
     roundNumber: 1,
-    market: marketDrawPile.splice(0, 4),
+    market,
     marketDrawPile,
     marketCycle: 0,
     marketPurchasedThisRound: false,
@@ -426,15 +508,17 @@ export const chooseStart = (
 }
 
 const replenishMarket = (gameState: GameState): void => {
-  if (gameState.marketDrawPile.length === 0) {
+  let nextCards = takeMarketCards(gameState.marketDrawPile, 1, gameState.market)
+  if (nextCards.length === 0) {
     gameState.marketCycle += 1
     gameState.marketDrawPile = new SeededRandom(
       `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}`,
     ).shuffle(
       MARKET_CARD_IDS.filter((cardId) => !gameState.market.includes(cardId)),
     )
+    nextCards = takeMarketCards(gameState.marketDrawPile, 1, gameState.market)
   }
-  const nextCardId = gameState.marketDrawPile.shift()
+  const nextCardId = nextCards[0]
   if (nextCardId) {
     gameState.market.push(nextCardId)
   }
@@ -446,7 +530,7 @@ const refreshMarket = (gameState: GameState, reason: string): void => {
   gameState.marketDrawPile = new SeededRandom(
     `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
   ).shuffle(MARKET_CARD_IDS.filter((cardId) => !previousMarket.has(cardId)))
-  gameState.market = gameState.marketDrawPile.splice(0, 4)
+  gameState.market = takeMarketCards(gameState.marketDrawPile, 4)
 }
 
 export const playCard = (
@@ -470,6 +554,9 @@ export const playCard = (
     error('INVALID_ACTION', 'Card definition was not found.')
   }
   const cardDefinition = definition!
+  if (cardDefinition.type !== 'MOVEMENT') {
+    error('INVALID_ACTION', 'Action cards must be used as actions.')
+  }
   if (mode !== 'MOVEMENT' && mode !== 'GOLD') {
     error('INVALID_ACTION', 'Invalid card play mode.')
   }
@@ -501,6 +588,111 @@ export const playCard = (
   return gameState
 }
 
+export const useActionCard = (
+  gameState: GameState,
+  playerId: string,
+  cardInstanceId: string,
+  targetPlayerId?: string,
+): GameState => {
+  ensureTurn(gameState, playerId)
+  const player = findPlayer(gameState, playerId)
+  if ((player.pendingDiscardCount ?? 0) > 0) {
+    error('INVALID_ACTION', 'Discard a card before taking another action.')
+  }
+  if (player.hasUsedActionCardThisTurn) {
+    error('INVALID_ACTION', 'Only one action card can be used per turn.')
+  }
+  const cardIndex = player.hand.findIndex(
+    (card) => card.instanceId === cardInstanceId,
+  )
+  const card = player.hand[cardIndex]
+  const definition = card ? CARD_BY_ID[card.cardId] : undefined
+  if (!card || definition?.type !== 'ACTION' || !definition.actionEffect) {
+    error('INVALID_ACTION', 'That card is not a usable action card.')
+  }
+  const actionCard = card!
+  const actionDefinition = definition!
+
+  switch (actionDefinition.actionEffect) {
+    case 'MAP_SHORTCUT':
+      player.shortcutMoveAvailable = true
+      break
+    case 'SECOND_WIND':
+      player.hand.splice(cardIndex, 1)
+      player.removedCards.push(actionCard)
+      drawCards(
+        player,
+        2,
+        `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
+      )
+      player.pendingDiscardCount = 1
+      break
+    case 'MERCHANT_CARAVAN':
+      player.extraPurchaseAvailable = true
+      break
+    case 'STEAL_PLANS': {
+      if (!targetPlayerId || targetPlayerId === playerId) {
+        error('INVALID_ACTION', 'Choose an opponent for this action.')
+      }
+      const target = findPlayer(gameState, targetPlayerId!)
+      if (target.hand.length === 0) {
+        error('INVALID_ACTION', 'The chosen opponent has no cards in hand.')
+      }
+      const stolen = new SeededRandom(
+        `${gameState.seed}:${playerId}:action:${actionCard.instanceId}:${targetPlayerId}`,
+      ).pick(target.hand)
+      target.hand.splice(
+        target.hand.findIndex(
+          (candidate) => candidate.instanceId === stolen.instanceId,
+        ),
+        1,
+      )
+      target.discardPile.push(stolen)
+      break
+    }
+    case 'GUIDE':
+      player.guidedMoveAvailable = true
+      break
+  }
+
+  if (actionDefinition.actionEffect !== 'SECOND_WIND') {
+    player.hand.splice(cardIndex, 1)
+    player.removedCards.push(actionCard)
+  }
+  player.hasUsedActionCardThisTurn = true
+  gameState.roundPlayedCards.push({
+    instanceId: actionCard.instanceId,
+    playerId,
+    cardId: actionDefinition.id,
+    mode: 'ACTION',
+  })
+  return gameState
+}
+
+export const discardCard = (
+  gameState: GameState,
+  playerId: string,
+  cardInstanceId: string,
+): GameState => {
+  ensureTurn(gameState, playerId)
+  const player = findPlayer(gameState, playerId)
+  if ((player.pendingDiscardCount ?? 0) < 1) {
+    error('INVALID_ACTION', 'There is no pending card discard.')
+  }
+  const cardIndex = player.hand.findIndex(
+    (card) => card.instanceId === cardInstanceId,
+  )
+  const card = player.hand[cardIndex]
+  if (!card) error('CARD_NOT_IN_HAND', 'That card is not in the player hand.')
+  player.hand.splice(cardIndex, 1)
+  player.discardPile.push(card!)
+  player.pendingDiscardCount = Math.max(
+    0,
+    (player.pendingDiscardCount ?? 1) - 1,
+  )
+  return gameState
+}
+
 export const movePlayer = (
   gameState: GameState,
   playerId: string,
@@ -510,11 +702,12 @@ export const movePlayer = (
   const player = findPlayer(gameState, playerId)
   const currentTile = findTile(gameState.map, player.position)
   const targetTile = findTile(gameState.map, targetHexId)
-  const adjacent = getNeighbors(gameState.map.tiles, currentTile).some(
-    (tile) => tile.id === targetHexId,
-  )
-  if (!adjacent) {
-    error('INVALID_MOVE', 'You can only move to adjacent hexes.')
+  const adjacent = axialDistance(currentTile, targetTile) === 1
+  const shortcut =
+    player.shortcutMoveAvailable &&
+    isShortcutMove(gameState.map.tiles, currentTile, targetTile)
+  if (!adjacent && !shortcut) {
+    error('INVALID_MOVE', 'That field is not reachable in one move.')
   }
   if (targetTile.isBlocked || targetTile.terrain === 'MOUNTAIN') {
     error('HEX_BLOCKED', 'That hex is blocked.')
@@ -527,10 +720,14 @@ export const movePlayer = (
   ) {
     error('HEX_OCCUPIED', 'That hex is occupied by another player.')
   }
-  if (!canAffordMove(player, currentTile, targetTile)) {
+  if (!canAffordMove(player, currentTile, targetTile, gameState.map.tiles)) {
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement for the selected hex.')
   }
-  spendMove(player, currentTile, targetTile)
+  spendMove(player, currentTile, targetTile, gameState.map.tiles)
+  if (shortcut) player.shortcutMoveAvailable = false
+  if (adjacent && player.guidedMoveAvailable) {
+    player.guidedMoveAvailable = false
+  }
   player.position = targetHexId
   rememberVisibleTiles(gameState, player)
 
@@ -666,7 +863,11 @@ export const buyCard = (
   if (gameState.marketLockedUntilPlayerId) {
     error('MARKET_LOCKED', 'The market is blocked by a curse.')
   }
-  if (player.hasBoughtThisTurn) {
+  const purchaseLimit = player.extraPurchaseAvailable ? 2 : 1
+  if (
+    (player.purchasesThisTurn ?? (player.hasBoughtThisTurn ? 1 : 0)) >=
+    purchaseLimit
+  ) {
     error('PURCHASE_LIMIT', 'You can buy only one card per turn.')
   }
   const definition = CARD_BY_ID[cardId]
@@ -683,7 +884,12 @@ export const buyCard = (
     `${playerId}-buy-${gameState.turnNumber}-${player.discardPile.length}`,
   )
   player.discardPile.push(nextCard)
+  player.purchasesThisTurn =
+    (player.purchasesThisTurn ?? (player.hasBoughtThisTurn ? 1 : 0)) + 1
   player.hasBoughtThisTurn = true
+  if (player.purchasesThisTurn >= 2) {
+    player.extraPurchaseAvailable = false
+  }
   gameState.marketPurchasedThisRound = true
   gameState.market = gameState.market.filter((entry) => entry !== cardId)
   replenishMarket(gameState)
@@ -693,12 +899,20 @@ export const buyCard = (
 export const endTurn = (gameState: GameState, playerId: string): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
+  if ((player.pendingDiscardCount ?? 0) > 0) {
+    error('INVALID_ACTION', 'Discard a card before ending the turn.')
+  }
   player.discardPile.push(...player.playedCards)
   player.playedCards = []
   player.availableMovement = createMovementPool()
   player.availableGold = 0
   player.hasBoughtThisTurn = false
+  player.purchasesThisTurn = 0
   player.hasSacrificedCardThisTurn = false
+  player.hasUsedActionCardThisTurn = false
+  player.extraPurchaseAvailable = false
+  player.shortcutMoveAvailable = false
+  player.guidedMoveAvailable = false
   let shouldSkipPlayer: boolean
   do {
     gameState.turnNumber += 1
@@ -912,9 +1126,7 @@ export const serializePublicGameState = (
       return {
         ...player,
         position,
-        ...(Number.isFinite(remainingRouteCost)
-          ? { remainingRouteCost }
-          : {}),
+        ...(Number.isFinite(remainingRouteCost) ? { remainingRouteCost } : {}),
         tokens: player.tokens?.map((token) => ({ ...token })) ?? [],
         claimedCampIds: [],
         revealedTileIds: [],

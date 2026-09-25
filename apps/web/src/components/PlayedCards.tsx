@@ -1,7 +1,7 @@
 import { CARD_BY_ID } from '@shared'
 import type { GameState, PlayerState } from '@shared'
 import { cardLabels, movementLabels } from '../labels.js'
-import { tokenPresentation } from './PlayerTokens.js'
+import { tokenPresentation } from '../tokenPresentation.js'
 
 export function PlayedCards({
   game,
@@ -64,15 +64,20 @@ export function PlayedCards({
                   >
                     <strong>{cardLabels[card.id]?.name ?? card.name}</strong>
                     <span>
-                      +
-                      {play.mode === 'GOLD'
-                        ? card.goldValue
-                        : card.movementValue}
+                      {play.mode === 'ACTION'
+                        ? '◆'
+                        : `+${
+                            play.mode === 'GOLD'
+                              ? card.goldValue
+                              : card.movementValue
+                          }`}
                     </span>
                     <small>
-                      {play.mode === 'GOLD'
-                        ? 'złota'
-                        : movementLabels[card.movementType]}
+                      {play.mode === 'ACTION'
+                        ? 'akcja jednorazowa'
+                        : play.mode === 'GOLD'
+                          ? 'złota'
+                          : movementLabels[card.movementType]}
                       {play.sacrificed ? ' · spalona' : ''}
                     </small>
                   </div>

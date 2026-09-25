@@ -98,6 +98,8 @@ interface GameStore {
     mode: CardPlayMode,
     sacrifice?: boolean,
   ) => void
+  useActionCard: (cardInstanceId: string, targetPlayerId?: string) => void
+  discardCard: (cardInstanceId: string) => void
   movePlayer: (targetHexId: string) => void
   buyCard: (cardId: string) => void
   useToken: (tokenInstanceId: string, targetPlayerId?: string) => void
@@ -333,6 +335,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cardInstanceId,
       mode,
       sacrifice,
+    })
+  },
+  useActionCard: (cardInstanceId, targetPlayerId) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.gameUseActionCard, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      cardInstanceId,
+      targetPlayerId,
+    })
+  },
+  discardCard: (cardInstanceId) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.gameDiscardCard, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      cardInstanceId,
     })
   },
   movePlayer: (targetHexId) => {

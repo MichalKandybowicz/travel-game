@@ -13,6 +13,8 @@ import {
   endTurn,
   movePlayer,
   playCard,
+  useActionCard as activateActionCard,
+  discardCard,
   removePlayer,
   serializePublicGameState,
   useToken as activateToken,
@@ -36,6 +38,8 @@ import {
   roomUpdatePlayerNameSchema,
   roomBotSchema,
   playCardSchema,
+  useActionCardSchema,
+  discardCardSchema,
   movePlayerSchema,
   buyCardSchema,
   useTokenSchema,
@@ -275,6 +279,7 @@ const chooseBotPurchase = (
   return game.market
     .map((cardId) => CARD_BY_ID[cardId])
     .filter((card): card is CardDefinition => Boolean(card))
+    .filter((card) => card.type === 'MOVEMENT')
     .filter((card) => card.purchaseCost <= possibleGold)
     .sort(
       (left, right) =>
@@ -303,6 +308,7 @@ const chooseBotGoldCard = (
       (entry): entry is { card: CardInstance; definition: CardDefinition } =>
         Boolean(entry.definition),
     )
+    .filter((entry) => entry.definition.type === 'MOVEMENT')
     .sort((left, right) => {
       const leftScore = cardPlanScore(left.definition, from, target)
       const rightScore = cardPlanScore(right.definition, from, target)
@@ -479,6 +485,19 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       }
 
       const player = game.players.find((entry) => entry.id === bot.id)!
+      if ((player.pendingDiscardCount ?? 0) > 0) {
+        const discard = player.hand.find(
+          (card) => CARD_BY_ID[card.cardId]?.type === 'MOVEMENT',
+        )
+        if (!discard) return
+        discardCard(game, bot.id, discard.instanceId)
+        logGameAction(room, bot.id, 'discard_card', {
+          cardInstanceId: discard.instanceId,
+          reason: 'action_card',
+        })
+        await emitRoom(io, room)
+        continue
+      }
       const currentTile = game.map.tiles.find(
         (tile) => tile.id === player.position,
       )!
@@ -490,6 +509,42 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         })
         await emitRoom(io, room)
         continue
+      }
+      const actionCard = !player.hasUsedActionCardThisTurn
+        ? player.hand.find((card) => {
+            const effect = CARD_BY_ID[card.cardId]?.actionEffect
+            return (
+              effect === 'GUIDE' ||
+              effect === 'SECOND_WIND' ||
+              effect === 'MERCHANT_CARAVAN' ||
+              effect === 'STEAL_PLANS'
+            )
+          })
+        : undefined
+      if (actionCard) {
+        const effect = CARD_BY_ID[actionCard.cardId]!.actionEffect
+        const targetPlayerId =
+          effect === 'STEAL_PLANS'
+            ? game.players.find(
+                (candidate) =>
+                  candidate.id !== bot.id && candidate.hand.length > 0,
+              )?.id
+            : undefined
+        if (effect !== 'STEAL_PLANS' || targetPlayerId) {
+          activateActionCard(
+            game,
+            bot.id,
+            actionCard.instanceId,
+            targetPlayerId,
+          )
+          logGameAction(room, bot.id, 'use_action_card', {
+            cardInstanceId: actionCard.instanceId,
+            cardId: actionCard.cardId,
+            targetPlayerId,
+          })
+          await emitRoom(io, room)
+          continue
+        }
       }
       const legalMove = canAffordMove(player, currentTile, target)
 
@@ -536,7 +591,9 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         player.hand.reduce(
           (sum, card) =>
             sum +
-            cardMovementFor(CARD_BY_ID[card.cardId]!, currentTile, target),
+            (CARD_BY_ID[card.cardId]?.type === 'MOVEMENT'
+              ? cardMovementFor(CARD_BY_ID[card.cardId]!, currentTile, target)
+              : 0),
           0,
         )
       const requiredMovement = getMoveRequirements(currentTile, target).reduce(
@@ -549,7 +606,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
               .filter((card) => {
                 const definition = CARD_BY_ID[card.cardId]
                 return (
-                  definition &&
+                  definition?.type === 'MOVEMENT' &&
                   cardMovementFor(definition, currentTile, target) > 0
                 )
               })
@@ -1370,6 +1427,88 @@ io.on('connection', (socket) => {
         cardId: room.gameState.roundPlayedCards.at(-1)?.cardId,
         mode: parsed.data.mode,
         sacrifice: parsed.data.sacrifice,
+      })
+      await emitRoom(io, room)
+      scheduleBotTurns(io, room)
+    } catch (caught) {
+      sendError(socket.id, io, caught as GameError)
+    }
+  })
+
+  socket.on(EVENTS.gameUseActionCard, async (payload: unknown) => {
+    const parsed = useActionCardSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room?.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_NOT_STARTED',
+        message: 'Game has not started.',
+      })
+      return
+    }
+    try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
+      activateActionCard(
+        room.gameState,
+        parsed.data.playerId,
+        parsed.data.cardInstanceId,
+        parsed.data.targetPlayerId,
+      )
+      logGameAction(room, parsed.data.playerId, 'use_action_card', {
+        cardInstanceId: parsed.data.cardInstanceId,
+        targetPlayerId: parsed.data.targetPlayerId,
+      })
+      await emitRoom(io, room)
+      scheduleBotTurns(io, room)
+    } catch (caught) {
+      sendError(socket.id, io, caught as GameError)
+    }
+  })
+
+  socket.on(EVENTS.gameDiscardCard, async (payload: unknown) => {
+    const parsed = discardCardSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room?.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_NOT_STARTED',
+        message: 'Game has not started.',
+      })
+      return
+    }
+    try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
+      discardCard(
+        room.gameState,
+        parsed.data.playerId,
+        parsed.data.cardInstanceId,
+      )
+      logGameAction(room, parsed.data.playerId, 'discard_card', {
+        cardInstanceId: parsed.data.cardInstanceId,
       })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)

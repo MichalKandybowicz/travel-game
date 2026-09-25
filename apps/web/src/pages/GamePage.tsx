@@ -25,6 +25,8 @@ export function GamePage() {
   const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
   const useToken = useGameStore((state) => state.useToken)
+  const useActionCard = useGameStore((state) => state.useActionCard)
+  const discardCard = useGameStore((state) => state.discardCard)
   const endTurn = useGameStore((state) => state.endTurn)
   const leaveFinishedGame = useGameStore((state) => state.leaveFinishedGame)
   const leaveRoom = useGameStore((state) => state.leaveRoom)
@@ -187,7 +189,8 @@ export function GamePage() {
                       {player.connected ? 'połączony' : 'rozłączony'}
                     </small>
                     <span title="Najniższa suma punktów ruchu potrzebna do celu">
-                      Do celu: <strong>{player.remainingRouteCost ?? '—'}</strong>
+                      Do celu:{' '}
+                      <strong>{player.remainingRouteCost ?? '—'}</strong>
                     </span>
                   </div>
                   <PlayedCards game={game} player={player} />
@@ -237,6 +240,8 @@ export function GamePage() {
               isActive={isActive}
               onPlayCard={playCard}
               onUseToken={useToken}
+              onUseActionCard={useActionCard}
+              onDiscardCard={discardCard}
               onEndTurn={endTurn}
               roundNumber={game.roundNumber ?? 1}
               market={

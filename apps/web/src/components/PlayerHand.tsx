@@ -1,5 +1,5 @@
 import { CARD_BY_ID } from '@shared'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { CardPlayMode, PlayerState } from '@shared'
 import { CardFace, MovementGlyph } from './CardFace.js'
 import { PlayerTokens } from './PlayerTokens.js'
@@ -31,6 +31,8 @@ interface PlayerHandProps {
   ) => void
   opponents: PlayerState[]
   onUseToken: (tokenInstanceId: string, targetPlayerId?: string) => void
+  onUseActionCard: (cardInstanceId: string, targetPlayerId?: string) => void
+  onDiscardCard: (cardInstanceId: string) => void
   onEndTurn: () => void
   roundNumber: number
   market?: ReactNode
@@ -42,10 +44,15 @@ export function PlayerHand({
   onPlayCard,
   opponents,
   onUseToken,
+  onUseActionCard,
+  onDiscardCard,
   onEndTurn,
   roundNumber,
   market,
 }: PlayerHandProps) {
+  const [actionTargetId, setActionTargetId] = useState(opponents[0]?.id ?? '')
+  const mustDiscard = (player?.pendingDiscardCount ?? 0) > 0
+
   return (
     <div className="panel hand-panel">
       <div className="panel-header">
@@ -89,7 +96,7 @@ export function PlayerHand({
           <button
             type="button"
             className="primary-button"
-            disabled={!isActive}
+            disabled={!isActive || mustDiscard}
             onClick={onEndTurn}
           >
             Zakończ turę
@@ -97,6 +104,12 @@ export function PlayerHand({
           {market}
         </div>
       </div>
+
+      {mustDiscard && (
+        <div className="pending-card-discard" role="status">
+          Drugi oddech: wybierz jedną kartę z ręki do odrzucenia.
+        </div>
+      )}
 
       <div className="hand-content">
         <div className="card-grid hand-card-grid">
@@ -112,42 +125,94 @@ export function PlayerHand({
                 data-movement={definition.movementType}
               >
                 <CardFace card={definition} />
-                <div className="hand-card-actions">
-                  <button
-                    type="button"
-                    disabled={!isActive}
-                    onClick={() => onPlayCard(card.instanceId, 'MOVEMENT')}
-                  >
-                    Ruch +{definition.movementValue}
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!isActive}
-                    onClick={() => onPlayCard(card.instanceId, 'GOLD')}
-                  >
-                    Złoto +{definition.goldValue}
-                  </button>
-                  <button
-                    type="button"
-                    className="sacrifice-card-action"
-                    disabled={!isActive || player.hasSacrificedCardThisTurn}
-                    title="Trwale usuwa kartę z talii i podwaja jej wartość ruchu"
-                    onClick={() =>
-                      onPlayCard(card.instanceId, 'MOVEMENT', true)
-                    }
-                  >
-                    Spal: ruch +{definition.movementValue * 2}
-                  </button>
-                  <button
-                    type="button"
-                    className="sacrifice-card-action"
-                    disabled={!isActive || player.hasSacrificedCardThisTurn}
-                    title="Trwale usuwa kartę z talii i podwaja jej wartość złota"
-                    onClick={() => onPlayCard(card.instanceId, 'GOLD', true)}
-                  >
-                    Spal: złoto +{definition.goldValue * 2}
-                  </button>
-                </div>
+                {definition.type === 'ACTION' ? (
+                  <div className="hand-card-actions hand-card-actions--action">
+                    {definition.actionEffect === 'STEAL_PLANS' && (
+                      <select
+                        aria-label="Cel kradzieży planów"
+                        value={actionTargetId}
+                        disabled={!isActive || mustDiscard}
+                        onChange={(event) =>
+                          setActionTargetId(event.target.value)
+                        }
+                      >
+                        {opponents.map((opponent) => (
+                          <option key={opponent.id} value={opponent.id}>
+                            {opponent.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      disabled={
+                        !isActive ||
+                        mustDiscard ||
+                        player.hasUsedActionCardThisTurn ||
+                        (definition.actionEffect === 'STEAL_PLANS' &&
+                          !actionTargetId)
+                      }
+                      onClick={() =>
+                        onUseActionCard(
+                          card.instanceId,
+                          definition.actionEffect === 'STEAL_PLANS'
+                            ? actionTargetId
+                            : undefined,
+                        )
+                      }
+                    >
+                      Użyj i usuń
+                    </button>
+                  </div>
+                ) : mustDiscard ? (
+                  <div className="hand-card-actions hand-card-actions--discard">
+                    <button
+                      type="button"
+                      className="sacrifice-card-action"
+                      disabled={!isActive}
+                      onClick={() => onDiscardCard(card.instanceId)}
+                    >
+                      Odrzuć tę kartę
+                    </button>
+                  </div>
+                ) : (
+                  <div className="hand-card-actions">
+                    <button
+                      type="button"
+                      disabled={!isActive}
+                      onClick={() => onPlayCard(card.instanceId, 'MOVEMENT')}
+                    >
+                      Ruch +{definition.movementValue}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!isActive}
+                      onClick={() => onPlayCard(card.instanceId, 'GOLD')}
+                    >
+                      Złoto +{definition.goldValue}
+                    </button>
+                    <button
+                      type="button"
+                      className="sacrifice-card-action"
+                      disabled={!isActive || player.hasSacrificedCardThisTurn}
+                      title="Trwale usuwa kartę z talii i podwaja jej wartość ruchu"
+                      onClick={() =>
+                        onPlayCard(card.instanceId, 'MOVEMENT', true)
+                      }
+                    >
+                      Spal: ruch +{definition.movementValue * 2}
+                    </button>
+                    <button
+                      type="button"
+                      className="sacrifice-card-action"
+                      disabled={!isActive || player.hasSacrificedCardThisTurn}
+                      title="Trwale usuwa kartę z talii i podwaja jej wartość złota"
+                      onClick={() => onPlayCard(card.instanceId, 'GOLD', true)}
+                    >
+                      Spal: złoto +{definition.goldValue * 2}
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}

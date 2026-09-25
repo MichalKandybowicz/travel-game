@@ -1,5 +1,5 @@
 import type { CardDefinition, MovementType } from '@shared'
-import { cardLabels, movementUnitLabel } from '../labels.js'
+import { cardDescription, cardLabels, movementUnitLabel } from '../labels.js'
 
 export function MovementGlyph({ type }: { type: MovementType }) {
   return (
@@ -41,6 +41,34 @@ export function CardFace({
   card: CardDefinition
   purchaseCost?: number
 }) {
+  if (card.type === 'ACTION') {
+    const symbols = {
+      MAP_SHORTCUT: '↝',
+      SECOND_WIND: '↻',
+      MERCHANT_CARAVAN: 'Ⅱ',
+      STEAL_PLANS: '⌁',
+      GUIDE: '◇',
+    } as const
+    return (
+      <span className="game-card__inner">
+        <span className="game-card__topline">Karta jednorazowa</span>
+        <strong className="game-card__name">
+          {cardLabels[card.id]?.name ?? card.name}
+        </strong>
+        <span className="game-card__art action-card-art" aria-hidden="true">
+          {card.actionEffect ? symbols[card.actionEffect] : '◆'}
+        </span>
+        <span className="game-card__action-effect">
+          {cardDescription(card)}
+        </span>
+        <span className="game-card__footer">
+          {purchaseCost === undefined
+            ? 'Po użyciu karta znika z talii'
+            : `Koszt: ${purchaseCost} złota · Jednorazowa`}
+        </span>
+      </span>
+    )
+  }
   return (
     <span className="game-card__inner">
       <span className="game-card__topline">Karta ruchu</span>

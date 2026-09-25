@@ -67,11 +67,29 @@ export const cardLabels: Record<string, { name: string }> = {
   adventurer: { name: 'Poszukiwacz przygód' },
   trailblazer: { name: 'Pionier' },
   wayfarer: { name: 'Wędrowiec' },
+  shortcut_map: { name: 'Mapa skrótów' },
+  second_wind: { name: 'Drugi oddech' },
+  merchant_caravan: { name: 'Karawana kupiecka' },
+  steal_plans: { name: 'Kradzież planów' },
+  guide: { name: 'Przewodnik' },
 }
 
 export function cardDescription(card: CardDefinition): string {
   if (card.id === 'hidden') {
     return 'Karta innego gracza.'
+  }
+  if (card.type === 'ACTION') {
+    const descriptions = {
+      MAP_SHORTCUT:
+        'Następny ruch może przeskoczyć przez jedno zablokowane pole.',
+      SECOND_WIND: 'Dobierz dwie karty, a następnie odrzuć jedną z ręki.',
+      MERCHANT_CARAVAN: 'Możesz kupić w tej turze drugą kartę.',
+      STEAL_PLANS: 'Wybrany przeciwnik odrzuca losową kartę z ręki.',
+      GUIDE: 'Następne sąsiednie przejście kosztuje 1 dowolnego ruchu.',
+    } as const
+    return card.actionEffect
+      ? descriptions[card.actionEffect]
+      : 'Jednorazowa karta akcji.'
   }
 
   const movement = `${card.movementValue} ${movementUnitLabel(

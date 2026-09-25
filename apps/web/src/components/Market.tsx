@@ -90,6 +90,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                   type="button"
                   className="card game-card market-card"
                   data-movement={card.movementType}
+                  data-card-type={card.type.toLowerCase()}
                   disabled={!canBuy}
                   title={cardDescription(card)}
                   onClick={() => {

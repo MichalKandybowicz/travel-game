@@ -7,11 +7,13 @@ import {
   chooseStart,
   createGameState,
   endTurn,
+  discardCard,
   getMoveRequirements,
   movePlayer,
   playCard,
   removePlayer,
   serializePublicGameState,
+  useActionCard,
   useToken,
 } from './GameEngine.js'
 import { buildStartingDeck } from './Deck.js'
@@ -226,12 +228,14 @@ describe('GameEngine', () => {
     target.isBlocked = false
     game.players[1]!.position = target.id
     player.availableMovement.GREEN = 1
+    player.availableMovement.WILD = 1
     game.settings.allowSharedTiles = false
 
     expect(() => movePlayer(game, 'p1', target.id)).toThrow(
       expect.objectContaining({ code: 'HEX_OCCUPIED' }),
     )
     expect(player.availableMovement.GREEN).toBe(1)
+    expect(player.availableMovement.WILD).toBe(1)
 
     game.settings.allowSharedTiles = true
     movePlayer(game, 'p1', target.id)
@@ -287,7 +291,7 @@ describe('GameEngine', () => {
       game.market.every((cardId) => MARKET_CARD_IDS.includes(cardId)),
     ).toBe(true)
 
-    for (let index = 0; index < 12; index += 1) {
+    for (let index = 0; index < 20; index += 1) {
       const cardId = game.market[0]!
       const cost = CARD_BY_ID[cardId]!.purchaseCost
       player.availableGold = cost
@@ -310,15 +314,131 @@ describe('GameEngine', () => {
     expect(serializePublicGameState(game, 'p1').marketDrawPile).toEqual([])
   })
 
-  it('keeps starter cards out of an affordable market', () => {
+  it('keeps starter cards out and maintains healthy market offers', () => {
     expect(MARKET_CARD_IDS).not.toEqual(
       expect.arrayContaining(['explorer', 'sailor', 'coin']),
     )
+    const game = buildTestGame()
     expect(
-      MARKET_CARD_IDS.every(
+      game.market.some(
         (cardId) => (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6,
       ),
     ).toBe(true)
+    expect(
+      game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION'),
+    ).toHaveLength(
+      Math.min(
+        2,
+        game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
+          .length,
+      ),
+    )
+    expect(
+      game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
+        .length,
+    ).toBeLessThanOrEqual(2)
+  })
+
+  it('uses second wind once, draws two and requires one discard', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const handSize = player.hand.length
+    player.hand.push({
+      cardId: 'second_wind',
+      instanceId: 'second-wind-test',
+    })
+
+    useActionCard(game, player.id, 'second-wind-test')
+
+    expect(player.removedCards.at(-1)?.cardId).toBe('second_wind')
+    expect(player.hand).toHaveLength(handSize + 2)
+    expect(player.pendingDiscardCount).toBe(1)
+    expect(() => endTurn(game, player.id)).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+    discardCard(game, player.id, player.hand[0]!.instanceId)
+    expect(player.pendingDiscardCount).toBe(0)
+    expect(player.hand).toHaveLength(handSize + 1)
+  })
+
+  it('allows a second market purchase after using merchant caravan', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.hand.push({
+      cardId: 'merchant_caravan',
+      instanceId: 'merchant-caravan-test',
+    })
+    useActionCard(game, player.id, 'merchant-caravan-test')
+    player.availableGold = 30
+
+    buyCard(game, player.id, game.market[0]!)
+    buyCard(game, player.id, game.market[0]!)
+
+    expect(player.hasBoughtThisTurn).toBe(true)
+    expect(player.extraPurchaseAvailable).toBe(false)
+    expect(() => buyCard(game, player.id, game.market[0]!)).toThrow(
+      expect.objectContaining({ code: 'PURCHASE_LIMIT' }),
+    )
+  })
+
+  it('steals plans by discarding a random opponent card', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const opponent = game.players[1]!
+    player.hand.push({
+      cardId: 'steal_plans',
+      instanceId: 'steal-plans-test',
+    })
+    const opponentHandSize = opponent.hand.length
+
+    useActionCard(game, player.id, 'steal-plans-test', opponent.id)
+
+    expect(opponent.hand).toHaveLength(opponentHandSize - 1)
+    expect(opponent.discardPile).toHaveLength(1)
+    expect(player.removedCards.at(-1)?.cardId).toBe('steal_plans')
+  })
+
+  it('makes the next adjacent move cost one after using guide', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const target = findReachableTile(game, 'JUNGLE')
+    target.difficulty = 4
+    player.hand.push({ cardId: 'guide', instanceId: 'guide-test' })
+    player.availableMovement.WILD = 1
+
+    useActionCard(game, player.id, 'guide-test')
+    movePlayer(game, player.id, target.id)
+
+    expect(player.availableMovement.WILD).toBe(0)
+    expect(player.guidedMoveAvailable).toBe(false)
+  })
+
+  it('allows shortcut map to jump over one blocked tile', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const start = game.map.tiles.find((tile) => tile.id === player.position)!
+    const blocked = getNeighbors(game.map.tiles, start)[0]!
+    blocked.terrain = 'MOUNTAIN'
+    blocked.isBlocked = true
+    const target = getNeighbors(game.map.tiles, blocked).find(
+      (tile) =>
+        tile.id !== start.id &&
+        axialDistance(start, tile) === 2 &&
+        !tile.isBlocked,
+    )!
+    target.terrain = 'JUNGLE'
+    target.difficulty = 1
+    player.hand.push({
+      cardId: 'shortcut_map',
+      instanceId: 'shortcut-map-test',
+    })
+    player.availableMovement.GREEN = 1
+
+    useActionCard(game, player.id, 'shortcut-map-test')
+    movePlayer(game, player.id, target.id)
+
+    expect(player.position).toBe(target.id)
+    expect(player.shortcutMoveAvailable).toBe(false)
   })
 
   it('replaces every unsold offer after a round without purchases', () => {

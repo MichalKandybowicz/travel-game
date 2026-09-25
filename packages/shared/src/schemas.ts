@@ -101,6 +101,25 @@ export const playCardSchema = z.object({
   sacrifice: z.boolean().default(false),
 })
 
+export const useActionCardSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  cardInstanceId: z.string(),
+  targetPlayerId: z.string().optional(),
+})
+
+export const discardCardSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  cardInstanceId: z.string(),
+})
+
 export const movePlayerSchema = z.object({
   roomCode: z
     .string()
