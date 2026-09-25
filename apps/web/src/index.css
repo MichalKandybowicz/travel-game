@@ -326,7 +326,7 @@ select {
 
 .hex-map {
   width: 100%;
-  min-height: 520px;
+  height: 400px;
   background: #020617;
   border-radius: 16px;
   cursor: grab;
