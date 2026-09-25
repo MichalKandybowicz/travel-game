@@ -217,12 +217,16 @@ describe('GameEngine', () => {
     playCard(game, 'p1', 'sailor-test')
     playCard(game, 'p1', 'trader-test')
 
-    expect(player.availableMovement.BLUE).toBe(2)
-    expect(player.availableMovement.YELLOW).toBe(3)
+    expect(player.availableMovement.BLUE).toBe(
+      CARD_BY_ID.seasoned_sailor!.movementValue,
+    )
+    expect(player.availableMovement.YELLOW).toBe(
+      CARD_BY_ID.master_trader!.movementValue,
+    )
     expect(player.availableGold).toBe(0)
   })
 
-  it('exchanges a coin for two gold and another card for one gold', () => {
+  it('exchanges cards for the gold value in their definitions', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     player.hand.push(
@@ -233,7 +237,9 @@ describe('GameEngine', () => {
     playCard(game, 'p1', 'coin-test', 'GOLD')
     playCard(game, 'p1', 'explorer-test', 'GOLD')
 
-    expect(player.availableGold).toBe(3)
+    expect(player.availableGold).toBe(
+      CARD_BY_ID.coin!.goldValue + CARD_BY_ID.explorer!.goldValue,
+    )
     expect(player.availableMovement).toEqual({
       GREEN: 0,
       BLUE: 0,

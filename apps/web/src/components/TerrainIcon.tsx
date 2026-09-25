@@ -60,11 +60,11 @@ export function TerrainIcon({ terrain }: { terrain: TerrainType }) {
           />
         </>
       )}
-      {terrain === 'VILLAGE' && (
+      {terrain === 'DESERT' && (
         <>
-          <path d="M-9-1L0-8L9-1" fill="#fef3c7" />
-          <path d="M-7-1V7H7V-1Z" fill="#fffbeb" />
-          <path d="M-2 7V2H2V7M4 1H5" />
+          <path d="M-11 5Q-5-2 1 4Q6-1 11 4V8H-11Z" fill="#fde68a" />
+          <path d="M-10 7Q-2 2 5 7M-4-3Q0-7 4-3" stroke="#92400e" />
+          <circle cx="7" cy="-6" r="2.5" fill="#fef08a" stroke="none" />
         </>
       )}
       {terrain === 'RUBBLE' && (

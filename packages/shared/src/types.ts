@@ -2,7 +2,7 @@ export type TerrainType =
   | 'UNKNOWN'
   | 'JUNGLE'
   | 'WATER'
-  | 'VILLAGE'
+  | 'DESERT'
   | 'RUBBLE'
   | 'CAMP'
   | 'MOUNTAIN'
@@ -38,7 +38,7 @@ export interface MapAnalysis {
   routeCount: number
   junglePercent: number
   waterPercent: number
-  villagePercent: number
+  desertPercent: number
   mountainPercent: number
   difficultyScore: number
 }

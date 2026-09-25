@@ -3,7 +3,7 @@ import type { GameMap, MapSettings } from '../../shared/src/index.js'
 import { mapSettingsSchema } from '../../shared/src/index.js'
 import { analyzeMap, countDistinctRoutesFromStart } from './MapAnalyzer.js'
 import { generateMap } from './MapGenerator.js'
-import { getNeighbors } from './HexGrid.js'
+import { axialDistance, getNeighbors, HEX_DIRECTIONS } from './HexGrid.js'
 
 const settings: MapSettings = {
   seed: 'JUNGLE-92841',
@@ -128,6 +128,72 @@ describe('generateMap', () => {
     }
   })
 
+  it('uses terrain cost ranges and creates spaced camps, mountain groups and water bodies', () => {
+    const ranges = {
+      JUNGLE: [1, 4],
+      WATER: [1, 3],
+      DESERT: [1, 4],
+      RUBBLE: [2, 4],
+      CAMP: [1, 5],
+    } as const
+    for (const [mapSize, petalCount] of [
+      ['SMALL', 3],
+      ['MEDIUM', 6],
+      ['LARGE', 12],
+    ] as const) {
+      const map = generateMap({ ...settings, mapSize, petalCount })
+      const byCoordinate = new Map(
+        map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile]),
+      )
+      const neighborsOf = (tile: (typeof map.tiles)[number]) =>
+        HEX_DIRECTIONS.map(([dq, dr]) =>
+          byCoordinate.get(`${tile.q + dq},${tile.r + dr}`),
+        ).filter((neighbor) => neighbor !== undefined)
+      for (const tile of map.tiles) {
+        if (tile.terrain in ranges) {
+          const [min, max] = ranges[tile.terrain as keyof typeof ranges]
+          expect(tile.difficulty).toBeGreaterThanOrEqual(min)
+          expect(tile.difficulty).toBeLessThanOrEqual(max)
+        }
+      }
+      const camps = map.tiles.filter((tile) => tile.terrain === 'CAMP')
+      expect(camps).toHaveLength(petalCount)
+      expect(new Set(camps.map((tile) => tile.petalId)).size).toBe(petalCount)
+      for (let left = 0; left < camps.length; left += 1) {
+        for (let right = left + 1; right < camps.length; right += 1) {
+          expect(
+            axialDistance(camps[left]!, camps[right]!),
+          ).toBeGreaterThanOrEqual(3)
+        }
+      }
+      for (const terrain of ['MOUNTAIN', 'WATER'] as const) {
+        const visited = new Set<string>()
+        const componentSizes: number[] = []
+        for (const tile of map.tiles.filter(
+          (entry) => entry.terrain === terrain,
+        )) {
+          if (visited.has(tile.id)) continue
+          const queue = [tile]
+          visited.add(tile.id)
+          for (let index = 0; index < queue.length; index += 1) {
+            for (const neighbor of neighborsOf(queue[index]!)) {
+              if (neighbor.terrain !== terrain || visited.has(neighbor.id))
+                continue
+              visited.add(neighbor.id)
+              queue.push(neighbor)
+            }
+          }
+          componentSizes.push(queue.length)
+        }
+        expect(componentSizes.length).toBeGreaterThan(0)
+        for (const size of componentSizes) {
+          expect(size).toBeGreaterThanOrEqual(terrain === 'MOUNTAIN' ? 3 : 2)
+          if (terrain === 'MOUNTAIN') expect(size).toBeLessThanOrEqual(5)
+        }
+      }
+    }
+  })
+
   it('counts distinct reachable branches from the start on a handcrafted map', () => {
     const map: GameMap = {
       startHexId: 'start',
@@ -137,7 +203,7 @@ describe('generateMap', () => {
         routeCount: 0,
         junglePercent: 0,
         waterPercent: 0,
-        villagePercent: 0,
+        desertPercent: 0,
         mountainPercent: 0,
         difficultyScore: 0,
       },
@@ -170,7 +236,7 @@ describe('generateMap', () => {
           id: 'mid-a',
           q: 1,
           r: 1,
-          terrain: 'VILLAGE',
+          terrain: 'DESERT',
           difficulty: 1,
           isBlocked: false,
         },

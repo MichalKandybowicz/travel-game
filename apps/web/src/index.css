@@ -311,6 +311,13 @@ select {
   min-height: 520px;
   background: #020617;
   border-radius: 16px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.hex-map:active {
+  cursor: grabbing;
 }
 
 .hex-difficulty {

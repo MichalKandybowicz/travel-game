@@ -86,28 +86,32 @@ W poczekalni można wybrać mgłę wojny:
 
 Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z nim. W trybach dynamicznych wcześniej widziane, ale obecnie odległe pola są ponownie zakrywane.
 
-W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Moneta zamieniona na złoto daje **2 sztuki**, każda inna karta daje **1 sztukę**. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
+W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Liczba punktów ruchu i złota wynika z wartości zapisanych na danej karcie; interfejs tworzy opisy z tych samych danych. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
 
-Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte do wioski. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju.
+Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte na pustyni. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju.
+
+Mapę można przesuwać przeciąganiem myszą, a przybliżać i oddalać kółkiem myszy. Przyciski kierunkowe i skali pozostają dostępne.
 
 Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
 
-| Teren     | Koszt wejścia                                     | Efekt                                                                  |
-| --------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
-| Dżungla   | Liczba na polu, zielone lub uniwersalne punkty    | Brak dodatkowego efektu.                                               |
-| Woda      | Liczba na polu, niebieskie lub uniwersalne punkty | Brak dodatkowego efektu.                                               |
-| Wioska    | Liczba na polu, żółte lub uniwersalne punkty      | Brak dodatkowego efektu.                                               |
-| Rumowisko | Liczba na polu (1–3), punkty dowolnego koloru     | Brak dodatkowego efektu.                                               |
-| Obóz      | 1 punkt dowolnego koloru                          | Obecnie brak dodatkowego efektu. Usuwanie kart z talii jest planowane. |
-| Góry      | Nie można wejść                                   | Pole zablokowane.                                                      |
-| Start     | 1 punkt dowolnego koloru przy ponownym wejściu    | Miejsce początkowe graczy.                                             |
-| Cel       | 1 punkt dowolnego koloru                          | Wejście kończy grę zwycięstwem.                                        |
+| Teren     | Koszt wejścia                                  | Efekt                                                                  |
+| --------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
+| Dżungla   | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                               |
+| Woda      | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                               |
+| Pustynia  | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                               |
+| Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                               |
+| Obóz      | 1–5 punktów dowolnego koloru                   | Obecnie brak dodatkowego efektu. Usuwanie kart z talii jest planowane. |
+| Góry      | Nie można wejść                                | Pole zablokowane.                                                      |
+| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Miejsce początkowe graczy.                                             |
+| Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                                        |
+
+Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego obozu na płatek mapy. Obozy dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 
 Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku kolejnej tury gracz dobiera karty do stanu 4 na ręce. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
 Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte) i **1 Żeglarza** (niebieski).
 
-Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Wśród mocniejszych kart są **Przewodnik** (+4 zielone punkty ruchu, koszt 7), **Kapitan** (+3 niebieskie, koszt 6), **Karawana** (+4 żółte, koszt 7) i **Pionier** (+2 dowolne, koszt 7). Każdą z nich można zamiast ruchu zamienić na 1 sztukę złota.
+Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Wśród mocniejszych kart są **Przewodnik**, **Kapitan**, **Karawana** i **Pionier**. Ich ruch, wartość w złocie i cena są pokazywane na podstawie aktualnych definicji kart.
 
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
 

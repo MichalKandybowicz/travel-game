@@ -1,6 +1,6 @@
 import { canAffordMove, getTerrainCost } from '@game-engine'
 import type { GameState, HexTile } from '@shared'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { movementLabels, terrainLabels } from '../labels.js'
 import { playerColor } from '../playerColors.js'
 import { TerrainIcon } from './TerrainIcon.js'
@@ -11,7 +11,7 @@ const tileColors: Record<HexTile['terrain'], string> = {
   GOAL: '#f97316',
   JUNGLE: '#22c55e',
   WATER: '#38bdf8',
-  VILLAGE: '#facc15',
+  DESERT: '#eabf65',
   RUBBLE: '#a8a29e',
   CAMP: '#c084fc',
   MOUNTAIN: '#334155',
@@ -21,7 +21,7 @@ const terrainOrder: HexTile['terrain'][] = [
   'START',
   'JUNGLE',
   'WATER',
-  'VILLAGE',
+  'DESERT',
   'RUBBLE',
   'CAMP',
   'MOUNTAIN',
@@ -31,12 +31,11 @@ const terrainOrder: HexTile['terrain'][] = [
 const terrainRules: Record<HexTile['terrain'], string> = {
   UNKNOWN: 'Typ i koszt pola pozostają ukryte.',
   START: 'Powrót kosztuje 1 punkt dowolnego koloru.',
-  JUNGLE: 'Koszt z pola: zielone lub uniwersalne punkty.',
-  WATER: 'Koszt z pola: niebieskie lub uniwersalne punkty.',
-  VILLAGE: 'Koszt z pola: żółte lub uniwersalne punkty.',
-  RUBBLE:
-    'Koszt z pola (1–3): punkty dowolnego koloru. Bez dodatkowego efektu.',
-  CAMP: 'Koszt 1 punkt dowolnego koloru. Obecnie bez dodatkowego efektu.',
+  JUNGLE: 'Koszt wejścia 1–4: zielone lub uniwersalne punkty.',
+  WATER: 'Koszt wejścia 1–3: niebieskie lub uniwersalne punkty.',
+  DESERT: 'Koszt wejścia 1–4: żółte lub uniwersalne punkty.',
+  RUBBLE: 'Koszt wejścia 2–4: punkty dowolnego koloru.',
+  CAMP: 'Koszt wejścia 1–5: punkty dowolnego koloru.',
   MOUNTAIN: 'Pole zablokowane; nie można na nie wejść.',
   GOAL: 'Wejście kosztuje 1 punkt dowolnego koloru i kończy grę zwycięstwem.',
 }
@@ -81,9 +80,20 @@ interface HexMapProps {
 }
 
 export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
-  const [zoom, setZoom] = useState(1)
-  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const [view, setView] = useState({ zoom: 1, pan: { x: 0, y: 0 } })
+  const { zoom, pan } = view
   const [selectedHexId, setSelectedHexId] = useState<string>()
+  const svgRef = useRef<SVGSVGElement>(null)
+  const dragRef = useRef<{
+    pointerId: number
+    startX: number
+    startY: number
+    panX: number
+    panY: number
+    worldPerPixel: number
+    moved: boolean
+  } | null>(null)
+  const suppressClickRef = useRef(false)
   const localPlayer = game.players.find((player) => player.id === playerId)
   const currentTile = game.map.tiles.find(
     (tile) => tile.id === localPlayer?.position,
@@ -112,6 +122,49 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
       height: Math.max(440, maxY - minY + 72),
     }
   }, [currentTile, game.map.tiles, game.settings.fogMode])
+
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      const rect = svg.getBoundingClientRect()
+      if (!rect.width || !rect.height) return
+      setView((current) => {
+        const nextZoom = Math.max(
+          0.6,
+          Math.min(4, current.zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12)),
+        )
+        const oldWidth = mapView.width / current.zoom
+        const oldHeight = mapView.height / current.zoom
+        const screenScale = Math.min(
+          rect.width / oldWidth,
+          rect.height / oldHeight,
+        )
+        const fractionX =
+          (event.clientX -
+            rect.left -
+            (rect.width - oldWidth * screenScale) / 2) /
+          (oldWidth * screenScale)
+        const fractionY =
+          (event.clientY -
+            rect.top -
+            (rect.height - oldHeight * screenScale) / 2) /
+          (oldHeight * screenScale)
+        const nextWidth = mapView.width / nextZoom
+        const nextHeight = mapView.height / nextZoom
+        return {
+          zoom: nextZoom,
+          pan: {
+            x: current.pan.x + (fractionX - 0.5) * (oldWidth - nextWidth),
+            y: current.pan.y + (fractionY - 0.5) * (oldHeight - nextHeight),
+          },
+        }
+      })
+    }
+    svg.addEventListener('wheel', handleWheel, { passive: false })
+    return () => svg.removeEventListener('wheel', handleWheel)
+  }, [mapView])
 
   const reachable = useMemo(() => {
     if (!localPlayer || !currentTile) {
@@ -151,10 +204,13 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
             onClick={() => {
               if (currentTile) {
                 const point = hexToPixel(currentTile.q, currentTile.r, 24)
-                setPan({
-                  x: point.x - mapView.centerX,
-                  y: point.y - mapView.centerY,
-                })
+                setView((current) => ({
+                  ...current,
+                  pan: {
+                    x: point.x - mapView.centerX,
+                    y: point.y - mapView.centerY,
+                  },
+                }))
               }
             }}
           >
@@ -162,47 +218,140 @@ export function HexMap({ game, playerId, isActive, onSelectHex }: HexMapProps) {
           </button>
           <button
             type="button"
-            onClick={() => setZoom((value) => Math.min(4, value + 0.2))}
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                zoom: Math.min(4, current.zoom + 0.2),
+              }))
+            }
           >
             +
           </button>
           <button
             type="button"
-            onClick={() => setZoom((value) => Math.max(0.6, value - 0.2))}
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                zoom: Math.max(0.6, current.zoom - 0.2),
+              }))
+            }
           >
             -
           </button>
           <button
             type="button"
-            onClick={() => setPan((state) => ({ ...state, x: state.x - 20 }))}
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                pan: { ...current.pan, x: current.pan.x - 20 },
+              }))
+            }
           >
             ←
           </button>
           <button
             type="button"
-            onClick={() => setPan((state) => ({ ...state, x: state.x + 20 }))}
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                pan: { ...current.pan, x: current.pan.x + 20 },
+              }))
+            }
           >
             →
           </button>
           <button
             type="button"
-            onClick={() => setPan((state) => ({ ...state, y: state.y - 20 }))}
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                pan: { ...current.pan, y: current.pan.y - 20 },
+              }))
+            }
           >
             ↑
           </button>
           <button
             type="button"
-            onClick={() => setPan((state) => ({ ...state, y: state.y + 20 }))}
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                pan: { ...current.pan, y: current.pan.y + 20 },
+              }))
+            }
           >
             ↓
           </button>
         </div>
       </div>
       <svg
+        ref={svgRef}
         viewBox={`${mapView.centerX + pan.x - mapView.width / (2 * zoom)} ${mapView.centerY + pan.y - mapView.height / (2 * zoom)} ${mapView.width / zoom} ${mapView.height / zoom}`}
         className="hex-map"
         role="img"
         aria-label="Mapa gry"
+        onPointerDown={(event) => {
+          if (event.button !== 0) return
+          const rect = event.currentTarget.getBoundingClientRect()
+          dragRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            panX: pan.x,
+            panY: pan.y,
+            worldPerPixel: Math.max(
+              mapView.width / zoom / rect.width,
+              mapView.height / zoom / rect.height,
+            ),
+            moved: false,
+          }
+        }}
+        onPointerMove={(event) => {
+          const drag = dragRef.current
+          if (!drag || drag.pointerId !== event.pointerId) return
+          if (event.buttons === 0) {
+            dragRef.current = null
+            return
+          }
+          const deltaX = event.clientX - drag.startX
+          const deltaY = event.clientY - drag.startY
+          if (!drag.moved && Math.hypot(deltaX, deltaY) < 5) return
+          if (!drag.moved) {
+            event.currentTarget.setPointerCapture(event.pointerId)
+          }
+          drag.moved = true
+          suppressClickRef.current = true
+          setView((current) => ({
+            ...current,
+            pan: {
+              x: drag.panX - deltaX * drag.worldPerPixel,
+              y: drag.panY - deltaY * drag.worldPerPixel,
+            },
+          }))
+        }}
+        onPointerUp={(event) => {
+          if (dragRef.current?.pointerId !== event.pointerId) return
+          dragRef.current = null
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId)
+          }
+          window.setTimeout(() => {
+            suppressClickRef.current = false
+          }, 0)
+        }}
+        onPointerCancel={() => {
+          dragRef.current = null
+          suppressClickRef.current = false
+        }}
+        onPointerLeave={() => {
+          if (dragRef.current && !dragRef.current.moved) dragRef.current = null
+        }}
+        onClickCapture={(event) => {
+          if (!suppressClickRef.current) return
+          event.preventDefault()
+          event.stopPropagation()
+          suppressClickRef.current = false
+        }}
       >
         <g>
           {game.map.tiles.map((tile) => {

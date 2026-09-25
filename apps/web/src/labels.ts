@@ -7,13 +7,41 @@ export const movementLabels: Record<MovementType, string> = {
   WILD: 'dowolne',
 }
 
+const movementSingular: Record<MovementType, string> = {
+  GREEN: 'zielony',
+  BLUE: 'niebieski',
+  YELLOW: 'żółty',
+  WILD: 'dowolny',
+}
+
+const movementGenitive: Record<MovementType, string> = {
+  GREEN: 'zielonych',
+  BLUE: 'niebieskich',
+  YELLOW: 'żółtych',
+  WILD: 'dowolnych',
+}
+
+const usesNominativePlural = (value: number): boolean =>
+  value % 10 >= 2 && value % 10 <= 4 && (value % 100 < 12 || value % 100 > 14)
+
+export const movementUnitLabel = (
+  type: MovementType,
+  value: number,
+): string => {
+  if (value === 1) return `${movementSingular[type]} punkt ruchu`
+  if (usesNominativePlural(value)) {
+    return `${movementLabels[type]} punkty ruchu`
+  }
+  return `${movementGenitive[type]} punktów ruchu`
+}
+
 export const terrainLabels: Record<TerrainType, string> = {
   UNKNOWN: 'Nieodkryte',
   START: 'Start',
   GOAL: 'Cel',
   JUNGLE: 'Dżungla',
   WATER: 'Woda',
-  VILLAGE: 'Wioska',
+  DESERT: 'Pustynia',
   RUBBLE: 'Rumowisko',
   CAMP: 'Obóz',
   MOUNTAIN: 'Góry',
@@ -41,13 +69,18 @@ export function cardDescription(card: CardDefinition): string {
     return 'Karta innego gracza.'
   }
 
-  const movement = `${card.movementValue} ${movementLabels[card.movementType]} ${
-    card.movementValue === 1 ? 'punkt' : 'punkty'
-  } ruchu`
+  const movement = `${card.movementValue} ${movementUnitLabel(
+    card.movementType,
+    card.movementValue,
+  )}`
   const gold =
     card.goldValue > 0
       ? ` albo ${card.goldValue} ${
-          card.goldValue === 1 ? 'sztukę' : 'sztuki'
+          card.goldValue === 1
+            ? 'sztukę'
+            : usesNominativePlural(card.goldValue)
+              ? 'sztuki'
+              : 'sztuk'
         } złota`
       : ''
 

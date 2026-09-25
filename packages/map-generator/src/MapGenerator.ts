@@ -143,7 +143,7 @@ export const generateMap = (settings: MapSettings): GameMap => {
         routeCount: 0,
         junglePercent: 0,
         waterPercent: 0,
-        villagePercent: 0,
+        desertPercent: 0,
         mountainPercent: 0,
         difficultyScore: 0,
       },

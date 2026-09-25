@@ -89,7 +89,7 @@ export const getTerrainCost = (
       return 'GREEN'
     case 'WATER':
       return 'BLUE'
-    case 'VILLAGE':
+    case 'DESERT':
       return 'YELLOW'
     case 'RUBBLE':
     case 'CAMP':
@@ -464,7 +464,7 @@ export const serializePublicGameState = (
               routeCount: 0,
               junglePercent: 0,
               waterPercent: 0,
-              villagePercent: 0,
+              desertPercent: 0,
               mountainPercent: 0,
               difficultyScore: 0,
             },

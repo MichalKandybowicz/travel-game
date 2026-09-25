@@ -21,8 +21,17 @@ export function PlayerHand({
         <div className="hand-header-details">
           <strong>Ręka</strong>
           <small>
-            Dobieranie: {player?.drawPile.length ?? 0} / Odrzucone:{' '}
-            {player?.discardPile.length ?? 0}
+            {player && (
+              <div
+                className="hand-movement"
+                aria-label="Twoje dostępne punkty ruchu"
+              >
+                <span>Zielone: {player.availableMovement.GREEN}</span>
+                <span>Niebieskie: {player.availableMovement.BLUE}</span>
+                <span>Żółte: {player.availableMovement.YELLOW}</span>
+                <span>Dowolne: {player.availableMovement.WILD}</span>
+              </div>
+            )}
           </small>
         </div>
         <button
@@ -34,14 +43,7 @@ export function PlayerHand({
           Zakończ turę
         </button>
       </div>
-      {player && (
-        <div className="hand-movement" aria-label="Twoje dostępne punkty ruchu">
-          <span>Zielone: {player.availableMovement.GREEN}</span>
-          <span>Niebieskie: {player.availableMovement.BLUE}</span>
-          <span>Żółte: {player.availableMovement.YELLOW}</span>
-          <span>Dowolne: {player.availableMovement.WILD}</span>
-        </div>
-      )}
+
       <div className="card-grid hand-card-grid">
         {player?.hand.map((card) => {
           const definition = CARD_BY_ID[card.cardId]

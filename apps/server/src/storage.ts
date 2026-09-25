@@ -93,6 +93,26 @@ export async function connectStorage(url: string): Promise<Storage> {
             ? {
                 gameState: {
                   ...room.gameState,
+                  map: {
+                    ...room.gameState.map,
+                    tiles: room.gameState.map.tiles.map((tile) =>
+                      (tile.terrain as string) === 'VILLAGE'
+                        ? { ...tile, terrain: 'DESERT' as const }
+                        : tile,
+                    ),
+                    stats: {
+                      ...room.gameState.map.stats,
+                      desertPercent:
+                        room.gameState.map.stats.desertPercent ??
+                        (
+                          room.gameState.map
+                            .stats as typeof room.gameState.map.stats & {
+                            villagePercent?: number
+                          }
+                        ).villagePercent ??
+                        0,
+                    },
+                  },
                   settings: {
                     ...room.gameState.settings,
                     allowSharedTiles:

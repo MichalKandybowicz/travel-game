@@ -1,5 +1,5 @@
 import type { CardDefinition, MovementType } from '@shared'
-import { cardLabels, movementLabels } from '../labels.js'
+import { cardLabels, movementUnitLabel } from '../labels.js'
 
 function MovementGlyph({ type }: { type: MovementType }) {
   return (
@@ -52,7 +52,7 @@ export function CardFace({
       </span>
       <span className="game-card__effect">
         <strong>+{card.movementValue}</strong>
-        <span>{movementLabels[card.movementType]} punkty ruchu</span>
+        <span>{movementUnitLabel(card.movementType, card.movementValue)}</span>
       </span>
       <span className="game-card__footer">
         {purchaseCost === undefined

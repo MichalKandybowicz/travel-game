@@ -2,59 +2,197 @@ import type {
   GameDifficulty,
   HexTile,
   MapSettings,
-  TerrainType,
 } from '../../shared/src/index.js'
+import { axialDistance, getNeighborCoordinates, hexKey } from './HexGrid.js'
 import { SeededRandom } from './SeededRandom.js'
-import { getNeighbors } from './HexGrid.js'
 
-const difficultyWeights: Record<
-  GameDifficulty,
-  readonly [number, number, number]
-> = {
-  EASY: [0.6, 0.3, 0.1],
-  NORMAL: [0.35, 0.45, 0.2],
-  HARD: [0.2, 0.45, 0.35],
+type CostTerrain = 'JUNGLE' | 'WATER' | 'DESERT' | 'RUBBLE' | 'CAMP'
+
+const costRanges: Record<CostTerrain, readonly [number, number]> = {
+  JUNGLE: [1, 4],
+  WATER: [1, 3],
+  DESERT: [1, 4],
+  RUBBLE: [2, 4],
+  CAMP: [1, 5],
 }
 
-const pickWeightedTerrain = (
+const pickCost = (
+  random: SeededRandom,
+  difficulty: GameDifficulty,
+  terrain: CostTerrain,
+): number => {
+  const [min, max] = costRanges[terrain]
+  const roll = random.next()
+  const weighted =
+    difficulty === 'EASY'
+      ? roll ** 1.6
+      : difficulty === 'HARD'
+        ? Math.sqrt(roll)
+        : roll
+  return min + Math.min(max - min, Math.floor(weighted * (max - min + 1)))
+}
+
+const pickLandTerrain = (
   random: SeededRandom,
   settings: MapSettings,
-): TerrainType => {
-  const villageWeight = Math.max(
+): Exclude<CostTerrain, 'WATER' | 'CAMP'> => {
+  const desertWeight = Math.max(
     0.12,
     1 - settings.jungleDensity - settings.waterDensity - 0.12,
   )
-  const rubbleWeight = 0.12
-  const weights: Array<{ terrain: TerrainType; weight: number }> = [
-    { terrain: 'JUNGLE', weight: settings.jungleDensity },
-    { terrain: 'WATER', weight: settings.waterDensity },
-    { terrain: 'VILLAGE', weight: villageWeight },
-    { terrain: 'RUBBLE', weight: rubbleWeight },
-  ]
-  const total = weights.reduce((sum, entry) => sum + entry.weight, 0)
-  let value = random.next() * total
-  for (const entry of weights) {
-    value -= entry.weight
-    if (value <= 0) {
-      return entry.terrain
-    }
+  const weights = [settings.jungleDensity, desertWeight, 0.12]
+  let roll = random.next() * weights.reduce((sum, weight) => sum + weight, 0)
+  for (const [index, terrain] of (
+    ['JUNGLE', 'DESERT', 'RUBBLE'] as const
+  ).entries()) {
+    roll -= weights[index]!
+    if (roll <= 0) return terrain
   }
   return 'RUBBLE'
 }
 
-const pickDifficulty = (
+const buildNeighborLookup = (tiles: HexTile[]) => {
+  const byCoordinate = new Map(
+    tiles.map((tile) => [hexKey(tile.q, tile.r), tile]),
+  )
+  return (tile: HexTile): HexTile[] =>
+    getNeighborCoordinates(tile.q, tile.r)
+      .map(({ q, r }) => byCoordinate.get(hexKey(q, r)))
+      .filter((neighbor): neighbor is HexTile => Boolean(neighbor))
+}
+
+const placeMountainGroups = (
+  tiles: HexTile[],
+  routes: Set<string>,
+  protectedIds: Set<string>,
+  target: number,
   random: SeededRandom,
-  difficulty: GameDifficulty,
-): number => {
-  const [one, two] = difficultyWeights[difficulty]
-  const roll = random.next()
-  if (roll <= one) {
-    return 1
+  neighborsOf: (tile: HexTile) => HexTile[],
+): void => {
+  const mountains = new Set<string>()
+  while (target - mountains.size >= 3) {
+    const remaining = target - mountains.size
+    const sizes = [3, 4, 5].filter(
+      (size) =>
+        size <= remaining && (remaining - size === 0 || remaining - size >= 3),
+    )
+    const groupSize = random.pick(sizes)
+    const canJoinGroup = (tile: HexTile, group: Set<string>): boolean =>
+      !routes.has(tile.id) &&
+      !protectedIds.has(tile.id) &&
+      !mountains.has(tile.id) &&
+      !group.has(tile.id) &&
+      neighborsOf(tile).every((neighbor) => !mountains.has(neighbor.id))
+    let placed = false
+    for (const seed of random.shuffle(tiles)) {
+      if (!canJoinGroup(seed, new Set())) continue
+      const group = [seed]
+      const groupIds = new Set([seed.id])
+      while (group.length < groupSize) {
+        const frontier = [
+          ...new Map(
+            group
+              .flatMap(neighborsOf)
+              .filter((tile) => canJoinGroup(tile, groupIds))
+              .map((tile) => [tile.id, tile]),
+          ).values(),
+        ]
+        if (frontier.length === 0) break
+        const next = random.pick(frontier)
+        group.push(next)
+        groupIds.add(next.id)
+      }
+      if (group.length !== groupSize) continue
+      for (const tile of group) {
+        mountains.add(tile.id)
+        tile.terrain = 'MOUNTAIN'
+        tile.isBlocked = true
+        tile.difficulty = 0
+      }
+      placed = true
+      break
+    }
+    if (!placed) break
   }
-  if (roll <= one + two) {
-    return 2
+}
+
+const placeWaterBodies = (
+  tiles: HexTile[],
+  protectedIds: Set<string>,
+  target: number,
+  random: SeededRandom,
+  neighborsOf: (tile: HexTile) => HexTile[],
+): void => {
+  const water = new Set<string>()
+  const available = (tile: HexTile) =>
+    !tile.isBlocked && !protectedIds.has(tile.id) && !water.has(tile.id)
+
+  while (water.size < target) {
+    const remaining = target - water.size
+    const candidates = tiles.filter(
+      (tile) =>
+        available(tile) &&
+        (remaining === 1 || neighborsOf(tile).some(available)),
+    )
+    if (candidates.length === 0) break
+    const existingEdge = candidates.filter((tile) =>
+      neighborsOf(tile).some((neighbor) => water.has(neighbor.id)),
+    )
+    const seed = random.pick(
+      remaining < 3 && existingEdge.length > 0 ? existingEdge : candidates,
+    )
+    const body = [seed]
+    water.add(seed.id)
+    const river = random.next() < 0.5
+    const bodySize = Math.min(remaining, random.int(6, 16))
+    while (body.length < bodySize) {
+      const tip = body[body.length - 1]!
+      const frontier = river
+        ? neighborsOf(tip).filter(available)
+        : [
+            ...new Map(
+              body
+                .flatMap(neighborsOf)
+                .filter(available)
+                .map((tile) => [tile.id, tile]),
+            ).values(),
+          ]
+      if (frontier.length === 0) break
+      const next = random.pick(frontier)
+      water.add(next.id)
+      body.push(next)
+    }
+    for (const tile of body) tile.terrain = 'WATER'
   }
-  return 3
+}
+
+const placeCamps = (
+  tiles: HexTile[],
+  routes: Set<string>,
+  petalCount: number,
+  random: SeededRandom,
+): void => {
+  const camps: HexTile[] = []
+  for (let petalId = 0; petalId < petalCount; petalId += 1) {
+    const candidates = random.shuffle(
+      tiles.filter(
+        (tile) =>
+          tile.petalId === petalId &&
+          !tile.isBlocked &&
+          tile.terrain !== 'WATER' &&
+          tile.terrain !== 'START' &&
+          tile.terrain !== 'GOAL',
+      ),
+    )
+    const eligible = candidates.filter((tile) =>
+      camps.every((camp) => axialDistance(tile, camp) >= 3),
+    )
+    const camp = eligible.find((tile) => routes.has(tile.id)) ?? eligible[0]
+    if (!camp) continue
+    camp.terrain = 'CAMP'
+    camp.specialType = 'CAMP'
+    camps.push(camp)
+  }
 }
 
 export const applyTerrain = (
@@ -66,63 +204,50 @@ export const applyTerrain = (
   goalId: string,
 ): HexTile[] => {
   const tiles = grid.map((tile) => ({ ...tile }))
-  const protectedIds = new Set<string>([startId, goalId])
-  const offRouteTiles = tiles.filter(
-    (tile) => !routes.has(tile.id) && !protectedIds.has(tile.id),
+  const neighborsOf = buildNeighborLookup(tiles)
+  const protectedIds = new Set([startId, goalId])
+
+  placeMountainGroups(
+    tiles,
+    routes,
+    protectedIds,
+    Math.round(tiles.length * settings.mountainDensity),
+    random,
+    neighborsOf,
   )
-  const targetMountains = Math.floor(tiles.length * settings.mountainDensity)
 
-  for (const tile of random.shuffle(offRouteTiles).slice(0, targetMountains)) {
-    tile.terrain = 'MOUNTAIN'
-    tile.isBlocked = true
-    tile.difficulty = 3
+  for (const tile of tiles) {
+    if (!tile.isBlocked) tile.terrain = pickLandTerrain(random, settings)
   }
-
-  const traversable = tiles.filter(
-    (tile) => !tile.isBlocked && !protectedIds.has(tile.id),
+  placeWaterBodies(
+    tiles,
+    protectedIds,
+    Math.round(tiles.length * settings.waterDensity),
+    random,
+    neighborsOf,
   )
-  const routeTraversable = traversable.filter((tile) => routes.has(tile.id))
-  const offRouteTraversable = traversable.filter((tile) => !routes.has(tile.id))
-  const campCount = Math.floor(traversable.length * settings.specialTileDensity)
-  const campCandidates = random.shuffle(routeTraversable).slice(0, campCount)
-  for (const tile of campCandidates) {
-    tile.terrain = 'CAMP'
-    tile.specialType = 'CAMP'
-    tile.difficulty = 1
-  }
-
-  for (const tile of routeTraversable) {
-    if (tile.isBlocked || tile.terrain === 'CAMP') {
-      continue
-    }
-    tile.terrain = random.pick(['JUNGLE', 'WATER', 'VILLAGE'] as const)
-    tile.difficulty = Math.min(2, pickDifficulty(random, settings.difficulty))
-  }
-
-  for (const tile of offRouteTraversable) {
-    if (tile.isBlocked) {
-      continue
-    }
-    tile.terrain = pickWeightedTerrain(random, settings)
-    tile.difficulty = pickDifficulty(random, settings.difficulty)
-  }
 
   const startTile = tiles.find((tile) => tile.id === startId)!
-  startTile.terrain = 'START'
-  startTile.difficulty = 0
-  startTile.isBlocked = false
   const goalTile = tiles.find((tile) => tile.id === goalId)!
+  startTile.terrain = 'START'
   goalTile.terrain = 'GOAL'
-  goalTile.difficulty = 0
-  goalTile.isBlocked = false
+  if (settings.specialTileDensity > 0) {
+    placeCamps(tiles, routes, settings.petalCount ?? 1, random)
+  }
 
-  for (const tile of getNeighbors(tiles, startTile)) {
-    if (!tile.isBlocked) {
-      tile.difficulty = Math.min(tile.difficulty, 2)
-      if (tile.terrain === 'RUBBLE') {
-        tile.terrain = 'JUNGLE'
-      }
+  for (const tile of tiles) {
+    if (tile.terrain in costRanges) {
+      tile.difficulty = pickCost(
+        random,
+        settings.difficulty,
+        tile.terrain as CostTerrain,
+      )
     }
+  }
+  startTile.difficulty = 0
+  goalTile.difficulty = 0
+  for (const tile of neighborsOf(startTile)) {
+    if (!tile.isBlocked) tile.difficulty = Math.min(tile.difficulty, 2)
   }
 
   return tiles

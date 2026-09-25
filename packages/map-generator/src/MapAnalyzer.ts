@@ -105,7 +105,7 @@ export const analyzeMap = (map: GameMap): MapAnalysis => {
     Math.min(
       100,
       Math.round(
-        (shortestPathLength / Math.sqrt(map.petalCount ?? 1)) * 2 +
+        (shortestPathLength / (map.petalCount ?? 1)) * 2.5 +
           averageDifficulty * 12 +
           mountainPercent * 0.8 +
           Math.max(0, 4 - routeCount) * 5,
@@ -122,8 +122,8 @@ export const analyzeMap = (map: GameMap): MapAnalysis => {
     waterPercent: Math.round(
       ((terrainCounts.WATER ?? 0) / map.tiles.length) * 100,
     ),
-    villagePercent: Math.round(
-      ((terrainCounts.VILLAGE ?? 0) / map.tiles.length) * 100,
+    desertPercent: Math.round(
+      ((terrainCounts.DESERT ?? 0) / map.tiles.length) * 100,
     ),
     mountainPercent,
     difficultyScore,
