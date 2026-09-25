@@ -100,6 +100,7 @@ export const errorLabels: Record<string, string> = {
   NOT_ENOUGH_GOLD: 'Brakuje złota na zakup tej karty.',
   TOKEN_LIMIT: 'W tej rundzie wykorzystałeś już jeden żeton.',
   TOKEN_NOT_FOUND: 'Nie masz tego żetonu.',
+  MARKET_LOCKED: 'Sklep jest obecnie zablokowany klątwą.',
   PURCHASE_LIMIT: 'Możesz kupić tylko jedną kartę w swojej turze.',
   HEX_BLOCKED: 'To pole jest zablokowane.',
   HEX_OCCUPIED: 'To pole jest zajęte przez innego gracza.',

@@ -1410,6 +1410,20 @@ select {
   gap: 9px;
 }
 
+.token-action {
+  display: grid;
+  gap: 5px;
+}
+
+.token-action select {
+  max-width: 190px;
+  padding: 5px 8px;
+  border: 1px solid #6b7280;
+  border-radius: 8px;
+  background: #17262d;
+  color: #f8fafc;
+}
+
 .token {
   display: inline-flex;
   align-items: center;
@@ -1454,6 +1468,10 @@ select {
 
 .token[data-tone='market'] .token-icon {
   background: #7c2d12;
+}
+
+.token[data-tone='curse'] .token-icon {
+  background: #6b21a8;
 }
 
 .token:not(:disabled):hover {

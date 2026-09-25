@@ -6,6 +6,9 @@ export type TokenEffect =
   | { kind: 'SWAP_HAND' }
   | { kind: 'DRAW_CARD' }
   | { kind: 'REFRESH_MARKET' }
+  | { kind: 'CURSE_REMOVE_CARD' }
+  | { kind: 'CURSE_SKIP_LEADER' }
+  | { kind: 'CURSE_MARKET' }
 
 export interface TokenDefinition {
   type: TokenType
@@ -26,6 +29,9 @@ export const TOKEN_DEFINITIONS: readonly TokenDefinition[] = [
   { type: 'SWAP_HAND', effect: { kind: 'SWAP_HAND' } },
   { type: 'DRAW_CARD', effect: { kind: 'DRAW_CARD' } },
   { type: 'REFRESH_MARKET', effect: { kind: 'REFRESH_MARKET' } },
+  { type: 'CURSE_REMOVE_CARD', effect: { kind: 'CURSE_REMOVE_CARD' } },
+  { type: 'CURSE_SKIP_LEADER', effect: { kind: 'CURSE_SKIP_LEADER' } },
+  { type: 'CURSE_MARKET', effect: { kind: 'CURSE_MARKET' } },
 ]
 
 export const TOKEN_BY_TYPE = Object.fromEntries(

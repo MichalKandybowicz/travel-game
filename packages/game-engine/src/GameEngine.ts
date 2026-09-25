@@ -162,6 +162,57 @@ const nextPlayerId = (gameState: GameState): string => {
   return gameState.players[(index + 1) % gameState.players.length]!.id
 }
 
+const distanceToGoal = (gameState: GameState, player: PlayerState): number => {
+  const goalId = gameState.map.goalHexId
+  const visited = new Set([player.position])
+  let frontier = [player.position]
+  let distance = 0
+
+  while (frontier.length > 0) {
+    if (frontier.includes(goalId)) return distance
+    const next: string[] = []
+    for (const tileId of frontier) {
+      const tile = gameState.map.tiles.find((entry) => entry.id === tileId)
+      if (!tile) continue
+      for (const neighbor of getNeighbors(gameState.map.tiles, tile)) {
+        if (
+          visited.has(neighbor.id) ||
+          neighbor.isBlocked ||
+          neighbor.terrain === 'MOUNTAIN'
+        ) {
+          continue
+        }
+        visited.add(neighbor.id)
+        next.push(neighbor.id)
+      }
+    }
+    frontier = next
+    distance += 1
+  }
+  return Number.POSITIVE_INFINITY
+}
+
+const closestOpponentToGoal = (
+  gameState: GameState,
+  playerId: string,
+): PlayerState => {
+  const opponent = gameState.players
+    .filter((player) => player.id !== playerId)
+    .map((player, index) => ({
+      player,
+      index,
+      distance: distanceToGoal(gameState, player),
+    }))
+    .sort(
+      (left, right) =>
+        left.distance - right.distance || left.index - right.index,
+    )[0]?.player
+  if (!opponent) {
+    error('PLAYER_NOT_FOUND', 'There is no opponent to target.')
+  }
+  return opponent!
+}
+
 export interface PlayerSetup {
   id: string
   name: string
@@ -388,6 +439,7 @@ export const useToken = (
   gameState: GameState,
   playerId: string,
   tokenInstanceId: string,
+  targetPlayerId?: string,
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
@@ -438,6 +490,39 @@ export const useToken = (
       refreshMarket(gameState, `token:${token.instanceId}`)
       gameState.marketPurchasedThisRound = true
       break
+    case 'CURSE_REMOVE_CARD': {
+      if (!targetPlayerId || targetPlayerId === playerId) {
+        error('INVALID_ACTION', 'Choose an opponent for this curse.')
+      }
+      const target = findPlayer(gameState, targetPlayerId)
+      const candidates = [
+        ...target.drawPile.map((card, index) => ({
+          card,
+          pile: target.drawPile,
+          index,
+        })),
+        ...target.discardPile.map((card, index) => ({
+          card,
+          pile: target.discardPile,
+          index,
+        })),
+      ]
+      if (candidates.length === 0) {
+        error('INVALID_ACTION', 'The opponent has no removable cards.')
+      }
+      const selected = new SeededRandom(
+        `${gameState.seed}:${playerId}:token:${token.instanceId}:${targetPlayerId}`,
+      ).pick(candidates)
+      selected.pile.splice(selected.index, 1)
+      target.removedCards.push(selected.card)
+      break
+    }
+    case 'CURSE_SKIP_LEADER':
+      closestOpponentToGoal(gameState, playerId).skipNextTurn = true
+      break
+    case 'CURSE_MARKET':
+      gameState.marketLockedUntilPlayerId = playerId
+      break
   }
 
   player.tokens.splice(tokenIndex, 1)
@@ -452,6 +537,9 @@ export const buyCard = (
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
+  if (gameState.marketLockedUntilPlayerId) {
+    error('MARKET_LOCKED', 'The market is blocked by a curse.')
+  }
   if (player.hasBoughtThisTurn) {
     error('PURCHASE_LIMIT', 'You can buy only one card per turn.')
   }
@@ -484,16 +572,25 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.availableMovement = createMovementPool()
   player.availableGold = 0
   player.hasBoughtThisTurn = false
-  gameState.turnNumber += 1
-  gameState.currentPlayerId = nextPlayerId(gameState)
-  if (gameState.currentPlayerId === gameState.players[0]?.id) {
-    gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
-    gameState.roundPlayedCards = []
-    if (!(gameState.marketPurchasedThisRound ?? false)) {
-      refreshMarket(gameState, 'stale')
+  do {
+    gameState.turnNumber += 1
+    gameState.currentPlayerId = nextPlayerId(gameState)
+    if (gameState.currentPlayerId === gameState.players[0]?.id) {
+      gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
+      gameState.roundPlayedCards = []
+      if (!(gameState.marketPurchasedThisRound ?? false)) {
+        refreshMarket(gameState, 'stale')
+      }
+      gameState.marketPurchasedThisRound = false
     }
-    gameState.marketPurchasedThisRound = false
-  }
+    if (gameState.marketLockedUntilPlayerId === gameState.currentPlayerId) {
+      delete gameState.marketLockedUntilPlayerId
+    }
+    const skippedPlayer = findPlayer(gameState, gameState.currentPlayerId)
+    if (!skippedPlayer.skipNextTurn) break
+    skippedPlayer.skipNextTurn = false
+  } while (true)
+
   const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
   if (nextPlayer.hand.length < 4) {
     drawCards(

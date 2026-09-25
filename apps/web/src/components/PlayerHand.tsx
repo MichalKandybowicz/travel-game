@@ -8,7 +8,8 @@ interface PlayerHandProps {
   player: PlayerState | undefined
   isActive: boolean
   onPlayCard: (cardInstanceId: string, mode: CardPlayMode) => void
-  onUseToken: (tokenInstanceId: string) => void
+  opponents: PlayerState[]
+  onUseToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   onEndTurn: () => void
   roundNumber: number
   market?: ReactNode
@@ -18,6 +19,7 @@ export function PlayerHand({
   player,
   isActive,
   onPlayCard,
+  opponents,
   onUseToken,
   onEndTurn,
   roundNumber,
@@ -58,6 +60,7 @@ export function PlayerHand({
       {player && (
         <PlayerTokens
           player={player}
+          opponents={opponents}
           roundNumber={roundNumber}
           isActive={isActive}
           onUseToken={onUseToken}

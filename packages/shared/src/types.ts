@@ -24,6 +24,9 @@ export type TokenType =
   | 'SWAP_HAND'
   | 'DRAW_CARD'
   | 'REFRESH_MARKET'
+  | 'CURSE_REMOVE_CARD'
+  | 'CURSE_SKIP_LEADER'
+  | 'CURSE_MARKET'
 export type CardPlayMode = 'MOVEMENT' | 'GOLD'
 export type CardType = 'MOVEMENT'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
@@ -123,6 +126,7 @@ export interface PlayerState {
   tokens?: TokenInstance[]
   claimedCampIds?: string[]
   tokenUsedInRound?: number
+  skipNextTurn?: boolean
   isReady: boolean
   connected: boolean
 }
@@ -143,6 +147,7 @@ export interface GameState {
   marketDrawPile: string[]
   marketCycle: number
   marketPurchasedThisRound?: boolean
+  marketLockedUntilPlayerId?: string
   roundPlayedCards: Array<{
     instanceId: string
     playerId: string
@@ -197,6 +202,7 @@ export interface GameError {
     | 'PURCHASE_LIMIT'
     | 'TOKEN_LIMIT'
     | 'TOKEN_NOT_FOUND'
+    | 'MARKET_LOCKED'
     | 'HEX_BLOCKED'
     | 'HEX_OCCUPIED'
     | 'LEAVE_FAILED'

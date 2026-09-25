@@ -224,6 +224,9 @@ export function GamePage() {
           {!isChoosingStart && (
             <PlayerHand
               player={localPlayer}
+              opponents={game.players.filter(
+                (player) => player.id !== localPlayer?.id,
+              )}
               isActive={isActive}
               onPlayCard={playCard}
               onUseToken={useToken}

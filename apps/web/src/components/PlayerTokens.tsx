@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { TOKEN_BY_TYPE, type PlayerState, type TokenType } from '@shared'
 
 const movementLabels = {
@@ -30,24 +31,43 @@ const tokenPresentation = (
       return { icon: '+1', label: 'Dobierz dodatkową kartę', tone: 'utility' }
     case 'REFRESH_MARKET':
       return { icon: '⟳', label: 'Przelosuj sklep', tone: 'market' }
+    case 'CURSE_REMOVE_CARD':
+      return {
+        icon: '−1',
+        label: 'Usuń losową kartę rywala',
+        tone: 'curse',
+      }
+    case 'CURSE_SKIP_LEADER':
+      return {
+        icon: 'Ⅱ',
+        label: 'Pomiń turę lidera',
+        tone: 'curse',
+      }
+    case 'CURSE_MARKET':
+      return { icon: '×', label: 'Przeklnij sklep', tone: 'curse' }
   }
 }
 
 interface PlayerTokensProps {
   player: PlayerState
+  opponents: PlayerState[]
   roundNumber: number
   isActive: boolean
-  onUseToken: (tokenInstanceId: string) => void
+  onUseToken: (tokenInstanceId: string, targetPlayerId?: string) => void
 }
 
 export function PlayerTokens({
   player,
+  opponents,
   roundNumber,
   isActive,
   onUseToken,
 }: PlayerTokensProps) {
   const tokens = player.tokens ?? []
   const usedThisRound = player.tokenUsedInRound === roundNumber
+  const [targetPlayerId, setTargetPlayerId] = useState(
+    opponents[0]?.id ?? '',
+  )
 
   return (
     <section className="player-tokens" aria-label="Twoje żetony">
@@ -68,21 +88,46 @@ export function PlayerTokens({
         <div className="token-list">
           {tokens.map((token) => {
             const presentation = tokenPresentation(token.type)
+            const needsTarget = token.type === 'CURSE_REMOVE_CARD'
             return (
-              <button
-                key={token.instanceId}
-                type="button"
-                className="token"
-                data-tone={presentation.tone}
-                disabled={!isActive || usedThisRound}
-                title={presentation.label}
-                onClick={() => onUseToken(token.instanceId)}
-              >
-                <span className="token-icon" aria-hidden="true">
-                  {presentation.icon}
-                </span>
-                <span>{presentation.label}</span>
-              </button>
+              <div className="token-action" key={token.instanceId}>
+                {needsTarget && (
+                  <select
+                    aria-label="Przeciwnik objęty klątwą"
+                    value={targetPlayerId}
+                    disabled={!isActive || usedThisRound}
+                    onChange={(event) => setTargetPlayerId(event.target.value)}
+                  >
+                    {opponents.map((opponent) => (
+                      <option key={opponent.id} value={opponent.id}>
+                        {opponent.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  type="button"
+                  className="token"
+                  data-tone={presentation.tone}
+                  disabled={
+                    !isActive ||
+                    usedThisRound ||
+                    (needsTarget && !targetPlayerId)
+                  }
+                  title={presentation.label}
+                  onClick={() =>
+                    onUseToken(
+                      token.instanceId,
+                      needsTarget ? targetPlayerId : undefined,
+                    )
+                  }
+                >
+                  <span className="token-icon" aria-hidden="true">
+                    {presentation.icon}
+                  </span>
+                  <span>{presentation.label}</span>
+                </button>
+              </div>
             )
           })}
         </div>

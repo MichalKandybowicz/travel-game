@@ -122,4 +122,5 @@ export const useTokenSchema = z.object({
     .transform((value) => value.toUpperCase()),
   playerId: z.string(),
   tokenInstanceId: z.string(),
+  targetPlayerId: z.string().optional(),
 })

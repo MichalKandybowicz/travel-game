@@ -285,7 +285,7 @@ const chooseBotToken = (
   game: GameState,
   player: PlayerState,
   target: HexTile,
-): string | undefined => {
+): { tokenInstanceId: string; targetPlayerId?: string } | undefined => {
   if (
     player.tokenUsedInRound === (game.roundNumber ?? 1) ||
     !player.tokens?.length
@@ -310,7 +310,7 @@ const chooseBotToken = (
       currentMovement + movementForTarget(bonusPool, target) >= requiredMovement
     )
   })
-  if (movementToken) return movementToken.instanceId
+  if (movementToken) return { tokenInstanceId: movementToken.instanceId }
 
   const goldToken = player.tokens
     .map((token) => ({ token, effect: TOKEN_BY_TYPE[token.type].effect }))
@@ -333,7 +333,7 @@ const chooseBotToken = (
         )
       }),
     )
-  if (goldToken) return goldToken.token.instanceId
+  if (goldToken) return { tokenInstanceId: goldToken.token.instanceId }
 
   const possibleMovement =
     currentMovement +
@@ -346,16 +346,47 @@ const chooseBotToken = (
     const drawToken = player.tokens.find(
       (token) => token.type === 'DRAW_CARD',
     )
-    if (drawToken) return drawToken.instanceId
+    if (drawToken) return { tokenInstanceId: drawToken.instanceId }
     const swapToken = player.tokens.find(
       (token) => token.type === 'SWAP_HAND',
     )
-    if (swapToken && player.hand.length > 0) return swapToken.instanceId
+    if (swapToken && player.hand.length > 0) {
+      return { tokenInstanceId: swapToken.instanceId }
+    }
   }
 
   if (!chooseBotPurchase(game, player, target)) {
-    return player.tokens.find((token) => token.type === 'REFRESH_MARKET')
-      ?.instanceId
+    const refreshToken = player.tokens.find(
+      (token) => token.type === 'REFRESH_MARKET',
+    )
+    if (refreshToken) return { tokenInstanceId: refreshToken.instanceId }
+  }
+
+  const skipToken = player.tokens.find(
+    (token) => token.type === 'CURSE_SKIP_LEADER',
+  )
+  if (skipToken) return { tokenInstanceId: skipToken.instanceId }
+
+  const removableTarget = game.players.find(
+    (opponent) =>
+      opponent.id !== player.id &&
+      opponent.drawPile.length + opponent.discardPile.length > 0,
+  )
+  const removeToken = player.tokens.find(
+    (token) => token.type === 'CURSE_REMOVE_CARD',
+  )
+  if (removeToken && removableTarget) {
+    return {
+      tokenInstanceId: removeToken.instanceId,
+      targetPlayerId: removableTarget.id,
+    }
+  }
+
+  const marketCurse = player.tokens.find(
+    (token) => token.type === 'CURSE_MARKET',
+  )
+  if (marketCurse && !game.marketLockedUntilPlayerId) {
+    return { tokenInstanceId: marketCurse.instanceId }
   }
   return undefined
 }
@@ -400,9 +431,14 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      const tokenId = chooseBotToken(game, player, target)
-      if (tokenId) {
-        useToken(game, bot.id, tokenId)
+      const tokenChoice = chooseBotToken(game, player, target)
+      if (tokenChoice) {
+        useToken(
+          game,
+          bot.id,
+          tokenChoice.tokenInstanceId,
+          tokenChoice.targetPlayerId,
+        )
         await emitRoom(io, room)
         continue
       }
@@ -1285,6 +1321,7 @@ io.on('connection', (socket) => {
         room.gameState,
         parsed.data.playerId,
         parsed.data.tokenInstanceId,
+        parsed.data.targetPlayerId,
       )
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
