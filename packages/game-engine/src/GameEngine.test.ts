@@ -494,6 +494,35 @@ describe('GameEngine', () => {
     ])
   })
 
+  it('doubles one sacrificed card per turn and permanently removes it', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.hand.push(
+      { cardId: 'coin', instanceId: 'sacrificed-coin' },
+      { cardId: 'explorer', instanceId: 'second-sacrifice' },
+    )
+
+    playCard(game, player.id, 'sacrificed-coin', 'MOVEMENT', true)
+
+    expect(player.availableMovement.YELLOW).toBe(
+      CARD_BY_ID.coin!.movementValue * 2,
+    )
+    expect(player.removedCards).toContainEqual({
+      cardId: 'coin',
+      instanceId: 'sacrificed-coin',
+    })
+    expect(player.playedCards).not.toContainEqual(
+      expect.objectContaining({ instanceId: 'sacrificed-coin' }),
+    )
+    expect(() =>
+      playCard(game, player.id, 'second-sacrifice', 'GOLD', true),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+
+    endTurn(game, player.id)
+    endTurn(game, 'p2')
+    expect(player.hasSacrificedCardThisTurn).toBe(false)
+  })
+
   it('keeps unplayed cards and draws back up to four next round', () => {
     const game = buildTestGame()
     const player = game.players[0]!

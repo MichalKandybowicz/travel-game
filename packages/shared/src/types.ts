@@ -125,10 +125,12 @@ export interface PlayerState {
   availableMovement: MovementPool
   availableGold: number
   hasBoughtThisTurn?: boolean
+  hasSacrificedCardThisTurn?: boolean
   tokens?: TokenInstance[]
   claimedCampIds?: string[]
   revealedTileIds?: string[]
   scoutedTileIds?: string[]
+  remainingRouteCost?: number
   tokenUsedInRound?: number
   skipNextTurn?: boolean
   isReady: boolean
@@ -157,6 +159,7 @@ export interface GameState {
     playerId: string
     cardId: string
     mode: CardPlayMode
+    sacrificed?: boolean
   }>
   winnerId?: string
 }

@@ -1363,11 +1363,13 @@ io.on('connection', (socket) => {
         parsed.data.playerId,
         parsed.data.cardInstanceId,
         parsed.data.mode,
+        parsed.data.sacrifice,
       )
       logGameAction(room, parsed.data.playerId, 'play_card', {
         cardInstanceId: parsed.data.cardInstanceId,
         cardId: room.gameState.roundPlayedCards.at(-1)?.cardId,
         mode: parsed.data.mode,
+        sacrifice: parsed.data.sacrifice,
       })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)

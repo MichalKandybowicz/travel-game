@@ -260,32 +260,42 @@ const nextPlayerId = (gameState: GameState): string => {
   return gameState.players[(index + 1) % gameState.players.length]!.id
 }
 
-const distanceToGoal = (gameState: GameState, player: PlayerState): number => {
-  const goalId = gameState.map.goalHexId
-  const visited = new Set([player.position])
-  let frontier = [player.position]
-  let distance = 0
+export const routeCostToGoal = (
+  gameState: GameState,
+  player: PlayerState,
+): number => {
+  if (!player.position) return Number.POSITIVE_INFINITY
+  const distances = new Map<string, number>([[player.position, 0]])
+  const pending = new Set([player.position])
 
-  while (frontier.length > 0) {
-    if (frontier.includes(goalId)) return distance
-    const next: string[] = []
-    for (const tileId of frontier) {
-      const tile = gameState.map.tiles.find((entry) => entry.id === tileId)
-      if (!tile) continue
-      for (const neighbor of getNeighbors(gameState.map.tiles, tile)) {
-        if (
-          visited.has(neighbor.id) ||
-          neighbor.isBlocked ||
-          neighbor.terrain === 'MOUNTAIN'
-        ) {
-          continue
-        }
-        visited.add(neighbor.id)
-        next.push(neighbor.id)
+  while (pending.size > 0) {
+    const currentId = [...pending].reduce((closestId, candidateId) =>
+      (distances.get(candidateId) ?? Infinity) <
+      (distances.get(closestId) ?? Infinity)
+        ? candidateId
+        : closestId,
+    )
+    pending.delete(currentId)
+    const currentCost = distances.get(currentId)!
+    if (currentId === gameState.map.goalHexId) return currentCost
+    const currentTile = gameState.map.tiles.find(
+      (tile) => tile.id === currentId,
+    )
+    if (!currentTile) continue
+
+    for (const neighbor of getNeighbors(gameState.map.tiles, currentTile)) {
+      const requirements = getMoveRequirements(currentTile, neighbor)
+      if (requirements.length === 0) continue
+      const edgeCost = requirements.reduce(
+        (sum, requirement) => sum + requirement.amount,
+        0,
+      )
+      const nextCost = currentCost + edgeCost
+      if (nextCost < (distances.get(neighbor.id) ?? Infinity)) {
+        distances.set(neighbor.id, nextCost)
+        pending.add(neighbor.id)
       }
     }
-    frontier = next
-    distance += 1
   }
   return Number.POSITIVE_INFINITY
 }
@@ -299,7 +309,7 @@ const closestOpponentToGoal = (
     .map((player, index) => ({
       player,
       index,
-      distance: distanceToGoal(gameState, player),
+      distance: routeCostToGoal(gameState, player),
     }))
     .sort(
       (left, right) =>
@@ -348,6 +358,7 @@ export const createGameState = (
       availableMovement: createMovementPool(),
       availableGold: 0,
       hasBoughtThisTurn: false,
+      hasSacrificedCardThisTurn: false,
       tokens: [],
       claimedCampIds: [],
       revealedTileIds: [],
@@ -443,6 +454,7 @@ export const playCard = (
   playerId: string,
   cardInstanceId: string,
   mode: CardPlayMode = 'MOVEMENT',
+  sacrifice = false,
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
@@ -461,20 +473,30 @@ export const playCard = (
   if (mode !== 'MOVEMENT' && mode !== 'GOLD') {
     error('INVALID_ACTION', 'Invalid card play mode.')
   }
+  if (sacrifice && player.hasSacrificedCardThisTurn) {
+    error('INVALID_ACTION', 'A card can be sacrificed only once per turn.')
+  }
   player.hand.splice(cardIndex, 1)
-  player.playedCards.push(card!)
+  if (sacrifice) {
+    player.removedCards.push(card!)
+    player.hasSacrificedCardThisTurn = true
+  } else {
+    player.playedCards.push(card!)
+  }
   gameState.roundPlayedCards ??= []
   gameState.roundPlayedCards.push({
     instanceId: card!.instanceId,
     playerId,
     cardId: cardDefinition.id,
     mode,
+    ...(sacrifice ? { sacrificed: true } : {}),
   })
+  const multiplier = sacrifice ? 2 : 1
   if (mode === 'GOLD') {
-    player.availableGold += cardDefinition.goldValue
+    player.availableGold += cardDefinition.goldValue * multiplier
   } else {
     player.availableMovement[cardDefinition.movementType] +=
-      cardDefinition.movementValue
+      cardDefinition.movementValue * multiplier
   }
   return gameState
 }
@@ -676,6 +698,7 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.availableMovement = createMovementPool()
   player.availableGold = 0
   player.hasBoughtThisTurn = false
+  player.hasSacrificedCardThisTurn = false
   let shouldSkipPlayer: boolean
   do {
     gameState.turnNumber += 1
@@ -862,12 +885,16 @@ export const serializePublicGameState = (
           },
     marketDrawPile: [],
     players: gameState.players.map((player) => {
+      const remainingRouteCost = routeCostToGoal(gameState, player)
       const position = fullyVisibleIds.has(player.position)
         ? player.position
         : ''
       if (player.id === viewerPlayerId) {
         return {
           ...player,
+          ...(Number.isFinite(remainingRouteCost)
+            ? { remainingRouteCost }
+            : {}),
           drawPile: player.drawPile.map<CardInstance>((card) => ({ ...card })),
           hand: player.hand.map<CardInstance>((card) => ({ ...card })),
           discardPile: player.discardPile.map<CardInstance>((card) => ({
@@ -885,7 +912,10 @@ export const serializePublicGameState = (
       return {
         ...player,
         position,
-        tokens: [],
+        ...(Number.isFinite(remainingRouteCost)
+          ? { remainingRouteCost }
+          : {}),
+        tokens: player.tokens?.map((token) => ({ ...token })) ?? [],
         claimedCampIds: [],
         revealedTileIds: [],
         scoutedTileIds: [],

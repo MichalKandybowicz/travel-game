@@ -8,7 +8,7 @@ const movementLabels = {
   WILD: 'dowolnego ruchu',
 } as const
 
-const tokenPresentation = (
+export const tokenPresentation = (
   type: TokenType,
 ): { icon: string; label: string; tone: string } => {
   const effect = TOKEN_BY_TYPE[type].effect

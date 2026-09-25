@@ -1,68 +1,87 @@
 import { CARD_BY_ID } from '@shared'
-import type { GameState } from '@shared'
+import type { GameState, PlayerState } from '@shared'
 import { cardLabels, movementLabels } from '../labels.js'
-import { PlayerBadge } from './PlayerBadge.js'
+import { tokenPresentation } from './PlayerTokens.js'
 
-export function PlayedCards({ game }: { game: GameState }) {
-  const roundNumber = Math.ceil(game.turnNumber / game.players.length)
+export function PlayedCards({
+  game,
+  player,
+}: {
+  game: GameState
+  player: PlayerState
+}) {
   const plays = game.roundPlayedCards ?? []
+  const playerPlays = plays.filter((entry) => entry.playerId === player.id)
+  const tokens = player.tokens ?? []
 
   return (
-    <section className="panel played-panel">
-      <div className="panel-header">
-        <strong>Zagrane karty</strong>
-        <small>Runda {roundNumber}</small>
-      </div>
-      {game.players.map((player, index) => {
-        const playerPlays = plays.filter(
-          (entry) => entry.playerId === player.id,
-        )
-        return (
-          <div key={player.id} className="played-player">
-            <div className="sidebar-player-heading">
-              <PlayerBadge
-                index={index}
-                color={player.color}
-                symbol={player.symbol}
-              />
-              <strong>{player.name}</strong>
+    <details className="player-journey-details">
+      <summary>
+        <span>
+          Do celu: <strong>{player.remainingRouteCost ?? '—'}</strong>
+        </span>
+        <span>{playerPlays.length} zagranych</span>
+      </summary>
+      <div className="player-journey-content">
+        <div>
+          <small>Posiadane żetony</small>
+          {tokens.length > 0 ? (
+            <div className="player-token-icons">
+              {tokens.map((token) => {
+                const presentation = tokenPresentation(token.type)
+                return (
+                  <span
+                    key={token.instanceId}
+                    className="compact-token-icon"
+                    data-tone={presentation.tone}
+                    title={presentation.label}
+                    aria-label={presentation.label}
+                  >
+                    {presentation.icon}
+                  </span>
+                )
+              })}
             </div>
-            {playerPlays.length === 0 ? (
-              <small>Brak kart w tej rundzie</small>
-            ) : (
-              <div className="mini-card-grid">
-                {playerPlays.map((play) => {
-                  const card = CARD_BY_ID[play.cardId]
-                  if (!card) {
-                    return null
-                  }
-                  return (
-                    <div
-                      key={play.instanceId}
-                      className="mini-card"
-                      data-movement={card.movementType}
-                      title={`${cardLabels[card.id]?.name ?? card.name}: ${play.mode === 'GOLD' ? 'złoto' : 'ruch'}`}
-                    >
-                      <strong>{cardLabels[card.id]?.name ?? card.name}</strong>
-                      <span>
-                        +
-                        {play.mode === 'GOLD'
-                          ? card.goldValue
-                          : card.movementValue}
-                      </span>
-                      <small>
-                        {play.mode === 'GOLD'
-                          ? 'złota'
-                          : movementLabels[card.movementType]}
-                      </small>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )
-      })}
-    </section>
+          ) : (
+            <small className="player-detail-empty">Brak żetonów</small>
+          )}
+        </div>
+        <div>
+          <small>Karty zagrane w tej rundzie</small>
+          {playerPlays.length === 0 ? (
+            <small className="player-detail-empty">Brak zagranych kart</small>
+          ) : (
+            <div className="mini-card-grid">
+              {playerPlays.map((play) => {
+                const card = CARD_BY_ID[play.cardId]
+                if (!card) return null
+                return (
+                  <div
+                    key={play.instanceId}
+                    className="mini-card"
+                    data-movement={card.movementType}
+                    title={`${cardLabels[card.id]?.name ?? card.name}: ${play.mode === 'GOLD' ? 'złoto' : 'ruch'}`}
+                  >
+                    <strong>{cardLabels[card.id]?.name ?? card.name}</strong>
+                    <span>
+                      +
+                      {play.mode === 'GOLD'
+                        ? card.goldValue
+                        : card.movementValue}
+                    </span>
+                    <small>
+                      {play.mode === 'GOLD'
+                        ? 'złota'
+                        : movementLabels[card.movementType]}
+                      {play.sacrificed ? ' · spalona' : ''}
+                    </small>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </details>
   )
 }

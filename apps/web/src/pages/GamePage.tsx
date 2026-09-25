@@ -182,12 +182,19 @@ export function GamePage() {
                     <strong>{player.name}</strong>
                     {player.id === session?.playerId && <small>Ty</small>}
                   </div>
-                  <small>{player.connected ? 'połączony' : 'rozłączony'}</small>
+                  <div className="sidebar-player-status">
+                    <small>
+                      {player.connected ? 'połączony' : 'rozłączony'}
+                    </small>
+                    <span title="Najniższa suma punktów ruchu potrzebna do celu">
+                      Do celu: <strong>{player.remainingRouteCost ?? '—'}</strong>
+                    </span>
+                  </div>
+                  <PlayedCards game={game} player={player} />
                 </li>
               ))}
             </ul>
           </aside>
-          <PlayedCards game={game} />
         </div>
         <div className="game-main">
           {isChoosingStart && (

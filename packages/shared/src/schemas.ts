@@ -98,6 +98,7 @@ export const playCardSchema = z.object({
   playerId: z.string(),
   cardInstanceId: z.string(),
   mode: z.enum(['MOVEMENT', 'GOLD']).default('MOVEMENT'),
+  sacrifice: z.boolean().default(false),
 })
 
 export const movePlayerSchema = z.object({

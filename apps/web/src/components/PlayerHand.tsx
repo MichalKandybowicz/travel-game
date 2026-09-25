@@ -24,7 +24,11 @@ function GoldGlyph() {
 interface PlayerHandProps {
   player: PlayerState | undefined
   isActive: boolean
-  onPlayCard: (cardInstanceId: string, mode: CardPlayMode) => void
+  onPlayCard: (
+    cardInstanceId: string,
+    mode: CardPlayMode,
+    sacrifice?: boolean,
+  ) => void
   opponents: PlayerState[]
   onUseToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   onEndTurn: () => void
@@ -122,6 +126,26 @@ export function PlayerHand({
                     onClick={() => onPlayCard(card.instanceId, 'GOLD')}
                   >
                     Złoto +{definition.goldValue}
+                  </button>
+                  <button
+                    type="button"
+                    className="sacrifice-card-action"
+                    disabled={!isActive || player.hasSacrificedCardThisTurn}
+                    title="Trwale usuwa kartę z talii i podwaja jej wartość ruchu"
+                    onClick={() =>
+                      onPlayCard(card.instanceId, 'MOVEMENT', true)
+                    }
+                  >
+                    Spal: ruch +{definition.movementValue * 2}
+                  </button>
+                  <button
+                    type="button"
+                    className="sacrifice-card-action"
+                    disabled={!isActive || player.hasSacrificedCardThisTurn}
+                    title="Trwale usuwa kartę z talii i podwaja jej wartość złota"
+                    onClick={() => onPlayCard(card.instanceId, 'GOLD', true)}
+                  >
+                    Spal: złoto +{definition.goldValue * 2}
                   </button>
                 </div>
               </div>

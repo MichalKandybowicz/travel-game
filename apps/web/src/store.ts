@@ -93,7 +93,11 @@ interface GameStore {
   removeBot: (botId: string) => void
   startGame: () => void
   chooseStart: (hexId: string) => void
-  playCard: (cardInstanceId: string, mode: CardPlayMode) => void
+  playCard: (
+    cardInstanceId: string,
+    mode: CardPlayMode,
+    sacrifice?: boolean,
+  ) => void
   movePlayer: (targetHexId: string) => void
   buyCard: (cardId: string) => void
   useToken: (tokenInstanceId: string, targetPlayerId?: string) => void
@@ -318,7 +322,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       hexId,
     })
   },
-  playCard: (cardInstanceId, mode) => {
+  playCard: (cardInstanceId, mode, sacrifice = false) => {
     const { session } = get()
     if (!session) {
       return
@@ -328,6 +332,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerId: session.playerId,
       cardInstanceId,
       mode,
+      sacrifice,
     })
   },
   movePlayer: (targetHexId) => {

@@ -1148,16 +1148,121 @@ select {
   color: #fff8dc;
 }
 
-.played-player {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #334155;
+.sidebar-player-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 5px 0 0 31px;
+  color: #a7beb5;
+  font-size: 0.72rem;
 }
 
-.played-player > small {
-  display: block;
-  margin-top: 7px;
-  color: #94a3b8;
+.sidebar-player-status strong {
+  color: #f1c778;
+  font-size: 0.82rem;
+}
+
+.player-journey-details {
+  margin: 8px 0 0 31px;
+  font-size: 0.74rem;
+}
+
+.player-journey-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(220, 225, 205, 0.16);
+  border-radius: 8px;
+  background: rgba(8, 28, 32, 0.52);
+  color: #c7d4cc;
+  cursor: pointer;
+  list-style: none;
+}
+
+.player-journey-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.player-journey-details summary::after {
+  content: '›';
+  color: #e9b669;
+  font-size: 1rem;
+  transition: transform 140ms ease;
+}
+
+.player-journey-details[open] summary::after {
+  transform: rotate(90deg);
+}
+
+.player-journey-content {
+  display: grid;
+  gap: 10px;
+  padding: 9px 3px 2px;
+}
+
+.player-journey-content > div {
+  display: grid;
+  gap: 6px;
+}
+
+.player-journey-content > div > small:first-child {
+  color: #91aaa0;
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.player-detail-empty {
+  color: #7f958d;
+}
+
+.player-token-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.compact-token-icon {
+  display: inline-grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 50%;
+  background: #475569;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  cursor: help;
+}
+
+.compact-token-icon[data-tone='green'] {
+  background: #166534;
+}
+
+.compact-token-icon[data-tone='blue'] {
+  background: #075985;
+}
+
+.compact-token-icon[data-tone='yellow'],
+.compact-token-icon[data-tone='gold'] {
+  background: #a16207;
+}
+
+.compact-token-icon[data-tone='wild'] {
+  background: linear-gradient(135deg, #166534, #075985 52%, #a16207);
+}
+
+.compact-token-icon[data-tone='market'] {
+  background: #7c2d12;
+}
+
+.compact-token-icon[data-tone='curse'] {
+  background: #6b21a8;
 }
 
 .mini-card-grid {
@@ -1165,6 +1270,11 @@ select {
   grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 6px;
   margin-top: 9px;
+}
+
+.player-journey-details .mini-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0;
 }
 
 .mini-card {
@@ -1325,6 +1435,17 @@ select {
 .hand-card-actions button:focus-visible {
   outline: 2px solid #f8fafc;
   outline-offset: 2px;
+}
+
+.hand-card-actions .sacrifice-card-action {
+  border-color: #ef8b72;
+  background: rgba(111, 35, 28, 0.62);
+  color: #ffd4c7;
+  font-size: 0.66rem;
+}
+
+.hand-card-actions .sacrifice-card-action:not(:disabled):hover {
+  background: rgba(151, 46, 34, 0.78);
 }
 
 .game-card__inner {
