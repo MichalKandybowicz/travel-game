@@ -10,6 +10,20 @@ export type TerrainType =
   | 'GOAL'
 
 export type MovementType = 'GREEN' | 'BLUE' | 'YELLOW' | 'WILD'
+export type TokenType =
+  | 'GREEN_1'
+  | 'GREEN_2'
+  | 'BLUE_1'
+  | 'BLUE_2'
+  | 'YELLOW_1'
+  | 'YELLOW_2'
+  | 'WILD_1'
+  | 'WILD_2'
+  | 'GOLD_1'
+  | 'GOLD_2'
+  | 'SWAP_HAND'
+  | 'DRAW_CARD'
+  | 'REFRESH_MARKET'
 export type CardPlayMode = 'MOVEMENT' | 'GOLD'
 export type CardType = 'MOVEMENT'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
@@ -79,6 +93,11 @@ export interface CardInstance {
   cardId: string
 }
 
+export interface TokenInstance {
+  instanceId: string
+  type: TokenType
+}
+
 export interface MovementPool {
   GREEN: number
   BLUE: number
@@ -101,6 +120,9 @@ export interface PlayerState {
   availableMovement: MovementPool
   availableGold: number
   hasBoughtThisTurn?: boolean
+  tokens?: TokenInstance[]
+  claimedCampIds?: string[]
+  tokenUsedInRound?: number
   isReady: boolean
   connected: boolean
 }
@@ -116,6 +138,7 @@ export interface GameState {
   currentPlayerId: string
   startSelectionOrder?: string[]
   turnNumber: number
+  roundNumber?: number
   market: string[]
   marketDrawPile: string[]
   marketCycle: number
@@ -172,6 +195,8 @@ export interface GameError {
     | 'CARD_NOT_IN_HAND'
     | 'NOT_ENOUGH_GOLD'
     | 'PURCHASE_LIMIT'
+    | 'TOKEN_LIMIT'
+    | 'TOKEN_NOT_FOUND'
     | 'HEX_BLOCKED'
     | 'HEX_OCCUPIED'
     | 'LEAVE_FAILED'

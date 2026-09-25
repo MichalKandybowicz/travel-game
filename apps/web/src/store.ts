@@ -94,6 +94,7 @@ interface GameStore {
   playCard: (cardInstanceId: string, mode: CardPlayMode) => void
   movePlayer: (targetHexId: string) => void
   buyCard: (cardId: string) => void
+  useToken: (tokenInstanceId: string) => void
   endTurn: () => void
   leaveRoom: () => Promise<boolean>
   leaveFinishedGame: () => void
@@ -347,6 +348,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomCode: session.roomCode,
       playerId: session.playerId,
       cardId,
+    })
+  },
+  useToken: (tokenInstanceId) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.gameUseToken, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      tokenInstanceId,
     })
   },
   endTurn: () => {

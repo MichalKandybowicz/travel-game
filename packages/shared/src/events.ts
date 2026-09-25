@@ -15,6 +15,7 @@ export const EVENTS = {
   gamePlayCard: 'game:play-card',
   gameMove: 'game:move',
   gameBuyCard: 'game:buy-card',
+  gameUseToken: 'game:use-token',
   gameEndTurn: 'game:end-turn',
   gameError: 'game:error',
 } as const

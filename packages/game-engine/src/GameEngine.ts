@@ -9,12 +9,15 @@ import type {
   MovementPool,
   PlayerState,
   TerrainType,
+  TokenInstance,
   PlayerColor,
   PlayerSymbol,
 } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
   MARKET_CARD_IDS,
+  TOKEN_BY_TYPE,
+  TOKEN_DEFINITIONS,
   createCardInstance,
 } from '../../shared/src/index.js'
 import {
@@ -196,6 +199,8 @@ export const createGameState = (
       availableMovement: createMovementPool(),
       availableGold: 0,
       hasBoughtThisTurn: false,
+      tokens: [],
+      claimedCampIds: [],
       isReady: true,
       connected: true,
     }
@@ -214,6 +219,7 @@ export const createGameState = (
     currentPlayerId: gamePlayers[0]!.id,
     startSelectionOrder: gamePlayers.map((player) => player.id),
     turnNumber: 1,
+    roundNumber: 1,
     market: marketDrawPile.splice(0, 4),
     marketDrawPile,
     marketCycle: 0,
@@ -270,11 +276,11 @@ const replenishMarket = (gameState: GameState): void => {
   }
 }
 
-const refreshStaleMarket = (gameState: GameState): void => {
+const refreshMarket = (gameState: GameState, reason: string): void => {
   const previousMarket = new Set(gameState.market)
   gameState.marketCycle += 1
   gameState.marketDrawPile = new SeededRandom(
-    `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:stale`,
+    `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
   ).shuffle(
     MARKET_CARD_IDS.filter((cardId) => !previousMarket.has(cardId)),
   )
@@ -354,11 +360,88 @@ export const movePlayer = (
   spendMove(player, targetTile)
   player.position = targetHexId
 
+  if (targetTile.terrain === 'CAMP') {
+    player.claimedCampIds ??= []
+    player.tokens ??= []
+    if (!player.claimedCampIds.includes(targetTile.id)) {
+      const tokenType = new SeededRandom(
+        `${gameState.seed}:${playerId}:camp:${targetTile.id}`,
+      ).pick([...TOKEN_DEFINITIONS]).type
+      const token: TokenInstance = {
+        instanceId: `${playerId}-camp-${targetTile.id}`,
+        type: tokenType,
+      }
+      player.claimedCampIds.push(targetTile.id)
+      player.tokens.push(token)
+    }
+  }
+
   if (targetTile.terrain === 'GOAL') {
     gameState.status = 'FINISHED'
     gameState.winnerId = playerId
   }
 
+  return gameState
+}
+
+export const useToken = (
+  gameState: GameState,
+  playerId: string,
+  tokenInstanceId: string,
+): GameState => {
+  ensureTurn(gameState, playerId)
+  const player = findPlayer(gameState, playerId)
+  const roundNumber = (gameState.roundNumber ??= 1)
+  if (player.tokenUsedInRound === roundNumber) {
+    error('TOKEN_LIMIT', 'You can use only one token per round.')
+  }
+  player.tokens ??= []
+  const tokenIndex = player.tokens.findIndex(
+    (token) => token.instanceId === tokenInstanceId,
+  )
+  const token = player.tokens[tokenIndex]
+  if (!token) {
+    error('TOKEN_NOT_FOUND', 'That token is not in the player inventory.')
+  }
+  const definition = TOKEN_BY_TYPE[token.type]
+  if (!definition) {
+    error('INVALID_ACTION', 'Token definition was not found.')
+  }
+
+  switch (definition.effect.kind) {
+    case 'MOVEMENT':
+      player.availableMovement[definition.effect.movementType] +=
+        definition.effect.value
+      break
+    case 'GOLD':
+      player.availableGold += definition.effect.value
+      break
+    case 'SWAP_HAND': {
+      const handSize = player.hand.length
+      player.discardPile.push(...player.hand)
+      player.hand = []
+      drawCards(
+        player,
+        handSize,
+        `${gameState.seed}:${player.id}:token:${token.instanceId}`,
+      )
+      break
+    }
+    case 'DRAW_CARD':
+      drawCards(
+        player,
+        1,
+        `${gameState.seed}:${player.id}:token:${token.instanceId}`,
+      )
+      break
+    case 'REFRESH_MARKET':
+      refreshMarket(gameState, `token:${token.instanceId}`)
+      gameState.marketPurchasedThisRound = true
+      break
+  }
+
+  player.tokens.splice(tokenIndex, 1)
+  player.tokenUsedInRound = roundNumber
   return gameState
 }
 
@@ -404,9 +487,10 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   gameState.turnNumber += 1
   gameState.currentPlayerId = nextPlayerId(gameState)
   if (gameState.currentPlayerId === gameState.players[0]?.id) {
+    gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
     gameState.roundPlayedCards = []
     if (!(gameState.marketPurchasedThisRound ?? false)) {
-      refreshStaleMarket(gameState)
+      refreshMarket(gameState, 'stale')
     }
     gameState.marketPurchasedThisRound = false
   }
@@ -594,6 +678,8 @@ export const serializePublicGameState = (
       return {
         ...player,
         position,
+        tokens: [],
+        claimedCampIds: [],
         drawPile: maskPile(player.drawPile.length, `${player.id}-draw`),
         hand: maskPile(player.hand.length, `${player.id}-hand`),
         discardPile: maskPile(

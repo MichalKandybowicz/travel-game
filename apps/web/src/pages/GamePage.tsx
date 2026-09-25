@@ -24,6 +24,7 @@ export function GamePage() {
   const movePlayer = useGameStore((state) => state.movePlayer)
   const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
+  const useToken = useGameStore((state) => state.useToken)
   const endTurn = useGameStore((state) => state.endTurn)
   const leaveFinishedGame = useGameStore((state) => state.leaveFinishedGame)
   const leaveRoom = useGameStore((state) => state.leaveRoom)
@@ -225,7 +226,9 @@ export function GamePage() {
               player={localPlayer}
               isActive={isActive}
               onPlayCard={playCard}
+              onUseToken={useToken}
               onEndTurn={endTurn}
+              roundNumber={game.roundNumber ?? 1}
               market={
                 <Market
                   game={game}

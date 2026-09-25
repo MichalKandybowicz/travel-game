@@ -2,12 +2,15 @@ import { CARD_BY_ID } from '@shared'
 import type { ReactNode } from 'react'
 import type { CardPlayMode, PlayerState } from '@shared'
 import { CardFace } from './CardFace.js'
+import { PlayerTokens } from './PlayerTokens.js'
 
 interface PlayerHandProps {
   player: PlayerState | undefined
   isActive: boolean
   onPlayCard: (cardInstanceId: string, mode: CardPlayMode) => void
+  onUseToken: (tokenInstanceId: string) => void
   onEndTurn: () => void
+  roundNumber: number
   market?: ReactNode
 }
 
@@ -15,7 +18,9 @@ export function PlayerHand({
   player,
   isActive,
   onPlayCard,
+  onUseToken,
   onEndTurn,
+  roundNumber,
   market,
 }: PlayerHandProps) {
   return (
@@ -49,6 +54,15 @@ export function PlayerHand({
           {market}
         </div>
       </div>
+
+      {player && (
+        <PlayerTokens
+          player={player}
+          roundNumber={roundNumber}
+          isActive={isActive}
+          onUseToken={onUseToken}
+        />
+      )}
 
       <div className="card-grid hand-card-grid">
         {player?.hand.map((card) => {

@@ -1379,6 +1379,93 @@ select {
   gap: 12px;
 }
 
+.player-tokens {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(233, 182, 105, 0.3);
+  border-radius: 14px;
+  background: rgba(8, 28, 32, 0.58);
+}
+
+.player-tokens-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.player-tokens-heading > div {
+  display: grid;
+}
+
+.player-tokens-heading small,
+.token-empty {
+  color: #a7beb5;
+}
+
+.token-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.token {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px 7px 7px;
+  border: 1px solid #6b7280;
+  border-radius: 999px;
+  background: #17262d;
+  color: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.token-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  background: #475569;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.token[data-tone='green'] .token-icon {
+  background: #166534;
+}
+
+.token[data-tone='blue'] .token-icon {
+  background: #075985;
+}
+
+.token[data-tone='yellow'] .token-icon,
+.token[data-tone='gold'] .token-icon {
+  background: #a16207;
+}
+
+.token[data-tone='wild'] .token-icon {
+  background: linear-gradient(135deg, #166534, #075985 52%, #a16207);
+}
+
+.token[data-tone='market'] .token-icon {
+  background: #7c2d12;
+}
+
+.token:not(:disabled):hover {
+  border-color: #f5cc91;
+  transform: translateY(-1px);
+}
+
+.token:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .error-banner {
   margin-top: 16px;
   padding: 12px 14px;
@@ -2090,6 +2177,13 @@ select {
   .game-shell .hand-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+  .player-tokens-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .token {
+    flex: 1 1 145px;
   }
   .game-shell .hand-card-actions {
     gap: 4px;

@@ -114,3 +114,12 @@ export const buyCardSchema = z.object({
   playerId: z.string(),
   cardId: z.string(),
 })
+
+export const useTokenSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  tokenInstanceId: z.string(),
+})

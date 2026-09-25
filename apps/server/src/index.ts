@@ -15,6 +15,7 @@ import {
   playCard,
   removePlayer,
   serializePublicGameState,
+  useToken,
 } from '../../../packages/game-engine/src/index.js'
 import {
   axialDistance,
@@ -24,6 +25,7 @@ import {
 import {
   EVENTS,
   CARD_BY_ID,
+  TOKEN_BY_TYPE,
   PLAYER_COLORS,
   PLAYER_SYMBOLS,
   roomCodeSchema,
@@ -36,6 +38,7 @@ import {
   playCardSchema,
   movePlayerSchema,
   buyCardSchema,
+  useTokenSchema,
   chooseStartSchema,
   type GameError,
   type CardDefinition,
@@ -278,6 +281,85 @@ const chooseBotGoldCard = (
   return undefined
 }
 
+const chooseBotToken = (
+  game: GameState,
+  player: PlayerState,
+  target: HexTile,
+): string | undefined => {
+  if (
+    player.tokenUsedInRound === (game.roundNumber ?? 1) ||
+    !player.tokens?.length
+  ) {
+    return undefined
+  }
+
+  const requiredMovement = Math.max(1, target.difficulty)
+  const currentMovement = movementForTarget(player.availableMovement, target)
+  const movementToken = player.tokens.find((token) => {
+    const effect = TOKEN_BY_TYPE[token.type].effect
+    if (effect.kind !== 'MOVEMENT') return false
+    const bonusPool: MovementPool = {
+      GREEN: 0,
+      BLUE: 0,
+      YELLOW: 0,
+      WILD: 0,
+    }
+    bonusPool[effect.movementType] = effect.value
+    return (
+      currentMovement < requiredMovement &&
+      currentMovement + movementForTarget(bonusPool, target) >= requiredMovement
+    )
+  })
+  if (movementToken) return movementToken.instanceId
+
+  const goldToken = player.tokens
+    .map((token) => ({ token, effect: TOKEN_BY_TYPE[token.type].effect }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        token: (typeof player.tokens)[number]
+        effect: { kind: 'GOLD'; value: 1 | 2 }
+      } => entry.effect.kind === 'GOLD',
+    )
+    .sort((left, right) => left.effect.value - right.effect.value)
+    .find(({ effect }) =>
+      game.market.some((cardId) => {
+        const card = CARD_BY_ID[cardId]
+        return (
+          card &&
+          card.purchaseCost > player.availableGold &&
+          card.purchaseCost <= player.availableGold + effect.value
+        )
+      }),
+    )
+  if (goldToken) return goldToken.token.instanceId
+
+  const possibleMovement =
+    currentMovement +
+    player.hand.reduce(
+      (sum, card) =>
+        sum + cardMovementFor(CARD_BY_ID[card.cardId]!, target),
+      0,
+    )
+  if (possibleMovement < requiredMovement) {
+    const drawToken = player.tokens.find(
+      (token) => token.type === 'DRAW_CARD',
+    )
+    if (drawToken) return drawToken.instanceId
+    const swapToken = player.tokens.find(
+      (token) => token.type === 'SWAP_HAND',
+    )
+    if (swapToken && player.hand.length > 0) return swapToken.instanceId
+  }
+
+  if (!chooseBotPurchase(game, player, target)) {
+    return player.tokens.find((token) => token.type === 'REFRESH_MARKET')
+      ?.instanceId
+  }
+  return undefined
+}
+
 const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
   if (botRooms.has(room.roomCode)) return
   botRooms.add(room.roomCode)
@@ -314,6 +396,13 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       if (legalMove) {
         movePlayer(game, bot.id, target.id)
         if (game.winnerId) room.status = 'FINISHED'
+        await emitRoom(io, room)
+        continue
+      }
+
+      const tokenId = chooseBotToken(game, player, target)
+      if (tokenId) {
+        useToken(game, bot.id, tokenId)
         await emitRoom(io, room)
         continue
       }
@@ -1160,6 +1249,43 @@ io.on('connection', (socket) => {
         return
       }
       buyCard(room.gameState, parsed.data.playerId, parsed.data.cardId)
+      await emitRoom(io, room)
+      scheduleBotTurns(io, room)
+    } catch (caught) {
+      sendError(socket.id, io, caught as GameError)
+    }
+  })
+
+  socket.on(EVENTS.gameUseToken, async (payload: unknown) => {
+    const parsed = useTokenSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room?.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_NOT_STARTED',
+        message: 'Game has not started.',
+      })
+      return
+    }
+    try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
+      useToken(
+        room.gameState,
+        parsed.data.playerId,
+        parsed.data.tokenInstanceId,
+      )
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
     } catch (caught) {
