@@ -3,8 +3,10 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy monorepo structure
+# Copy all tsconfig files and package files
 COPY package*.json ./
+COPY tsconfig.json ./
+COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
 
