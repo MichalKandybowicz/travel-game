@@ -70,67 +70,68 @@ export function TerrainIcon({
       {terrain === 'JUNGLE' && (
         <>
           <path
-            d="M0 8C-7 5-10-2-7-8c5 0 9 2 10 7 1 4-1 7-3 9Z"
+            d="M-8 3a4 4 0 0 1 1-7 5 5 0 0 1 9 2 4 4 0 0 1-2 6ZM1 3a4 4 0 0 1 2-7 5 5 0 0 1 9 3 4 4 0 0 1-3 5Z"
             fill={colors.fill}
             fillOpacity=".82"
           />
-          <path
-            d="M1 7C3 1 7-3 11-5c1 6-2 11-10 12Z"
-            fill={colors.fill}
-            fillOpacity=".62"
-          />
-          <path d="M-7 9C-2 3 2-1 8-5M-1 3l-1-7M2 1l6 1" />
-          <circle cx="-5" cy="-6" r="1.45" fill={colors.glow} stroke="none" />
+          <path d="M-4 2v7M6 2v7M-8 9h18M-4 5l-3 2M-4 6l3 2M6 5l3 2" />
+          <circle cx="-8" cy="-7" r="1.35" fill={colors.glow} stroke="none" />
+          <circle cx="8" cy="-8" r=".85" fill={colors.glow} stroke="none" />
         </>
       )}
       {terrain === 'WATER' && (
         <>
-          <path
-            d="M0-11C4-5 9 0 9 5a9 9 0 0 1-18 0c0-5 5-10 9-16Z"
-            fill={colors.fill}
-            fillOpacity=".62"
-          />
-          <path d="M-5 5c3-3 5 3 8 0s5 0 6 1M-3 0c1-2 3-4 4-6" />
-          <path d="M-10-7h3M-8.5-8.5v3M7-5h4M9-7v4" />
+          <path d="m0-10 4 5-4 6-4-6Z" fill={colors.fill} fillOpacity=".78" />
+          <path d="M-11 2c3-3 5 3 8 0s5 3 8 0 5 2 7 0M-11 7c3-3 5 3 8 0s5 3 8 0 5 2 7 0" />
+          <path d="M0-10V1M-4-5h8" opacity=".72" />
         </>
       )}
       {terrain === 'DESERT' && (
         <>
-          <circle cx="5" cy="-5" r="4" fill={colors.glow} fillOpacity=".75" />
-          <path d="M-11 7Q-6-2 1 5Q6-2 11 4V9H-11Z" fill={colors.fill} />
-          <path d="M-10 8Q-2 2 6 8M-8 1c3-3 5-3 8 0" />
-          <path d="m-6-8 1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />
+          <circle cx="6" cy="-6" r="3" fill={colors.glow} fillOpacity=".75" />
+          <path d="M-11 8Q-4-4 3 3q4 4 9 2v4h-23Z" fill={colors.fill} />
+          <path d="M-11 8Q-4 1 3 6q4 3 9-1M-9 1q4-5 9-1" />
+          <path d="M6-11v2M1-6h2M9-6h2M3-9l1.5 1.5M9-9 7.5-7.5" />
         </>
       )}
       {terrain === 'RUBBLE' && (
         <>
           <path
-            d="M-10 7-7-2l4-2 3 5 3-9 5 4 3 11Z"
+            d="m-11 7 3-5 4 1 2-6 5-1 3 5 3 1 3 5Z"
             fill={colors.fill}
-            fillOpacity=".7"
+            fillOpacity=".78"
           />
-          <path d="m-7-2 4 4 3-1 3 3 5-8M-8 7l4-3 4 3 4-3 5 3" />
-          <path d="M-3-8v3M-5-6h4" />
+          <path d="m-8 2 4 1-2 4M-2-3l5-1-1 5-4 2M3 7l3-6 3 1M-11 7h23" />
+          <path d="m-8-4 3-3 3 3-3 2Z" fill={colors.fill} />
         </>
       )}
       {terrain === 'CAMP' && (
         <>
-          <circle cx="0" cy="0" r="9" fill={colors.fill} fillOpacity=".45" />
-          <circle cx="0" cy="0" r="5.5" />
-          <path d="M0-10v4M0 6v4M-10 0h4M6 0h4M-7-7l3 3M4 4l3 3M7-7 4-4M-7 7l-4 4" />
-          <path d="m0-4 2.5 4L0 4l-2.5-4Z" fill={colors.glow} />
+          <ellipse
+            cx="0"
+            cy="1"
+            rx="9"
+            ry="6"
+            fill={colors.fill}
+            fillOpacity=".3"
+          />
+          <path d="M0-7v5M8-3 4 0M8 6 4 3M0 10V5M-8 6l4-3M-8-3l4 3" />
+          <path
+            d="m0-10 2 3-2 3-2-3Zm9 4 2 3-2 3-2-3Zm0 9 2 3-2 3-2-3Zm-9 4 2 3-2 3-2-3Zm-9-4 2 3-2 3-2-3Zm0-9 2 3-2 3-2-3Z"
+            fill={colors.fill}
+          />
+          <circle cx="0" cy="1.5" r="2" fill={colors.glow} />
         </>
       )}
       {terrain === 'MOUNTAIN' && (
         <>
           <path
-            d="M-11 8-4-7 0-1 4-10 11 8Z"
+            d="M-11 9-5-5-1 0 4-11 12 9Z"
             fill={colors.fill}
             fillOpacity=".72"
           />
-          <path d="m-7-1 3-6 3 5M1-2l3-8 4 7M-10 8h21" />
-          <path d="m-4 2 2-2 2 2 3-3 3 3" />
-          <path d="M8-9v3M6.5-7.5h3" />
+          <path d="m-8 2 3-7 3 4M0-1l4-10 4 7M-11 9h23" />
+          <path d="M4-6 1-2l3 2-2 5 5-6-3-2 3-3Z" fill={colors.glow} />
         </>
       )}
     </g>
