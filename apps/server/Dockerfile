@@ -3,6 +3,7 @@ FROM node:22-bookworm-slim
 WORKDIR /app
 
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/server ./apps/server
 

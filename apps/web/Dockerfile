@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Copy monorepo structure
 COPY package*.json ./
+COPY tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
 COPY apps/web/tsconfig*.json ./
