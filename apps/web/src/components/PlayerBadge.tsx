@@ -8,8 +8,8 @@ export function PlayerBadge({
   symbol,
 }: {
   index: number
-  color?: PlayerColor
-  symbol?: PlayerSymbolType
+  color?: PlayerColor | undefined
+  symbol?: PlayerSymbolType | undefined
 }) {
   return (
     <span
