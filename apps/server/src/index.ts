@@ -250,7 +250,10 @@ const movementForTarget = (
   }
   return Math.min(
     requirements.reduce(
-      (sum, requirement) => sum + movement[requirement.type] + movement.WILD,
+      (sum, requirement) =>
+        sum +
+        (requirement.type === 'ANY' ? 0 : movement[requirement.type]) +
+        movement.WILD,
       0,
     ),
     Object.values(movement).reduce((sum, value) => sum + value, 0),
