@@ -55,6 +55,65 @@ const findTile = (map: GameMap, hexId: string): HexTile => {
   return tile!
 }
 
+const getFogVisibility = (
+  map: GameMap,
+  position: string,
+  fogMode: MapSettings['fogMode'],
+): { revealed: Set<string>; scouted: Set<string> } => {
+  const currentTile = map.tiles.find((tile) => tile.id === position)
+  const revealed = new Set<string>()
+  const scouted = new Set<string>()
+  if (!currentTile) return { revealed, scouted }
+
+  if (fogMode === 'NONE') {
+    for (const tile of map.tiles) {
+      revealed.add(tile.id)
+      scouted.add(tile.id)
+    }
+    return { revealed, scouted }
+  }
+
+  if (fogMode === 'PETAL') {
+    const visiblePetals = new Set([currentTile.petalId])
+    for (const neighbor of getNeighbors(map.tiles, currentTile)) {
+      visiblePetals.add(neighbor.petalId)
+    }
+    for (const tile of map.tiles) {
+      if (visiblePetals.has(tile.petalId)) {
+        revealed.add(tile.id)
+        scouted.add(tile.id)
+      }
+    }
+    return { revealed, scouted }
+  }
+
+  const fullRange = fogMode === 'MEDIUM' ? 2 : 1
+  const terrainRange = fogMode === 'MEDIUM' ? 4 : 2
+  for (const tile of map.tiles) {
+    const distance = axialDistance(currentTile, tile)
+    if (distance <= terrainRange) scouted.add(tile.id)
+    if (distance <= fullRange) revealed.add(tile.id)
+  }
+  return { revealed, scouted }
+}
+
+const rememberVisibleTiles = (
+  gameState: GameState,
+  player: PlayerState,
+): void => {
+  const visibility = getFogVisibility(
+    gameState.map,
+    player.position,
+    gameState.settings.fogMode ?? 'NONE',
+  )
+  player.revealedTileIds = [
+    ...new Set([...(player.revealedTileIds ?? []), ...visibility.revealed]),
+  ]
+  player.scoutedTileIds = [
+    ...new Set([...(player.scoutedTileIds ?? []), ...visibility.scouted]),
+  ]
+}
+
 const ensureTurn = (gameState: GameState, playerId: string): void => {
   if (gameState.currentPlayerId !== playerId) {
     error('NOT_YOUR_TURN', 'It is not your turn.')
@@ -108,50 +167,89 @@ export const getTerrainCost = (
   }
 }
 
-export const canAffordMove = (player: PlayerState, tile: HexTile): boolean => {
-  if (tile.isBlocked) {
-    return false
+export type MoveRequirement = {
+  type: Exclude<keyof MovementPool, 'WILD'> | 'ANY'
+  amount: number
+}
+
+export const getMoveRequirements = (
+  from: HexTile,
+  to: HexTile,
+): MoveRequirement[] => {
+  const fromType = getTerrainCost(from.terrain, from.difficulty)
+  const toType = getTerrainCost(to.terrain, to.difficulty)
+  if (
+    from.isBlocked ||
+    to.isBlocked ||
+    fromType === 'BLOCKED' ||
+    toType === 'BLOCKED'
+  ) {
+    return []
   }
-  const costType = getTerrainCost(tile.terrain, tile.difficulty)
-  if (costType === 'BLOCKED') {
-    return false
+  const fromAmount = Math.max(1, from.difficulty)
+  const toAmount = Math.max(1, to.difficulty)
+  if (fromType === toType) {
+    return [{ type: fromType, amount: fromAmount + toAmount - 1 }]
   }
-  if (costType === 'ANY') {
-    const total = Object.values(player.availableMovement).reduce(
-      (sum, value) => sum + value,
+  return [
+    { type: fromType, amount: fromAmount },
+    { type: toType, amount: toAmount },
+  ]
+}
+
+export const canAffordMove = (
+  player: PlayerState,
+  from: HexTile,
+  to: HexTile,
+): boolean => {
+  const requirements = getMoveRequirements(from, to)
+  if (requirements.length === 0) return false
+  const coloredDeficit = requirements
+    .filter(
+      (
+        requirement,
+      ): requirement is MoveRequirement & {
+        type: Exclude<keyof MovementPool, 'WILD'>
+      } => requirement.type !== 'ANY',
+    )
+    .reduce(
+      (sum, requirement) =>
+        sum +
+        Math.max(
+          0,
+          requirement.amount - player.availableMovement[requirement.type],
+        ),
       0,
     )
-    return total >= Math.max(1, tile.difficulty)
-  }
+  const totalRequired = requirements.reduce(
+    (sum, requirement) => sum + requirement.amount,
+    0,
+  )
+  const totalAvailable = Object.values(player.availableMovement).reduce(
+    (sum, value) => sum + value,
+    0,
+  )
   return (
-    player.availableMovement[costType] + player.availableMovement.WILD >=
-    tile.difficulty
+    coloredDeficit <= player.availableMovement.WILD &&
+    totalAvailable >= totalRequired
   )
 }
 
-const spendMove = (player: PlayerState, tile: HexTile): void => {
-  const costType = getTerrainCost(tile.terrain, tile.difficulty)
-  if (costType === 'BLOCKED') {
-    error('HEX_BLOCKED', 'That hex is blocked.')
+const spendMove = (player: PlayerState, from: HexTile, to: HexTile): void => {
+  const requirements = getMoveRequirements(from, to)
+  if (requirements.length === 0) {
+    error('HEX_BLOCKED', 'That connection is blocked.')
   }
-
-  if (costType === 'ANY') {
-    if (spendAny(player, Math.max(1, tile.difficulty)) > 0) {
-      error('NOT_ENOUGH_MOVEMENT', 'Not enough movement points for that tile.')
-    }
-    return
+  for (const requirement of requirements) {
+    if (requirement.type === 'ANY') continue
+    let remaining = spendColor(player, requirement.type, requirement.amount)
+    if (remaining > 0) remaining = spendColor(player, 'WILD', remaining)
   }
-
-  let remaining = spendColor(
-    player,
-    costType as keyof MovementPool,
-    tile.difficulty,
-  )
-  if (remaining > 0) {
-    remaining = spendColor(player, 'WILD', remaining)
-  }
-  if (remaining > 0) {
-    error('NOT_ENOUGH_MOVEMENT', 'Not enough movement points for that terrain.')
+  const anyRequired = requirements
+    .filter((requirement) => requirement.type === 'ANY')
+    .reduce((sum, requirement) => sum + requirement.amount, 0)
+  if (spendAny(player, anyRequired) > 0) {
+    error('NOT_ENOUGH_MOVEMENT', 'Not enough movement points for this route.')
   }
 }
 
@@ -252,6 +350,8 @@ export const createGameState = (
       hasBoughtThisTurn: false,
       tokens: [],
       claimedCampIds: [],
+      revealedTileIds: [],
+      scoutedTileIds: [],
       isReady: true,
       connected: true,
     }
@@ -297,7 +397,9 @@ export const chooseStart = (
   if (gameState.players.some((player) => player.position === hexId)) {
     error('HEX_OCCUPIED', 'This starting position is occupied.')
   }
-  findPlayer(gameState, playerId).position = hexId
+  const player = findPlayer(gameState, playerId)
+  player.position = hexId
+  rememberVisibleTiles(gameState, player)
   const order =
     gameState.startSelectionOrder ??
     gameState.players.map((player) => player.id)
@@ -403,11 +505,12 @@ export const movePlayer = (
   ) {
     error('HEX_OCCUPIED', 'That hex is occupied by another player.')
   }
-  if (!canAffordMove(player, targetTile)) {
+  if (!canAffordMove(player, currentTile, targetTile)) {
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement for the selected hex.')
   }
-  spendMove(player, targetTile)
+  spendMove(player, currentTile, targetTile)
   player.position = targetHexId
+  rememberVisibleTiles(gameState, player)
 
   if (targetTile.terrain === 'CAMP') {
     player.claimedCampIds ??= []
@@ -681,18 +784,25 @@ export const serializePublicGameState = (
     viewer.position || gameState.map.startHexId,
   )
   const fogMode = gameState.settings.fogMode ?? 'NONE'
-  const visiblePetals = new Set([currentTile.petalId])
-  if (fogMode === 'PETAL') {
-    for (const neighbor of getNeighbors(gameState.map.tiles, currentTile)) {
-      visiblePetals.add(neighbor.petalId)
-    }
-  }
+  const currentVisibility = getFogVisibility(
+    gameState.map,
+    currentTile.id,
+    fogMode,
+  )
+  const revealedIds = new Set([
+    ...(viewer.revealedTileIds ?? []),
+    ...currentVisibility.revealed,
+  ])
+  const scoutedIds = new Set([
+    ...(viewer.scoutedTileIds ?? []),
+    ...currentVisibility.scouted,
+  ])
   const visibleTiles = gameState.map.tiles.flatMap((tile) => {
     if (gameState.status === 'CHOOSING_START' && tile.petalId === 0)
       return [tile]
     if (fogMode === 'NONE') return [tile]
     if (fogMode === 'PETAL') {
-      return visiblePetals.has(tile.petalId)
+      return revealedIds.has(tile.id)
         ? [tile]
         : [
             {
@@ -703,11 +813,8 @@ export const serializePublicGameState = (
             },
           ]
     }
-    const distance = axialDistance(currentTile, tile)
-    const fullRange = fogMode === 'MEDIUM' ? 2 : 1
-    const terrainRange = fogMode === 'MEDIUM' ? 4 : 2
-    if (distance <= fullRange) return [tile]
-    if (distance <= terrainRange) {
+    if (revealedIds.has(tile.id)) return [tile]
+    if (scoutedIds.has(tile.id)) {
       return [{ ...hideSpecialType(tile), difficulty: -1 }]
     }
     return []
@@ -780,6 +887,8 @@ export const serializePublicGameState = (
         position,
         tokens: [],
         claimedCampIds: [],
+        revealedTileIds: [],
+        scoutedTileIds: [],
         drawPile: maskPile(player.drawPile.length, `${player.id}-draw`),
         hand: maskPile(player.hand.length, `${player.id}-hand`),
         discardPile: maskPile(

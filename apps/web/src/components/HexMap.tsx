@@ -1,4 +1,9 @@
-import { canAffordMove, getTerrainCost } from '@game-engine'
+import {
+  canAffordMove,
+  getMoveRequirements,
+  getTerrainCost,
+  type MoveRequirement,
+} from '@game-engine'
 import type { GameState, HexTile } from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { movementLabels, terrainLabels } from '../labels.js'
@@ -23,6 +28,8 @@ const tilePalette: Record<
 }
 
 const MAX_ZOOM = 12
+const HEX_SPACING = 35
+const HEX_RADIUS = 20
 
 type MapView = {
   centerX: number
@@ -33,7 +40,7 @@ type MapView = {
 
 const focusedView = (tile: HexTile | undefined, mapView: MapView) => {
   const point = tile
-    ? hexToPixel(tile.q, tile.r, 24)
+    ? hexToPixel(tile.q, tile.r, HEX_SPACING)
     : { x: mapView.centerX, y: mapView.centerY }
   return {
     zoom: Math.min(
@@ -99,6 +106,24 @@ const tileDescription = (tile: HexTile): string => {
   return `${terrainLabels[tile.terrain]} — koszt: ${Math.max(1, tile.difficulty)}; rodzaj ruchu: ${color}`
 }
 
+const edgeCost = (
+  requirement: MoveRequirement | undefined,
+): { label: string; color: string } => {
+  if (!requirement) {
+    return { label: '?', color: '#526873' }
+  }
+  const colors = {
+    GREEN: '#287554',
+    BLUE: '#2b7792',
+    YELLOW: '#b88436',
+    ANY: '#7c6284',
+  } as const
+  return {
+    label: String(requirement.amount),
+    color: colors[requirement.type],
+  }
+}
+
 interface HexMapProps {
   game: GameState
   playerId: string | undefined
@@ -141,10 +166,14 @@ export function HexMap({
       game.settings.fogMode === 'FULL'
     ) {
       const point = currentTile ?? startTile
-      const center = point ? hexToPixel(point.q, point.r, 24) : { x: 0, y: 0 }
+      const center = point
+        ? hexToPixel(point.q, point.r, HEX_SPACING)
+        : { x: 0, y: 0 }
       return { centerX: center.x, centerY: center.y, width: 360, height: 330 }
     }
-    const points = game.map.tiles.map((tile) => hexToPixel(tile.q, tile.r, 24))
+    const points = game.map.tiles.map((tile) =>
+      hexToPixel(tile.q, tile.r, HEX_SPACING),
+    )
     const xs = points.map((point) => point.x)
     const ys = points.map((point) => point.y)
     const minX = Math.min(...xs)
@@ -154,8 +183,8 @@ export function HexMap({
     return {
       centerX: (minX + maxX) / 2,
       centerY: (minY + maxY) / 2,
-      width: Math.max(480, maxX - minX + 72),
-      height: Math.max(440, maxY - minY + 72),
+      width: Math.max(480, maxX - minX + 90),
+      height: Math.max(440, maxY - minY + 90),
     }
   }, [currentTile, startTile, game.map.tiles, game.settings.fogMode])
   const [view, setView] = useState(() =>
@@ -237,7 +266,7 @@ export function HexMap({
                 (player) =>
                   player.id !== localPlayer.id && player.position === tile.id,
               )) &&
-            canAffordMove(localPlayer, tile),
+            canAffordMove(localPlayer, currentTile, tile),
         )
         .map((tile) => tile.id),
     )
@@ -248,6 +277,21 @@ export function HexMap({
     game.settings.allowSharedTiles,
     localPlayer,
   ])
+  const connections = useMemo(
+    () =>
+      game.map.tiles.flatMap((tile, tileIndex) =>
+        game.map.tiles
+          .slice(tileIndex + 1)
+          .filter((neighbor) => cubeDistance(tile, neighbor) === 1)
+          .map((neighbor) => ({
+            from: tile,
+            to: neighbor,
+            fromPoint: hexToPixel(tile.q, tile.r, HEX_SPACING),
+            toPoint: hexToPixel(neighbor.q, neighbor.r, HEX_SPACING),
+          })),
+      ),
+    [game.map.tiles],
+  )
 
   return (
     <div className="panel map-panel">
@@ -413,10 +457,51 @@ export function HexMap({
               <stop offset="1" stopColor={palette.dark} />
             </linearGradient>
           ))}
+          {connections.map((connection, index) => (
+            <linearGradient
+              key={`connection-gradient-${connection.from.id}-${connection.to.id}`}
+              id={`connection-gradient-${index}`}
+              gradientUnits="userSpaceOnUse"
+              x1={connection.fromPoint.x}
+              y1={connection.fromPoint.y}
+              x2={connection.toPoint.x}
+              y2={connection.toPoint.y}
+            >
+              <stop stopColor={tilePalette[connection.from.terrain].dark} />
+              <stop
+                offset="1"
+                stopColor={tilePalette[connection.to.terrain].dark}
+              />
+            </linearGradient>
+          ))}
         </defs>
+        <g className="map-connections" pointerEvents="none">
+          {connections.map((connection, index) => (
+            <g key={`${connection.from.id}-${connection.to.id}`}>
+              <line
+                x1={connection.fromPoint.x}
+                y1={connection.fromPoint.y}
+                x2={connection.toPoint.x}
+                y2={connection.toPoint.y}
+                stroke={`url(#connection-gradient-${index})`}
+                strokeWidth="28"
+                strokeLinecap="round"
+                opacity="0.82"
+              />
+              <line
+                x1={connection.fromPoint.x}
+                y1={connection.fromPoint.y}
+                x2={connection.toPoint.x}
+                y2={connection.toPoint.y}
+                stroke="rgba(223, 235, 220, 0.2)"
+                strokeWidth="1"
+              />
+            </g>
+          ))}
+        </g>
         <g>
           {game.map.tiles.map((tile) => {
-            const { x, y } = hexToPixel(tile.q, tile.r, 24)
+            const { x, y } = hexToPixel(tile.q, tile.r, HEX_SPACING)
             const occupiedBy = game.players.filter(
               (player) => player.position === tile.id,
             )
@@ -446,8 +531,8 @@ export function HexMap({
               >
                 <title>{tileDescription(tile)}</title>
                 <polygon
-                  points={polygonPoints(x, y, 22)}
-                  fill="#10272d"
+                  points={polygonPoints(x, y, HEX_RADIUS)}
+                  fill={tilePalette[tile.terrain].dark}
                   stroke={
                     isAvailableStart
                       ? '#ffe0a1'
@@ -472,7 +557,7 @@ export function HexMap({
                   }
                 />
                 <polygon
-                  points={polygonPoints(x, y, 19.5)}
+                  points={polygonPoints(x, y, HEX_RADIUS - 2.5)}
                   fill={`url(#hex-${tile.terrain})`}
                   stroke="rgba(255, 249, 224, 0.24)"
                   strokeWidth="0.65"
@@ -487,42 +572,36 @@ export function HexMap({
                 <g transform={`translate(${x} ${y - 5})`}>
                   <TerrainIcon terrain={tile.terrain} />
                 </g>
-                {tile.terrain !== 'UNKNOWN' && (
-                  <circle
-                    cx={x}
-                    cy={y + 10.5}
-                    r="6.5"
-                    fill="rgba(9, 31, 36, 0.83)"
-                    stroke="rgba(255, 242, 206, 0.58)"
-                    strokeWidth="0.8"
-                    pointerEvents="none"
-                  />
-                )}
-                <text
-                  x={x}
-                  y={y + 13.1}
-                  textAnchor="middle"
-                  className="hex-difficulty"
-                >
-                  {tile.terrain === 'UNKNOWN'
-                    ? ''
-                    : game.status === 'CHOOSING_START' &&
-                        tile.terrain === 'START'
-                      ? (game.map.startHexIds ?? [game.map.startHexId]).indexOf(
-                          tile.id,
-                        ) + 1
-                      : tile.difficulty < 0
-                        ? '?'
-                        : tile.terrain === 'MOUNTAIN'
-                          ? '×'
-                          : Math.max(1, tile.difficulty)}
-                </text>
+                {game.status === 'CHOOSING_START' &&
+                  tile.terrain === 'START' && (
+                    <>
+                      <circle
+                        cx={x}
+                        cy={y + 10}
+                        r="6"
+                        fill="rgba(9, 31, 36, 0.83)"
+                        stroke="rgba(255, 242, 206, 0.58)"
+                        strokeWidth="0.8"
+                        pointerEvents="none"
+                      />
+                      <text
+                        x={x}
+                        y={y + 12.7}
+                        textAnchor="middle"
+                        className="hex-difficulty"
+                      >
+                        {(
+                          game.map.startHexIds ?? [game.map.startHexId]
+                        ).indexOf(tile.id) + 1}
+                      </text>
+                    </>
+                  )}
                 {occupiedBy.map((player, index) => {
                   const number =
                     game.players.findIndex((entry) => entry.id === player.id) +
                     1
                   const markerX = x + (index - (occupiedBy.length - 1) / 2) * 13
-                  const markerY = y + 17
+                  const markerY = y + 7
                   return (
                     <g key={player.id} className="map-player-marker">
                       <title>{`${player.name}${player.id === playerId ? ' (Ty)' : ''}`}</title>
@@ -545,6 +624,50 @@ export function HexMap({
                 })}
               </g>
             )
+          })}
+        </g>
+        <g className="map-edge-costs" pointerEvents="none">
+          {connections.flatMap((connection) => {
+            const deltaX = connection.toPoint.x - connection.fromPoint.x
+            const deltaY = connection.toPoint.y - connection.fromPoint.y
+            const length = Math.hypot(deltaX, deltaY)
+            const middleX = (connection.fromPoint.x + connection.toPoint.x) / 2
+            const middleY = (connection.fromPoint.y + connection.toPoint.y) / 2
+            const perpendicularX = (-deltaY / length) * 6.8
+            const perpendicularY = (deltaX / length) * 6.8
+
+            const requirements =
+              connection.from.terrain === 'UNKNOWN' ||
+              connection.to.terrain === 'UNKNOWN' ||
+              connection.from.difficulty < 0 ||
+              connection.to.difficulty < 0
+                ? [undefined]
+                : getMoveRequirements(connection.from, connection.to)
+            return requirements.map((requirement, index) => {
+              const direction =
+                requirements.length === 1 ? 0 : index === 0 ? -1 : 1
+              const x = middleX + perpendicularX * direction
+              const y = middleY + perpendicularY * direction
+              const cost = edgeCost(requirement)
+              return (
+                <g
+                  key={`${connection.from.id}-${connection.to.id}-${index}`}
+                  className="map-edge-cost"
+                >
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="6.4"
+                    fill={cost.color}
+                    stroke="#fff2c7"
+                    strokeWidth="1.15"
+                  />
+                  <text x={x} y={y + 2.7} textAnchor="middle">
+                    {cost.label}
+                  </text>
+                </g>
+              )
+            })
           })}
         </g>
       </svg>
@@ -580,8 +703,9 @@ export function HexMap({
       <details className="terrain-rules">
         <summary>Zasady terenów</summary>
         <p>
-          Liczba na polu oznacza koszt wejścia. Można przejść tylko na sąsiednie
-          pole. Uniwersalne punkty ruchu zastępują wymagany kolor.
+          Liczba na łączniku przy danym polu oznacza koszt wejścia na to pole.
+          Można przejść tylko na sąsiednie pole. Uniwersalne punkty ruchu
+          zastępują wymagany kolor.
         </p>
         <ul>
           {terrainOrder.map((terrain) => (

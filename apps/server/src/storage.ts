@@ -140,6 +140,8 @@ export async function connectStorage(url: string): Promise<Storage> {
                   roundPlayedCards: room.gameState.roundPlayedCards ?? [],
                   players: room.gameState.players.map((player) => ({
                     ...player,
+                    revealedTileIds: player.revealedTileIds ?? [],
+                    scoutedTileIds: player.scoutedTileIds ?? [],
                     connected: player.isBot === true,
                   })),
                 },

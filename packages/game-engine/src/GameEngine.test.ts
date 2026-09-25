@@ -7,6 +7,7 @@ import {
   chooseStart,
   createGameState,
   endTurn,
+  getMoveRequirements,
   movePlayer,
   playCard,
   removePlayer,
@@ -63,6 +64,49 @@ const findReachableTile = (
 }
 
 describe('GameEngine', () => {
+  it('combines matching terrain costs with a one-point edge discount', () => {
+    const greenTwo: HexTile = {
+      id: 'green-2',
+      q: 0,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 2,
+      isBlocked: false,
+    }
+    const otherGreenTwo = { ...greenTwo, id: 'other-green-2', q: 1 }
+    const greenThree = { ...greenTwo, id: 'green-3', difficulty: 3 }
+
+    expect(getMoveRequirements(greenTwo, otherGreenTwo)).toEqual([
+      { type: 'GREEN', amount: 3 },
+    ])
+    expect(getMoveRequirements(greenThree, otherGreenTwo)).toEqual([
+      { type: 'GREEN', amount: 4 },
+    ])
+  })
+
+  it('requires both costs when connected terrains use different movement types', () => {
+    const jungle: HexTile = {
+      id: 'jungle',
+      q: 0,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 2,
+      isBlocked: false,
+    }
+    const water: HexTile = {
+      ...jungle,
+      id: 'water',
+      q: 1,
+      terrain: 'WATER',
+      difficulty: 3,
+    }
+
+    expect(getMoveRequirements(jungle, water)).toEqual([
+      { type: 'GREEN', amount: 2 },
+      { type: 'BLUE', amount: 3 },
+    ])
+  })
+
   it('lets players choose distinct starts, then plays in reverse selection order', () => {
     const game = createGameState('ABCDE', settings, [
       { id: 'p1', name: 'Player 1' },
@@ -680,4 +724,42 @@ describe('GameEngine', () => {
       expect(view.map.goalHexId).toBe('')
     },
   )
+
+  it('keeps previously revealed and scouted tiles visible through fog', () => {
+    const game = createGameState(
+      'ABCDE',
+      { ...settings, petalCount: 3, fogMode: 'FULL' },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+    )
+    game.status = 'ACTIVE'
+    const player = game.players[0]!
+    player.position = game.map.startHexId
+    const start = game.map.tiles.find(
+      (tile) => tile.id === game.map.startHexId,
+    )!
+    const revealed = game.map.tiles.find(
+      (tile) => axialDistance(start, tile) > 2,
+    )!
+    const scouted = game.map.tiles.find(
+      (tile) => tile.id !== revealed.id && axialDistance(start, tile) > 2,
+    )!
+    player.revealedTileIds = [revealed.id]
+    player.scoutedTileIds = [revealed.id, scouted.id]
+
+    const view = serializePublicGameState(game, player.id)
+
+    expect(view.map.tiles.find((tile) => tile.id === revealed.id)).toEqual(
+      revealed,
+    )
+    expect(view.map.tiles.find((tile) => tile.id === scouted.id)).toMatchObject(
+      {
+        id: scouted.id,
+        terrain: scouted.terrain,
+        difficulty: -1,
+      },
+    )
+  })
 })

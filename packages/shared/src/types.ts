@@ -127,6 +127,8 @@ export interface PlayerState {
   hasBoughtThisTurn?: boolean
   tokens?: TokenInstance[]
   claimedCampIds?: string[]
+  revealedTileIds?: string[]
+  scoutedTileIds?: string[]
   tokenUsedInRound?: number
   skipNextTurn?: boolean
   isReady: boolean

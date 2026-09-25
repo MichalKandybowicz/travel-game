@@ -9,7 +9,7 @@ import {
   chooseStart,
   createGameState,
   canAffordMove,
-  getTerrainCost,
+  getMoveRequirements,
   endTurn,
   movePlayer,
   playCard,
@@ -214,12 +214,17 @@ const findBotRoute = (game: GameState, player: PlayerState): HexTile[] => {
   return route
 }
 
-const cardMovementFor = (card: CardDefinition, target: HexTile): number => {
-  const costType = getTerrainCost(target.terrain, target.difficulty)
-  if (costType === 'BLOCKED') return 0
+const cardMovementFor = (
+  card: CardDefinition,
+  from: HexTile,
+  target: HexTile,
+): number => {
+  const requirements = getMoveRequirements(from, target)
   if (
-    costType === 'ANY' ||
-    card.movementType === costType ||
+    requirements.some(
+      (requirement) =>
+        requirement.type === 'ANY' || card.movementType === requirement.type,
+    ) ||
     card.movementType === 'WILD'
   ) {
     return card.movementValue
@@ -227,21 +232,35 @@ const cardMovementFor = (card: CardDefinition, target: HexTile): number => {
   return 0
 }
 
-const cardPlanScore = (card: CardDefinition, target: HexTile): number =>
-  cardMovementFor(card, target) * 10 + card.goldValue
+const cardPlanScore = (
+  card: CardDefinition,
+  from: HexTile,
+  target: HexTile,
+): number => cardMovementFor(card, from, target) * 10 + card.goldValue
 
-const movementForTarget = (movement: MovementPool, target: HexTile): number => {
-  const costType = getTerrainCost(target.terrain, target.difficulty)
-  if (costType === 'BLOCKED') return 0
-  if (costType === 'ANY') {
+const movementForTarget = (
+  movement: MovementPool,
+  from: HexTile,
+  target: HexTile,
+): number => {
+  const requirements = getMoveRequirements(from, target)
+  if (requirements.length === 0) return 0
+  if (requirements.some((requirement) => requirement.type === 'ANY')) {
     return Object.values(movement).reduce((sum, value) => sum + value, 0)
   }
-  return movement[costType] + movement.WILD
+  return Math.min(
+    requirements.reduce(
+      (sum, requirement) => sum + movement[requirement.type] + movement.WILD,
+      0,
+    ),
+    Object.values(movement).reduce((sum, value) => sum + value, 0),
+  )
 }
 
 const chooseBotPurchase = (
   game: GameState,
   player: PlayerState,
+  from: HexTile,
   target: HexTile,
 ): CardDefinition | undefined => {
   const possibleGold =
@@ -256,14 +275,15 @@ const chooseBotPurchase = (
     .filter((card) => card.purchaseCost <= possibleGold)
     .sort(
       (left, right) =>
-        cardPlanScore(right, target) -
+        cardPlanScore(right, from, target) -
         right.purchaseCost -
-        (cardPlanScore(left, target) - left.purchaseCost),
+        (cardPlanScore(left, from, target) - left.purchaseCost),
     )[0]
 }
 
 const chooseBotGoldCard = (
   player: PlayerState,
+  from: HexTile,
   target: HexTile,
 ): CardInstance | undefined => {
   const upcoming = player.drawPile
@@ -271,7 +291,7 @@ const chooseBotGoldCard = (
     .map((card) => CARD_BY_ID[card.cardId])
     .filter((card): card is CardDefinition => Boolean(card))
   const weakestUpcomingScore = upcoming.length
-    ? Math.max(...upcoming.map((card) => cardPlanScore(card, target)))
+    ? Math.max(...upcoming.map((card) => cardPlanScore(card, from, target)))
     : 0
 
   const candidates = player.hand
@@ -281,8 +301,8 @@ const chooseBotGoldCard = (
         Boolean(entry.definition),
     )
     .sort((left, right) => {
-      const leftScore = cardPlanScore(left.definition, target)
-      const rightScore = cardPlanScore(right.definition, target)
+      const leftScore = cardPlanScore(left.definition, from, target)
+      const rightScore = cardPlanScore(right.definition, from, target)
       const leftReplaceable =
         leftScore === 0 || weakestUpcomingScore > leftScore ? 0 : 1
       const rightReplaceable =
@@ -294,18 +314,21 @@ const chooseBotGoldCard = (
       )
     })
   const replaceable = candidates.find((entry) => {
-    const score = cardPlanScore(entry.definition, target)
+    const score = cardPlanScore(entry.definition, from, target)
     return score === 0 || weakestUpcomingScore > score
   })
   if (replaceable) return replaceable.card
 
   const possibleMovement =
-    movementForTarget(player.availableMovement, target) +
+    movementForTarget(player.availableMovement, from, target) +
     candidates.reduce(
-      (sum, entry) => sum + cardMovementFor(entry.definition, target),
+      (sum, entry) => sum + cardMovementFor(entry.definition, from, target),
       0,
     )
-  const requiredMovement = Math.max(1, target.difficulty)
+  const requiredMovement = getMoveRequirements(from, target).reduce(
+    (sum, requirement) => sum + requirement.amount,
+    0,
+  )
   if (player.hand.length >= 4 && possibleMovement < requiredMovement) {
     return candidates[0]?.card
   }
@@ -315,6 +338,7 @@ const chooseBotGoldCard = (
 const chooseBotToken = (
   game: GameState,
   player: PlayerState,
+  from: HexTile,
   target: HexTile,
 ): { tokenInstanceId: string; targetPlayerId?: string } | undefined => {
   if (
@@ -324,8 +348,15 @@ const chooseBotToken = (
     return undefined
   }
 
-  const requiredMovement = Math.max(1, target.difficulty)
-  const currentMovement = movementForTarget(player.availableMovement, target)
+  const requiredMovement = getMoveRequirements(from, target).reduce(
+    (sum, requirement) => sum + requirement.amount,
+    0,
+  )
+  const currentMovement = movementForTarget(
+    player.availableMovement,
+    from,
+    target,
+  )
   const movementToken = player.tokens.find((token) => {
     const effect = TOKEN_BY_TYPE[token.type].effect
     if (effect.kind !== 'MOVEMENT') return false
@@ -338,7 +369,8 @@ const chooseBotToken = (
     bonusPool[effect.movementType] = effect.value
     return (
       currentMovement < requiredMovement &&
-      currentMovement + movementForTarget(bonusPool, target) >= requiredMovement
+      currentMovement + movementForTarget(bonusPool, from, target) >=
+        requiredMovement
     )
   })
   if (movementToken) return { tokenInstanceId: movementToken.instanceId }
@@ -369,7 +401,8 @@ const chooseBotToken = (
   const possibleMovement =
     currentMovement +
     player.hand.reduce(
-      (sum, card) => sum + cardMovementFor(CARD_BY_ID[card.cardId]!, target),
+      (sum, card) =>
+        sum + cardMovementFor(CARD_BY_ID[card.cardId]!, from, target),
       0,
     )
   if (possibleMovement < requiredMovement) {
@@ -381,7 +414,7 @@ const chooseBotToken = (
     }
   }
 
-  if (!chooseBotPurchase(game, player, target)) {
+  if (!chooseBotPurchase(game, player, from, target)) {
     const refreshToken = player.tokens.find(
       (token) => token.type === 'REFRESH_MARKET',
     )
@@ -443,6 +476,9 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       }
 
       const player = game.players.find((entry) => entry.id === bot.id)!
+      const currentTile = game.map.tiles.find(
+        (tile) => tile.id === player.position,
+      )!
       const target = findBotRoute(game, player)[0]
       if (!target) {
         endTurn(game, bot.id)
@@ -452,7 +488,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         await emitRoom(io, room)
         continue
       }
-      const legalMove = canAffordMove(player, target)
+      const legalMove = canAffordMove(player, currentTile, target)
 
       if (legalMove) {
         movePlayer(game, bot.id, target.id)
@@ -466,7 +502,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      const tokenChoice = chooseBotToken(game, player, target)
+      const tokenChoice = chooseBotToken(game, player, currentTile, target)
       if (tokenChoice) {
         activateToken(
           game,
@@ -480,7 +516,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       }
 
       if (!player.hasBoughtThisTurn && !game.marketLockedUntilPlayerId) {
-        const purchase = chooseBotPurchase(game, player, target)
+        const purchase = chooseBotPurchase(game, player, currentTile, target)
         if (purchase && purchase.purchaseCost <= player.availableGold) {
           buyCard(game, bot.id, purchase.id)
           logGameAction(room, bot.id, 'buy_card', {
@@ -493,23 +529,39 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       }
 
       const plannedMovement =
-        movementForTarget(player.availableMovement, target) +
+        movementForTarget(player.availableMovement, currentTile, target) +
         player.hand.reduce(
           (sum, card) =>
-            sum + cardMovementFor(CARD_BY_ID[card.cardId]!, target),
+            sum +
+            cardMovementFor(CARD_BY_ID[card.cardId]!, currentTile, target),
           0,
         )
+      const requiredMovement = getMoveRequirements(currentTile, target).reduce(
+        (sum, requirement) => sum + requirement.amount,
+        0,
+      )
       const movementCard =
-        plannedMovement >= Math.max(1, target.difficulty)
+        plannedMovement >= requiredMovement
           ? player.hand
               .filter((card) => {
                 const definition = CARD_BY_ID[card.cardId]
-                return definition && cardMovementFor(definition, target) > 0
+                return (
+                  definition &&
+                  cardMovementFor(definition, currentTile, target) > 0
+                )
               })
               .sort(
                 (left, right) =>
-                  cardMovementFor(CARD_BY_ID[right.cardId]!, target) -
-                  cardMovementFor(CARD_BY_ID[left.cardId]!, target),
+                  cardMovementFor(
+                    CARD_BY_ID[right.cardId]!,
+                    currentTile,
+                    target,
+                  ) -
+                  cardMovementFor(
+                    CARD_BY_ID[left.cardId]!,
+                    currentTile,
+                    target,
+                  ),
               )[0]
           : undefined
       if (movementCard) {
@@ -522,7 +574,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      const goldCard = chooseBotGoldCard(player, target)
+      const goldCard = chooseBotGoldCard(player, currentTile, target)
       if (goldCard) {
         playCard(game, bot.id, goldCard.instanceId, 'GOLD')
         logGameAction(room, bot.id, 'play_card', {

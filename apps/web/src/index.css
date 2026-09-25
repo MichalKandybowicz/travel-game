@@ -804,6 +804,19 @@ select {
   stroke-width: 2px;
 }
 
+.map-edge-cost {
+  filter: drop-shadow(0 1.5px 1.5px rgba(2, 6, 23, 1));
+}
+
+.map-edge-cost text {
+  fill: #fffaf0;
+  font-size: 7.5px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: rgba(15, 23, 42, 0.9);
+  stroke-width: 1.35px;
+}
+
 .terrain-legend {
   display: flex;
   flex-wrap: wrap;
