@@ -50,6 +50,8 @@ npm run lint
    ```
 4. Open the client at `http://localhost:5173`.
 
+Na stronie głównej wpisz nazwę gracza i kliknij **Utwórz pokój**. Pokój powstanie od razu z domyślnymi ustawieniami, a mapa i zasady można zmienić w poczekalni przed rozpoczęciem gry.
+
 The server listens on `http://localhost:3000`. By default it connects to `mongodb://127.0.0.1:27017/travel_game`; set `MONGO_URL` to use another MongoDB instance.
 
 ## Test z osobą przez internet

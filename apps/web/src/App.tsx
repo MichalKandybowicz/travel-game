@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { CreatePage } from './pages/CreatePage.js'
 import { GamePage } from './pages/GamePage.js'
 import { HomePage } from './pages/HomePage.js'
 import { JoinPage } from './pages/JoinPage.js'
@@ -17,7 +16,7 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      <Route path="/create" element={<CreatePage />} />
+      <Route path="/create" element={<Navigate to="/" replace />} />
       <Route path="/join" element={<JoinPage />} />
       <Route path="/room/:roomCode" element={<RoomPage />} />
       <Route path="/game/:roomCode" element={<GamePage />} />

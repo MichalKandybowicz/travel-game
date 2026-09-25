@@ -49,6 +49,423 @@ button {
   text-align: center;
 }
 
+.home-page {
+  min-height: 100vh;
+  padding: 0 24px;
+  color: #f5f1e8;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(38, 98, 88, 0.26), transparent 35%),
+    #091720;
+}
+
+.home-wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.home-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 82px;
+}
+
+.home-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #f5f1e8;
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+}
+
+.home-brand-mark {
+  color: #e9b669;
+  font-size: 2.2rem;
+  line-height: 0.8;
+}
+
+.home-brand-accent {
+  color: #e9b669;
+}
+
+.home-nav-note {
+  color: #a9bcb9;
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+
+.home-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 590px;
+  overflow: hidden;
+  border: 1px solid rgba(206, 193, 157, 0.27);
+  border-radius: 28px;
+  background: #0b1a20;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.32);
+}
+
+.home-hero-art {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(
+      90deg,
+      #0a171e 0%,
+      rgba(10, 23, 30, 0.96) 23%,
+      rgba(10, 23, 30, 0.65) 43%,
+      transparent 73%
+    ),
+    linear-gradient(0deg, rgba(9, 23, 32, 0.62), transparent 24%),
+    url('/images/expedition-map.webp');
+  background-position:
+    center,
+    center,
+    center 48%;
+  background-size: cover;
+}
+
+.home-hero-content {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 620px);
+  padding: 70px 0 78px 6.4%;
+}
+
+.home-eyebrow {
+  color: #e9b669;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.19em;
+}
+
+.home-eyebrow > span {
+  margin-right: 5px;
+  font-size: 1rem;
+}
+
+.home-hero h1,
+.home-section-heading h2 {
+  margin: 22px 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 700;
+  line-height: 1.06;
+  letter-spacing: -0.055em;
+}
+
+.home-hero h1 {
+  font-size: clamp(3.4rem, 5.7vw, 5.8rem);
+}
+
+.home-hero h1 em,
+.home-section-heading h2 em {
+  color: #ecc17f;
+  font-weight: 400;
+}
+
+.home-hero-content > p {
+  max-width: 470px;
+  margin: 0 0 30px;
+  color: #d5ded7;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.home-create-form {
+  display: grid;
+  gap: 16px;
+}
+
+.home-name-field {
+  max-width: 310px;
+  color: #e3e9df;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.home-name-field input {
+  border-color: rgba(229, 211, 174, 0.45);
+  background: rgba(9, 23, 32, 0.85);
+  color: #fff;
+}
+
+.home-name-field input:focus-visible,
+.home-account input:focus-visible {
+  outline: 2px solid #e9b669;
+  outline-offset: 2px;
+}
+
+.home-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.home-create-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  min-width: 220px;
+  padding: 14px 18px;
+  border: 1px solid #edbb73;
+  background: #edbb73;
+  color: #14251f;
+  font-weight: 800;
+  box-shadow: 0 12px 28px rgba(12, 13, 7, 0.2);
+}
+
+.home-create-button:not(:disabled):hover {
+  background: #ffd28c;
+}
+
+.home-create-button span {
+  font-size: 1.3rem;
+}
+
+.home-join-link {
+  color: #f5f1e8;
+  font-weight: 750;
+  text-decoration-color: #e9b669;
+  text-underline-offset: 6px;
+}
+
+.home-join-link span {
+  margin-left: 7px;
+  color: #e9b669;
+}
+
+.home-connection {
+  display: block;
+  margin-top: 8px;
+  color: #d5ded7;
+}
+
+.home-resume {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  max-width: 500px;
+  margin-top: 26px;
+  padding: 12px 14px;
+  border: 1px solid rgba(231, 182, 105, 0.5);
+  border-radius: 14px;
+  background: rgba(7, 23, 28, 0.88);
+}
+
+.home-resume div {
+  display: grid;
+  margin-right: auto;
+}
+
+.home-resume small {
+  color: #bacac2;
+}
+
+.home-resume a {
+  color: #f5cc91;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.home-resume button {
+  padding: 5px 8px;
+  border: 0;
+  background: transparent;
+  color: #e7d9c5;
+  text-decoration: underline;
+}
+
+.home-hero-caption {
+  position: absolute;
+  right: 30px;
+  bottom: 25px;
+  color: #f3e2c7;
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-shadow: 0 2px 12px #000;
+}
+
+.home-below {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 36px;
+  padding: 66px 4px 60px;
+}
+
+.home-section-heading h2 {
+  margin: 13px 0 28px;
+  font-size: clamp(2.3rem, 3.8vw, 3.6rem);
+}
+
+.home-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.home-feature {
+  min-height: 200px;
+  padding: 23px 20px;
+  border: 1px solid rgba(216, 228, 211, 0.16);
+  border-radius: 18px;
+  background: rgba(20, 44, 48, 0.62);
+}
+
+.home-feature-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.home-feature-icon-green {
+  background: #1b4e42;
+  color: #a8e5bd;
+}
+.home-feature-icon-gold {
+  background: #584224;
+  color: #ffda95;
+}
+.home-feature-icon-blue {
+  background: #1a4861;
+  color: #a8dcf5;
+}
+
+.home-feature h3 {
+  margin: 17px 0 6px;
+  font-size: 1rem;
+}
+
+.home-feature p {
+  margin: 0;
+  color: #b3c6c1;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.home-account {
+  align-self: start;
+  padding: 26px;
+  border: 1px solid rgba(223, 190, 139, 0.24);
+  border-radius: 20px;
+  background: #142b30;
+}
+
+.home-account h2 {
+  margin: 10px 0 8px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.9rem;
+}
+
+.home-account > p {
+  margin: 0 0 22px;
+  color: #b4c8c2;
+  font-size: 0.87rem;
+}
+
+.home-account label {
+  color: #d7e2d9;
+  font-size: 0.82rem;
+}
+
+.home-account input {
+  background: #0a1b23;
+}
+
+.home-account .primary-button {
+  background: #dfac65;
+  border-color: #dfac65;
+  color: #15231e;
+  font-weight: 800;
+}
+
+.home-account .account-switch {
+  color: #e9c38f;
+  font-size: 0.83rem;
+  text-align: left;
+}
+
+.home-footer {
+  padding: 0 4px 30px;
+  color: #839e9a;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+}
+
+.home-footer span {
+  color: #e9b669;
+}
+
+@media (max-width: 1050px) {
+  .home-below {
+    grid-template-columns: 1fr;
+  }
+  .home-account {
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 650px) {
+  .home-page {
+    padding: 0 14px;
+  }
+  .home-nav {
+    min-height: 72px;
+  }
+  .home-nav-note {
+    display: none;
+  }
+  .home-hero {
+    min-height: 0;
+    align-items: flex-end;
+  }
+  .home-hero-art {
+    background-image:
+      linear-gradient(
+        0deg,
+        #0a171e 3%,
+        rgba(10, 23, 30, 0.92) 45%,
+        rgba(10, 23, 30, 0.18) 100%
+      ),
+      url('/images/expedition-map.webp');
+    background-position:
+      center,
+      61% top;
+  }
+  .home-hero-content {
+    padding: 210px 22px 56px;
+  }
+  .home-hero h1 {
+    font-size: clamp(3rem, 11vw, 4.5rem);
+  }
+  .home-hero-caption {
+    display: none;
+  }
+  .home-below {
+    gap: 34px;
+    padding-top: 46px;
+  }
+  .home-feature-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-feature {
+    min-height: 0;
+  }
+}
+
 .hero-actions,
 .inline-field {
   display: flex;
