@@ -5,16 +5,41 @@ import { movementLabels, terrainLabels } from '../labels.js'
 import { playerColor } from '../playerColors.js'
 import { TerrainIcon } from './TerrainIcon.js'
 
-const tileColors: Record<HexTile['terrain'], string> = {
-  UNKNOWN: '#334155',
-  START: '#60a5fa',
-  GOAL: '#f97316',
-  JUNGLE: '#22c55e',
-  WATER: '#38bdf8',
-  DESERT: '#eabf65',
-  RUBBLE: '#a8a29e',
-  CAMP: '#c084fc',
-  MOUNTAIN: '#334155',
+const tilePalette: Record<
+  HexTile['terrain'],
+  { light: string; dark: string; edge: string }
+> = {
+  UNKNOWN: { light: '#40515a', dark: '#1a2d35', edge: '#68808a' },
+  START: { light: '#e3b76e', dark: '#8a6036', edge: '#f5d89c' },
+  GOAL: { light: '#efae6a', dark: '#a55234', edge: '#ffd29b' },
+  JUNGLE: { light: '#4e9973', dark: '#205645', edge: '#81bf91' },
+  WATER: { light: '#57a9b7', dark: '#235979', edge: '#8ad0cf' },
+  DESERT: { light: '#ddbd79', dark: '#a47447', edge: '#f4d99c' },
+  RUBBLE: { light: '#aca596', dark: '#655c55', edge: '#d1c6ae' },
+  CAMP: { light: '#a286a9', dark: '#604960', edge: '#c4a9bc' },
+  MOUNTAIN: { light: '#647c7c', dark: '#293f47', edge: '#9eb1a9' },
+}
+
+const MAX_ZOOM = 12
+
+type MapView = {
+  centerX: number
+  centerY: number
+  width: number
+  height: number
+}
+
+const focusedView = (tile: HexTile | undefined, mapView: MapView) => {
+  const point = tile
+    ? hexToPixel(tile.q, tile.r, 24)
+    : { x: mapView.centerX, y: mapView.centerY }
+  return {
+    zoom: Math.min(
+      MAX_ZOOM,
+      Math.max(1.35, mapView.width / 400, mapView.height / 340),
+    ),
+    pan: { x: point.x - mapView.centerX, y: point.y - mapView.centerY },
+  }
 }
 
 const terrainOrder: HexTile['terrain'][] = [
@@ -89,8 +114,6 @@ export function HexMap({
   onSelectHex,
   onChooseStart,
 }: HexMapProps) {
-  const [view, setView] = useState({ zoom: 1, pan: { x: 0, y: 0 } })
-  const { zoom, pan } = view
   const [selectedHexId, setSelectedHexId] = useState<string>()
   const svgRef = useRef<SVGSVGElement>(null)
   const dragRef = useRef<{
@@ -107,15 +130,17 @@ export function HexMap({
   const currentTile = game.map.tiles.find(
     (tile) => tile.id === localPlayer?.position,
   )
+  const startTile = game.map.tiles.find(
+    (tile) => tile.id === game.map.startHexId,
+  )
   const mapView = useMemo(() => {
     if (
       game.settings.fogMode === 'MEDIUM' ||
       game.settings.fogMode === 'FULL'
     ) {
-      const point = currentTile
-        ? hexToPixel(currentTile.q, currentTile.r, 24)
-        : { x: 0, y: 0 }
-      return { centerX: point.x, centerY: point.y, width: 360, height: 330 }
+      const point = currentTile ?? startTile
+      const center = point ? hexToPixel(point.q, point.r, 24) : { x: 0, y: 0 }
+      return { centerX: center.x, centerY: center.y, width: 360, height: 330 }
     }
     const points = game.map.tiles.map((tile) => hexToPixel(tile.q, tile.r, 24))
     const xs = points.map((point) => point.x)
@@ -130,7 +155,24 @@ export function HexMap({
       width: Math.max(480, maxX - minX + 72),
       height: Math.max(440, maxY - minY + 72),
     }
-  }, [currentTile, game.map.tiles, game.settings.fogMode])
+  }, [currentTile, startTile, game.map.tiles, game.settings.fogMode])
+  const [view, setView] = useState(() =>
+    focusedView(currentTile ?? startTile, mapView),
+  )
+  const { zoom, pan } = view
+  const focusedGameRef = useRef(game.id)
+  const focusedOwnStartRef = useRef(Boolean(currentTile))
+
+  useEffect(() => {
+    if (focusedGameRef.current !== game.id) {
+      focusedGameRef.current = game.id
+      focusedOwnStartRef.current = Boolean(currentTile)
+      setView(focusedView(currentTile ?? startTile, mapView))
+    } else if (!focusedOwnStartRef.current && currentTile) {
+      focusedOwnStartRef.current = true
+      setView(focusedView(currentTile, mapView))
+    }
+  }, [game.id, currentTile, startTile, mapView])
 
   useEffect(() => {
     const svg = svgRef.current
@@ -142,7 +184,10 @@ export function HexMap({
       setView((current) => {
         const nextZoom = Math.max(
           0.6,
-          Math.min(4, current.zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12)),
+          Math.min(
+            MAX_ZOOM,
+            current.zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12),
+          ),
         )
         const oldWidth = mapView.width / current.zoom
         const oldHeight = mapView.height / current.zoom
@@ -209,28 +254,18 @@ export function HexMap({
         <div className="map-controls">
           <button
             type="button"
-            disabled={!currentTile}
             onClick={() => {
-              if (currentTile) {
-                const point = hexToPixel(currentTile.q, currentTile.r, 24)
-                setView((current) => ({
-                  ...current,
-                  pan: {
-                    x: point.x - mapView.centerX,
-                    y: point.y - mapView.centerY,
-                  },
-                }))
-              }
+              setView(focusedView(currentTile ?? startTile, mapView))
             }}
           >
-            Pokaż mnie
+            {currentTile ? 'Pokaż mnie' : 'Pokaż start'}
           </button>
           <button
             type="button"
             onClick={() =>
               setView((current) => ({
                 ...current,
-                zoom: Math.min(4, current.zoom + 0.2),
+                zoom: Math.min(MAX_ZOOM, current.zoom + 0.2),
               }))
             }
           >
@@ -362,6 +397,21 @@ export function HexMap({
           suppressClickRef.current = false
         }}
       >
+        <defs>
+          {Object.entries(tilePalette).map(([terrain, palette]) => (
+            <linearGradient
+              key={terrain}
+              id={`hex-${terrain}`}
+              x1="0"
+              y1="0"
+              x2="0.85"
+              y2="1"
+            >
+              <stop stopColor={palette.light} />
+              <stop offset="1" stopColor={palette.dark} />
+            </linearGradient>
+          ))}
+        </defs>
         <g>
           {game.map.tiles.map((tile) => {
             const { x, y } = hexToPixel(tile.q, tile.r, 24)
@@ -382,11 +432,7 @@ export function HexMap({
             return (
               <g
                 key={tile.id}
-                className={
-                  (isActive && isReachable) || isAvailableStart
-                    ? 'reachable-hex'
-                    : undefined
-                }
+                className={`map-tile${(isActive && isReachable) || isAvailableStart ? ' reachable-hex' : ''}`}
                 onClick={() => {
                   setSelectedHexId(tile.id)
                   if (isActive && isReachable) {
@@ -399,43 +445,60 @@ export function HexMap({
                 <title>{tileDescription(tile)}</title>
                 <polygon
                   points={polygonPoints(x, y, 22)}
-                  fill={tileColors[tile.terrain]}
+                  fill="#10272d"
                   stroke={
                     isAvailableStart
-                      ? '#facc15'
+                      ? '#ffe0a1'
                       : isLocalTile
-                        ? '#fef08a'
+                        ? '#f5c778'
                         : isSelected
-                          ? '#111827'
+                          ? '#fff2ca'
                           : isReachable
-                            ? '#f8fafc'
-                            : '#0f172a'
+                            ? '#b7e8cc'
+                            : tilePalette[tile.terrain].edge
                   }
                   strokeWidth={
                     isAvailableStart
-                      ? 4
+                      ? 3.5
                       : isLocalTile
-                        ? 4
+                        ? 3.5
                         : isSelected
                           ? 3
                           : isReachable
                             ? 2.5
-                            : 1
+                            : 1.25
                   }
-                  opacity={
-                    tile.terrain === 'UNKNOWN'
-                      ? 0.85
-                      : tile.isBlocked
-                        ? 0.45
-                        : 1
-                  }
+                />
+                <polygon
+                  points={polygonPoints(x, y, 19.5)}
+                  fill={`url(#hex-${tile.terrain})`}
+                  stroke="rgba(255, 249, 224, 0.24)"
+                  strokeWidth="0.65"
+                />
+                <path
+                  d={`M${x - 13} ${y - 11}L${x} ${y - 18}L${x + 13} ${y - 11}`}
+                  fill="none"
+                  stroke="rgba(255, 252, 230, 0.25)"
+                  strokeWidth="0.9"
+                  pointerEvents="none"
                 />
                 <g transform={`translate(${x} ${y - 5})`}>
                   <TerrainIcon terrain={tile.terrain} />
                 </g>
+                {tile.terrain !== 'UNKNOWN' && (
+                  <circle
+                    cx={x}
+                    cy={y + 10.5}
+                    r="6.5"
+                    fill="rgba(9, 31, 36, 0.83)"
+                    stroke="rgba(255, 242, 206, 0.58)"
+                    strokeWidth="0.8"
+                    pointerEvents="none"
+                  />
+                )}
                 <text
                   x={x}
-                  y={y + 10}
+                  y={y + 13.1}
                   textAnchor="middle"
                   className="hex-difficulty"
                 >
@@ -500,7 +563,9 @@ export function HexMap({
             <svg viewBox="-14 -14 28 28" aria-hidden="true">
               <polygon
                 points={polygonPoints(0, 0, 13)}
-                fill={tileColors[terrain]}
+                fill={tilePalette[terrain].light}
+                stroke={tilePalette[terrain].edge}
+                strokeWidth="1.2"
               />
               <TerrainIcon terrain={terrain} />
             </svg>
@@ -522,13 +587,7 @@ export function HexMap({
           ))}
         </ul>
       </details>
-      {game.settings.fogMode === 'NONE' && (
-        <div className="map-stats">
-          <span>Najkrótsza trasa: {game.map.stats.shortestPathLength}</span>
-          <span>Trasy: {game.map.stats.routeCount}</span>
-          <span>Trudność: {game.map.stats.difficultyScore}</span>
-        </div>
-      )}
+
     </div>
   )
 }
