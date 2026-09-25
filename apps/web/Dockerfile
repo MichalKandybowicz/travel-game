@@ -8,6 +8,9 @@ COPY packages ./packages
 COPY apps/web ./apps/web
 COPY apps/web/tsconfig*.json ./
 
+ARG VITE_SERVER_URL
+ENV VITE_SERVER_URL=$VITE_SERVER_URL
+
 # Install and build only web
 RUN npm ci && \
     npm run build --workspace=@travel-game/web
