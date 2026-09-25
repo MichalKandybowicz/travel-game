@@ -129,132 +129,130 @@ export function RoomPage() {
           {errorLabels[error.code] ?? error.message}
         </div>
       )}
-      <div className="layout two-column lobby-layout">
-        <div className="lobby-sidebar">
-          <section className="panel lobby-players-panel">
-            <div className="panel-header">
-              <div>
-                <small className="panel-kicker">UCZESTNICY</small>
-                <h2>
-                  Gracze <span>{playerCount}/4</span>
-                </h2>
+      <div className="layout lobby-layout">
+        <section className="panel lobby-players-panel">
+          <div className="panel-header">
+            <div>
+              <small className="panel-kicker">UCZESTNICY</small>
+              <h2>
+                Gracze <span>{playerCount}/4</span>
+              </h2>
+            </div>
+          </div>
+          <ul className="player-list">
+            {room?.players.map((player, index) => (
+              <li key={player.id}>
+                <PlayerBadge
+                  index={index}
+                  color={player.color}
+                  symbol={player.symbol}
+                />
+                <span className="lobby-player-copy">
+                  <strong>{player.name}</strong>
+                  <small>
+                    {player.connected ? 'Połączony' : 'Łączy się ponownie'}
+                  </small>
+                </span>
+                {player.id === room.hostPlayerId && (
+                  <span className="lobby-host-badge">Gospodarz</span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="lobby-player-hint">
+            Do rozpoczęcia gry potrzeba co najmniej dwóch graczy.
+          </p>
+          {me && room?.status === 'LOBBY' && (
+            <div className="player-appearance-picker">
+              <strong>Twój gracz</strong>
+              <form
+                className="lobby-player-name"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const name = playerName.trim()
+                  if (name && name !== me.name) updatePlayerName(name)
+                }}
+              >
+                <label htmlFor="lobby-player-name">Nazwa gracza</label>
+                <div>
+                  <input
+                    id="lobby-player-name"
+                    value={playerName}
+                    minLength={1}
+                    maxLength={24}
+                    onChange={(event) => setPlayerName(event.target.value)}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={
+                      !playerName.trim() || playerName.trim() === me.name
+                    }
+                  >
+                    Zapisz
+                  </button>
+                </div>
+              </form>
+              <span>Kolor</span>
+              <div
+                className="appearance-options"
+                role="group"
+                aria-label="Kolor pionka"
+              >
+                {PLAYER_COLORS.map((color) => {
+                  const taken = room.players.some(
+                    (player) => player.id !== me.id && player.color === color,
+                  )
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      className="appearance-color"
+                      style={{ backgroundColor: color }}
+                      aria-label={`Kolor ${PLAYER_COLORS.indexOf(color) + 1}${taken ? ' — zajęty' : ''}`}
+                      aria-pressed={myColor === color}
+                      disabled={taken}
+                      onClick={() => updateAppearance(color, mySymbol)}
+                    />
+                  )
+                })}
+              </div>
+              <span>Symbol</span>
+              <div
+                className="appearance-options"
+                role="group"
+                aria-label="Symbol pionka"
+              >
+                {PLAYER_SYMBOLS.map((symbol) => (
+                  <button
+                    key={symbol}
+                    type="button"
+                    className="appearance-symbol"
+                    style={{ backgroundColor: myColor }}
+                    aria-label={playerSymbolLabels[symbol]}
+                    aria-pressed={mySymbol === symbol}
+                    title={playerSymbolLabels[symbol]}
+                    onClick={() => updateAppearance(myColor, symbol)}
+                  >
+                    <PlayerSymbol symbol={symbol} size={19} />
+                  </button>
+                ))}
               </div>
             </div>
-            <ul className="player-list">
-              {room?.players.map((player, index) => (
-                <li key={player.id}>
-                  <PlayerBadge
-                    index={index}
-                    color={player.color}
-                    symbol={player.symbol}
-                  />
-                  <span className="lobby-player-copy">
-                    <strong>{player.name}</strong>
-                    <small>
-                      {player.connected ? 'Połączony' : 'Łączy się ponownie'}
-                    </small>
-                  </span>
-                  {player.id === room.hostPlayerId && (
-                    <span className="lobby-host-badge">Gospodarz</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="lobby-player-hint">
-              Do rozpoczęcia gry potrzeba co najmniej dwóch graczy.
-            </p>
-            {me && room?.status === 'LOBBY' && (
-              <div className="player-appearance-picker">
-                <strong>Twój gracz</strong>
-                <form
-                  className="lobby-player-name"
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    const name = playerName.trim()
-                    if (name && name !== me.name) updatePlayerName(name)
-                  }}
-                >
-                  <label htmlFor="lobby-player-name">Nazwa gracza</label>
-                  <div>
-                    <input
-                      id="lobby-player-name"
-                      value={playerName}
-                      minLength={1}
-                      maxLength={24}
-                      onChange={(event) => setPlayerName(event.target.value)}
-                      required
-                    />
-                    <button
-                      type="submit"
-                      disabled={
-                        !playerName.trim() || playerName.trim() === me.name
-                      }
-                    >
-                      Zapisz
-                    </button>
-                  </div>
-                </form>
-                <span>Kolor</span>
-                <div
-                  className="appearance-options"
-                  role="group"
-                  aria-label="Kolor pionka"
-                >
-                  {PLAYER_COLORS.map((color) => {
-                    const taken = room.players.some(
-                      (player) => player.id !== me.id && player.color === color,
-                    )
-                    return (
-                      <button
-                        key={color}
-                        type="button"
-                        className="appearance-color"
-                        style={{ backgroundColor: color }}
-                        aria-label={`Kolor ${PLAYER_COLORS.indexOf(color) + 1}${taken ? ' — zajęty' : ''}`}
-                        aria-pressed={myColor === color}
-                        disabled={taken}
-                        onClick={() => updateAppearance(color, mySymbol)}
-                      />
-                    )
-                  })}
-                </div>
-                <span>Symbol</span>
-                <div
-                  className="appearance-options"
-                  role="group"
-                  aria-label="Symbol pionka"
-                >
-                  {PLAYER_SYMBOLS.map((symbol) => (
-                    <button
-                      key={symbol}
-                      type="button"
-                      className="appearance-symbol"
-                      style={{ backgroundColor: myColor }}
-                      aria-label={playerSymbolLabels[symbol]}
-                      aria-pressed={mySymbol === symbol}
-                      title={playerSymbolLabels[symbol]}
-                      onClick={() => updateAppearance(myColor, symbol)}
-                    >
-                      <PlayerSymbol symbol={symbol} size={19} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </section>
-          {room && (
-            <section className="panel map-shape-panel">
-              <div className="panel-header">
-                <div>
-                  <small className="panel-kicker">PODGLĄD WYPRAWY</small>
-                  <h2>Kształt mapy</h2>
-                </div>
-              </div>
-              <MapShapePreview shape={room.mapShape} />
-              <p>Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.</p>
-            </section>
           )}
-        </div>
+        </section>
+        {room && (
+          <section className="panel map-shape-panel">
+            <div className="panel-header">
+              <div>
+                <small className="panel-kicker">PODGLĄD WYPRAWY</small>
+                <h2>Kształt mapy</h2>
+              </div>
+            </div>
+            <MapShapePreview shape={room.mapShape} />
+            <p>Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.</p>
+          </section>
+        )}
         <section className="panel lobby-settings-panel">
           <div className="panel-header">
             <div>

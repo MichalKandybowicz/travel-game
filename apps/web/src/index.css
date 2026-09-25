@@ -1635,7 +1635,12 @@ select {
 }
 
 .lobby-layout {
-  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.8fr);
+  display: grid;
+  grid-template-columns:
+    minmax(260px, 0.8fr)
+    minmax(320px, 1.15fr)
+    minmax(300px, 1fr);
+  gap: 20px;
   align-items: start;
 }
 
@@ -2001,10 +2006,10 @@ select {
     justify-content: flex-start;
   }
   .lobby-layout {
-    grid-template-columns: 1fr;
-  }
-  .lobby-sidebar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .lobby-layout .map-shape-panel {
+    grid-column: 1 / -1;
   }
 }
 
@@ -2035,11 +2040,12 @@ select {
   .lobby-header-actions button {
     flex: 1;
   }
-  .lobby-sidebar {
-    grid-template-columns: 1fr;
-  }
   .lobby-layout {
+    grid-template-columns: 1fr;
     gap: 14px;
+  }
+  .lobby-layout .map-shape-panel {
+    grid-column: auto;
   }
   .game-shell .game-layout {
     gap: 14px;
