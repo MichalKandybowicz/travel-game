@@ -98,10 +98,7 @@ export function HomePage() {
                 <button
                   className="home-create-button"
                   type="submit"
-                  disabled={
-                    !connected ||
-                    (createRequested && !error)
-                  }
+                  disabled={!connected || (createRequested && !error)}
                 >
                   {createRequested && !error
                     ? 'Tworzenie pokoju…'

@@ -308,7 +308,7 @@ describe('GameEngine', () => {
     const game = buildTestGame()
     const caster = game.players[0]!
     const opponent = game.players[1]!
-    caster.tokens.push({
+    caster.tokens!.push({
       instanceId: 'market-curse',
       type: 'CURSE_MARKET',
     })
@@ -343,7 +343,7 @@ describe('GameEngine', () => {
     const caster = game.players[0]!
     const leader = game.players[1]!
     leader.position = game.map.goalHexId
-    caster.tokens.push({
+    caster.tokens!.push({
       instanceId: 'skip-curse',
       type: 'CURSE_SKIP_LEADER',
     })
@@ -366,7 +366,7 @@ describe('GameEngine', () => {
     const handBefore = [...opponent.hand]
     const removableBefore =
       opponent.drawPile.length + opponent.discardPile.length
-    caster.tokens.push({
+    caster.tokens!.push({
       instanceId: 'remove-curse',
       type: 'CURSE_REMOVE_CARD',
     })
@@ -383,7 +383,7 @@ describe('GameEngine', () => {
   it('allows only one stored token per round and preserves the others', () => {
     const game = buildTestGame()
     const player = game.players[0]!
-    player.tokens.push(
+    player.tokens!.push(
       { instanceId: 'green-token', type: 'GREEN_1' },
       { instanceId: 'gold-token', type: 'GOLD_2' },
     )
@@ -391,7 +391,7 @@ describe('GameEngine', () => {
     useToken(game, player.id, 'green-token')
 
     expect(player.availableMovement.GREEN).toBe(1)
-    expect(player.tokens.map((token) => token.instanceId)).toEqual([
+    expect(player.tokens!.map((token) => token.instanceId)).toEqual([
       'gold-token',
     ])
     expect(() => useToken(game, player.id, 'gold-token')).toThrow(

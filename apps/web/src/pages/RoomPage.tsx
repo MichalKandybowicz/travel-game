@@ -209,9 +209,7 @@ export function RoomPage() {
                     maxLength={24}
                     required
                   />
-                  <button type="submit">
-                    Zapisz
-                  </button>
+                  <button type="submit">Zapisz</button>
                 </div>
               </form>
               <span>Kolor</span>
