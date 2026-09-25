@@ -15,7 +15,18 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: linear-gradient(180deg, #0f172a, #111827 60%, #020617);
+  background:
+    radial-gradient(
+      circle at 18% 12%,
+      rgba(126, 74, 189, 0.2),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 82% 22%,
+      rgba(27, 150, 164, 0.16),
+      transparent 30%
+    ),
+    linear-gradient(180deg, #100c22, #101827 58%, #050510);
 }
 
 button,
@@ -54,8 +65,17 @@ button {
   padding: 0 24px;
   color: #f5f1e8;
   background:
-    radial-gradient(circle at 85% 15%, rgba(38, 98, 88, 0.26), transparent 35%),
-    #091720;
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(111, 64, 160, 0.28),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 12% 65%,
+      rgba(14, 116, 144, 0.18),
+      transparent 30%
+    ),
+    #090b1d;
 }
 
 .home-wrap {
@@ -83,13 +103,14 @@ button {
 }
 
 .home-brand-mark {
-  color: #e9b669;
+  color: #d8b4fe;
+  filter: drop-shadow(0 0 7px rgba(192, 132, 252, 0.65));
   font-size: 2.2rem;
   line-height: 0.8;
 }
 
 .home-brand-accent {
-  color: #e9b669;
+  color: #c4b5fd;
 }
 
 .home-nav-note {
@@ -104,10 +125,12 @@ button {
   align-items: center;
   min-height: 590px;
   overflow: hidden;
-  border: 1px solid rgba(206, 193, 157, 0.27);
+  border: 1px solid rgba(216, 180, 254, 0.3);
   border-radius: 28px;
-  background: #0b1a20;
-  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.32);
+  background: #101329;
+  box-shadow:
+    0 26px 70px rgba(0, 0, 0, 0.38),
+    0 0 40px rgba(126, 34, 206, 0.08);
 }
 
 .home-hero-art {
@@ -831,9 +854,14 @@ select {
 }
 
 .terrain-legend-item svg {
-  width: 25px;
-  height: 25px;
+  width: 29px;
+  height: 29px;
   flex: none;
+  shape-rendering: geometricprecision;
+}
+
+.terrain-glyph {
+  shape-rendering: geometricprecision;
 }
 
 .terrain-rules {
@@ -1650,6 +1678,12 @@ select {
 
 .reachable-hex {
   cursor: pointer;
+  animation: rune-pulse 1.65s ease-in-out infinite;
+}
+
+.map-player-marker--active {
+  filter: drop-shadow(0 0 3px #fff3bf) drop-shadow(0 0 7px #c084fc);
+  animation: familiar-float 1.8s ease-in-out infinite;
 }
 
 .hand-panel {
@@ -1794,12 +1828,49 @@ select {
 
 /* Shared visual language for joining, the lobby and the game. */
 .journey-page {
+  position: relative;
+  isolation: isolate;
   max-width: none;
   min-height: 100vh;
   color: #f5f1e8;
   background:
-    radial-gradient(circle at 87% 5%, rgba(33, 90, 80, 0.27), transparent 33%),
-    #091720;
+    radial-gradient(circle at 87% 5%, rgba(91, 63, 151, 0.3), transparent 33%),
+    radial-gradient(
+      circle at 12% 48%,
+      rgba(16, 122, 130, 0.17),
+      transparent 28%
+    ),
+    #090b1d;
+}
+
+.journey-page::before,
+.journey-page::after {
+  position: fixed;
+  z-index: -1;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #e9d5ff;
+  box-shadow:
+    12vw 18vh #67e8f9,
+    28vw 8vh #fde68a,
+    44vw 31vh #d8b4fe,
+    61vw 13vh #a5f3fc,
+    76vw 38vh #f0abfc,
+    91vw 16vh #fef3c7,
+    18vw 68vh #c4b5fd,
+    38vw 82vh #67e8f9,
+    67vw 73vh #fde68a,
+    88vw 87vh #d8b4fe;
+  content: '';
+  opacity: 0.58;
+  animation: arcane-drift 8s ease-in-out infinite alternate;
+}
+
+.journey-page::after {
+  transform: translate(5vw, 18vh) scale(0.7);
+  opacity: 0.35;
+  animation-delay: -4s;
 }
 
 .journey-page > * {
@@ -2048,9 +2119,13 @@ select {
 .game-shell .panel {
   background: linear-gradient(
     145deg,
-    rgba(20, 49, 52, 0.97),
-    rgba(11, 30, 38, 0.98)
+    rgba(31, 35, 65, 0.97),
+    rgba(8, 34, 43, 0.98)
   );
+  border-color: rgba(196, 181, 253, 0.24);
+  box-shadow:
+    0 16px 40px rgba(2, 6, 23, 0.34),
+    inset 0 1px rgba(216, 180, 254, 0.08);
 }
 
 .lobby-page .panel h2,
@@ -2375,7 +2450,13 @@ select {
 
 .game-shell .hex-map {
   border: 1px solid rgba(225, 228, 207, 0.21);
-  background: radial-gradient(circle, #153638, #081c25 78%);
+  background:
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(65, 93, 112, 0.68),
+      transparent 55%
+    ),
+    radial-gradient(circle, #1c274d, #090b20 78%);
 }
 
 .game-shell .hand-panel {
@@ -2388,8 +2469,51 @@ select {
 }
 
 .game-shell .market-trigger {
-  border-color: #b68d57;
-  background: linear-gradient(125deg, #594023, #162e33 76%);
+  border-color: #c084fc;
+  background: linear-gradient(125deg, #53306e, #153744 76%);
+  box-shadow:
+    inset 0 0 18px rgba(192, 132, 252, 0.12),
+    0 0 14px rgba(34, 211, 238, 0.08);
+}
+
+@keyframes arcane-drift {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 0.35;
+  }
+  to {
+    transform: translateY(-14px) scale(1.15);
+    opacity: 0.72;
+  }
+}
+
+@keyframes rune-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px rgba(167, 243, 208, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 7px rgba(103, 232, 249, 0.92));
+  }
+}
+
+@keyframes familiar-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-page::before,
+  .journey-page::after,
+  .reachable-hex,
+  .map-player-marker--active {
+    animation: none;
+  }
 }
 
 .game-shell .deck-preview summary {

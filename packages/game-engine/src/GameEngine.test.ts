@@ -301,6 +301,17 @@ describe('GameEngine', () => {
 
       expect(game.market).toHaveLength(4)
       expect(new Set(game.market).size).toBe(4)
+      expect(
+        game.market.filter((offer) => CARD_BY_ID[offer]?.type === 'ACTION')
+          .length,
+      ).toBeLessThanOrEqual(1)
+      expect(
+        game.market.some(
+          (offer) =>
+            CARD_BY_ID[offer]?.type === 'MOVEMENT' &&
+            CARD_BY_ID[offer]!.purchaseCost <= 5,
+        ),
+      ).toBe(true)
       endTurn(game, 'p1')
       endTurn(game, 'p2')
     }
@@ -321,22 +332,15 @@ describe('GameEngine', () => {
     const game = buildTestGame()
     expect(
       game.market.some(
-        (cardId) => (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6,
+        (cardId) =>
+          CARD_BY_ID[cardId]?.type === 'MOVEMENT' &&
+          CARD_BY_ID[cardId]!.purchaseCost <= 5,
       ),
     ).toBe(true)
     expect(
-      game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION'),
-    ).toHaveLength(
-      Math.min(
-        2,
-        game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
-          .length,
-      ),
-    )
-    expect(
       game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
         .length,
-    ).toBeLessThanOrEqual(2)
+    ).toBeLessThanOrEqual(1)
   })
 
   it('uses second wind once, draws two and requires one discard', () => {

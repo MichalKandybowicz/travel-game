@@ -16,4 +16,10 @@ export const playerSymbolLabels: Record<PlayerSymbol, string> = {
   WAVE: 'Fala',
   MOUNTAIN: 'Góra',
   SUN: 'Słońce',
+  MOON: 'Księżyc',
+  CRYSTAL: 'Kryształ',
+  RUNE: 'Runa',
+  WAND: 'Różdżka',
+  CROWN: 'Korona',
+  DRAGON: 'Smok',
 }

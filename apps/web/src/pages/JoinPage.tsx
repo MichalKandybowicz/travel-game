@@ -44,13 +44,13 @@ export function JoinPage() {
       <div className="join-layout">
         <div className="join-visual">
           <div className="join-visual-copy">
-            <span className="home-eyebrow">WYPRAWA CZEKA</span>
+            <span className="home-eyebrow">PORTAL CZEKA</span>
             <h1>
-              Najlepsze trasy odkrywa się <em>razem.</em>
+              Najpotężniejsze legendy tworzy się <em>razem.</em>
             </h1>
             <p>
-              Wpisz kod od gospodarza i dołącz do wspólnego wyścigu przez
-              nieznane.
+              Wpisz kod od gospodarza i przekrocz portal do wspólnego wyścigu
+              przez zaklęte krainy.
             </p>
           </div>
         </div>

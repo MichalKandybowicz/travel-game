@@ -347,8 +347,11 @@ export const routeCostToGoal = (
 const isActionCard = (cardId: string): boolean =>
   CARD_BY_ID[cardId]?.type === 'ACTION'
 
-const hasAffordableMarketCard = (cardIds: string[]): boolean =>
-  cardIds.some((cardId) => (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6)
+const hasAffordableMovementCard = (cardIds: string[]): boolean =>
+  cardIds.some((cardId) => {
+    const card = CARD_BY_ID[cardId]
+    return card?.type === 'MOVEMENT' && card.purchaseCost <= 5
+  })
 
 const takeMarketCards = (
   drawPile: string[],
@@ -360,14 +363,13 @@ const takeMarketCards = (
     const offers = [...currentMarket, ...selected]
     const actionCount = offers.filter(isActionCard).length
     const mustPickAffordable =
-      !hasAffordableMarketCard(offers) && selected.length === amount - 1
+      !hasAffordableMovementCard(offers) && selected.length === amount - 1
     const index = drawPile.findIndex((cardId) => {
       if (offers.includes(cardId)) return false
-      if (isActionCard(cardId) && actionCount >= 2) return false
-      return (
-        !mustPickAffordable ||
-        (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6
-      )
+      if (isActionCard(cardId) && actionCount >= 1) return false
+      if (!mustPickAffordable) return true
+      const card = CARD_BY_ID[cardId]
+      return card?.type === 'MOVEMENT' && card.purchaseCost <= 5
     })
     if (index < 0) break
     selected.push(drawPile.splice(index, 1)[0]!)

@@ -168,8 +168,8 @@ export function GamePage() {
           <aside className="panel sidebar game-players-panel">
             <div className="panel-header">
               <div>
-                <small className="panel-kicker">WYPRAWA</small>
-                <h2>Gracze</h2>
+                <small className="panel-kicker">KRĄG WĘDROWCÓW</small>
+                <h2>Magowie</h2>
               </div>
             </div>
             <ul className="player-list">

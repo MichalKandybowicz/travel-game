@@ -22,15 +22,15 @@ export function PlayerTokens({
   const [targetPlayerId, setTargetPlayerId] = useState(opponents[0]?.id ?? '')
 
   return (
-    <section className="player-tokens" aria-label="Twoje żetony">
+    <section className="player-tokens" aria-label="Twoje runy">
       <div>
-        <strong>Żetony obozowe</strong>
+        <strong>Runy kręgów mocy</strong>
       </div>
       <div className="player-tokens-heading">
         <small>
           {usedThisRound
-            ? 'Żeton wykorzystany w tej rundzie'
-            : 'Możesz użyć 1 żetonu w tej rundzie'}
+            ? 'Runa wykorzystana w tej rundzie'
+            : 'Możesz użyć 1 runy w tej rundzie'}
         </small>
       </div>
       {tokens.length > 0 ? (
@@ -82,7 +82,7 @@ export function PlayerTokens({
         </div>
       ) : (
         <small className="token-empty">
-          Wejdź do obozu, aby zdobyć losowy żeton.
+          Wejdź do kręgu mocy, aby zdobyć losową runę.
         </small>
       )}
     </section>

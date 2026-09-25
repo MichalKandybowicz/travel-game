@@ -27,9 +27,9 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
         onClick={() => dialogRef.current?.showModal()}
       >
         <span>
-          <strong>Otwórz sklep</strong>
-          <small>Oferty: {game.market.length}</small>
-          {isLocked && <small>Sklep przeklęty</small>}
+          <strong>Otwórz magiczny bazar</strong>
+          <small>Zaklęcia i artefakty: {game.market.length}</small>
+          {isLocked && <small>Bazar spowity klątwą</small>}
         </span>
         <span className="market-trigger-arrow" aria-hidden="true">
           →
@@ -49,8 +49,8 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
         <div className="market-dialog-content">
           <header className="market-dialog-header">
             <div>
-              <small>Rynek kart</small>
-              <h2 id="market-title">Sklep</h2>
+              <small>Wędrowny kram zaklęć</small>
+              <h2 id="market-title">Magiczny bazar</h2>
             </div>
             <button
               type="button"
@@ -63,7 +63,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
           </header>
           <div className="market-dialog-summary">
             <div className="market-gold">
-              <span>Twoje złoto</span>
+              <span>Twoje magiczne złoto</span>
               <strong>{availableGold}</strong>
             </div>
             <p>

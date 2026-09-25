@@ -73,11 +73,11 @@ export function RoomPage() {
             TRAVEL<span className="home-brand-accent">GAME</span>
           </span>
         </span>
-        <span className="journey-nav-label">Przygotowanie wyprawy</span>
+        <span className="journey-nav-label">Przygotowanie rytuału</span>
       </nav>
       <header className="journey-header lobby-header">
         <div>
-          <span className="home-eyebrow">WYPRAWA ZARAZ SIĘ ZACZNIE</span>
+          <span className="home-eyebrow">PORTAL WKRÓTCE SIĘ OTWORZY</span>
           <h1>Poczekalnia</h1>
           <p>
             Zaproszenie jest gotowe. Zbierz graczy i ustalcie, jak będzie

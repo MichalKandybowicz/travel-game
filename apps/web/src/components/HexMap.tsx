@@ -298,7 +298,7 @@ export function HexMap({
   return (
     <div className="panel map-panel">
       <div className="panel-header">
-        <strong>Mapa</strong>
+        <strong>Mapa krain</strong>
         <div className="map-controls">
           <button
             type="button"
@@ -381,7 +381,7 @@ export function HexMap({
         viewBox={`${mapView.centerX + pan.x - mapView.width / (2 * zoom)} ${mapView.centerY + pan.y - mapView.height / (2 * zoom)} ${mapView.width / zoom} ${mapView.height / zoom}`}
         className="hex-map"
         role="img"
-        aria-label="Mapa gry"
+        aria-label="Magiczna mapa krain"
         onPointerDown={(event) => {
           if (event.button !== 0) return
           const rect = event.currentTarget.getBoundingClientRect()
@@ -571,8 +571,11 @@ export function HexMap({
                   strokeWidth="0.9"
                   pointerEvents="none"
                 />
-                <g transform={`translate(${x} ${y - 5})`}>
-                  <TerrainIcon terrain={tile.terrain} />
+                <g
+                  transform={`translate(${x} ${y - 3})`}
+                  className="terrain-glyph"
+                >
+                  <TerrainIcon terrain={tile.terrain} scale={1.18} />
                 </g>
                 {game.status === 'CHOOSING_START' &&
                   tile.terrain === 'START' && (
@@ -605,7 +608,10 @@ export function HexMap({
                   const markerX = x + (index - (occupiedBy.length - 1) / 2) * 13
                   const markerY = y + 7
                   return (
-                    <g key={player.id} className="map-player-marker">
+                    <g
+                      key={player.id}
+                      className={`map-player-marker${player.id === game.currentPlayerId ? ' map-player-marker--active' : ''}`}
+                    >
                       <title>{`${player.name}${player.id === playerId ? ' (Ty)' : ''}`}</title>
                       <circle
                         cx={markerX}
@@ -696,7 +702,7 @@ export function HexMap({
                 stroke={tilePalette[terrain].edge}
                 strokeWidth="1.2"
               />
-              <TerrainIcon terrain={terrain} />
+              <TerrainIcon terrain={terrain} scale={1.08} />
             </svg>
             {terrainLabels[terrain]}
           </span>

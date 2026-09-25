@@ -51,7 +51,7 @@ export function CardFace({
     } as const
     return (
       <span className="game-card__inner">
-        <span className="game-card__topline">Karta jednorazowa</span>
+        <span className="game-card__topline">Jednorazowe zaklęcie</span>
         <strong className="game-card__name">
           {cardLabels[card.id]?.name ?? card.name}
         </strong>
@@ -71,7 +71,7 @@ export function CardFace({
   }
   return (
     <span className="game-card__inner">
-      <span className="game-card__topline">Karta ruchu</span>
+      <span className="game-card__topline">Karta mocy</span>
       <strong className="game-card__name">
         {cardLabels[card.id]?.name ?? card.name}
       </strong>

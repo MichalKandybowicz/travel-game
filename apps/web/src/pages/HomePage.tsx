@@ -62,23 +62,24 @@ export function HomePage() {
               TRAVEL<span className="home-brand-accent">GAME</span>
             </span>
           </Link>
-          <span className="home-nav-note">Gra wyprawowa dla 2–4 graczy</span>
+          <span className="home-nav-note">Magiczny wyścig dla 2–4 graczy</span>
         </header>
 
         <section className="home-hero" aria-labelledby="home-title">
           <div className="home-hero-art" aria-hidden="true" />
           <div className="home-hero-content">
             <span className="home-eyebrow">
-              <span aria-hidden="true">✦</span> WYŚCIG PRZEZ NIEZNANE
+              <span aria-hidden="true">✦</span> WYŚCIG PRZEZ ZAKLĘTE KRAINY
             </span>
             <h1 id="home-title">
-              Każda droga
+              Każde zaklęcie
               <br />
-              to nowa <em>przygoda.</em>
+              zmienia <em>przeznaczenie.</em>
             </h1>
             <p>
-              Odkrywaj heksagonalny świat, buduj talię i znajdź własną trasę do
-              celu. Zaproś znajomych i ruszajcie razem.
+              Otwieraj pradawne portale, buduj talię magicznych mocy i odnajdź
+              drogę przez krainy spowite mgłą. Zaproś znajomych do wspólnego
+              rytuału.
             </p>
 
             <form
@@ -147,7 +148,7 @@ export function HomePage() {
             )}
           </div>
           <div className="home-hero-caption" aria-hidden="true">
-            NOWA MAPA · NOWA DROGA · NOWY WYŚCIG
+            NOWA KRAINA · NOWE ZAKLĘCIA · NOWE PRZEZNACZENIE
           </div>
         </section>
 
@@ -160,7 +161,7 @@ export function HomePage() {
         <section className="home-below" aria-label="O grze i koncie">
           <div className="home-features">
             <div className="home-section-heading">
-              <span className="home-eyebrow">JAK WYGLĄDA WYPRAWA</span>
+              <span className="home-eyebrow">JAK WYGLĄDA MAGICZNA WYPRAWA</span>
               <h2>
                 Proste zasady.
                 <br />
@@ -175,10 +176,10 @@ export function HomePage() {
                 >
                   ⬡
                 </span>
-                <h3>Odkrywaj mapę</h3>
+                <h3>Odkrywaj zaklęte krainy</h3>
                 <p>
-                  Wybieraj drogę przez dżunglę, wodę i pustynię. Każdy teren
-                  wymaga innego ruchu.
+                  Wybieraj drogę przez zaklęte gaje, kryształowe wody i
+                  starożytne ruiny. Każda kraina wymaga innej mocy.
                 </p>
               </article>
               <article className="home-feature">
@@ -301,7 +302,7 @@ export function HomePage() {
           </section>
         </section>
         <footer className="home-footer">
-          TRAVEL GAME <span>·</span> Każda wyprawa zaczyna się od jednego pola.
+          TRAVEL GAME <span>·</span> Każda legenda zaczyna się od jednej runy.
         </footer>
       </div>
     </main>
