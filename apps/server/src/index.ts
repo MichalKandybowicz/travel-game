@@ -385,7 +385,7 @@ io.on('connection', (socket) => {
           PLAYER_COLORS.find((color) =>
             room.players.every((entry) => entry.color !== color),
           ) ?? PLAYER_COLORS[0],
-        symbol: PLAYER_SYMBOLS[room.players.length],
+        symbol: PLAYER_SYMBOLS[room.players.length % PLAYER_SYMBOLS.length]!,
         sessionTokenHash: '',
         ...(account ? { accountId: account.id } : {}),
         connected: true,

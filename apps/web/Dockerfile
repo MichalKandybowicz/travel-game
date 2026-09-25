@@ -12,10 +12,8 @@ COPY apps/web/tsconfig*.json ./
 RUN npm ci && \
     npm run build --workspace=@travel-game/web
 
-# Serve with http-server
 RUN npm install -g http-server
 
 EXPOSE 8080
 
-CMD ["http-server", "apps/web/dist", "-p", "8080", "--gzip", "-c-1"]
-
+CMD ["sh", "-c", "http-server apps/web/dist -p \"${PORT:-8080}\" --gzip -c-1"]
