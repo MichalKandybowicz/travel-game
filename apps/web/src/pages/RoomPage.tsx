@@ -32,7 +32,6 @@ export function RoomPage() {
   const removeBot = useGameStore((state) => state.removeBot)
   const [leaving, setLeaving] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [playerName, setPlayerName] = useState('')
 
   useEffect(() => {
     if (
@@ -58,9 +57,6 @@ export function RoomPage() {
   const myColor = playerColor(Math.max(0, myIndex), me?.color)
   const mySymbol = playerSymbol(Math.max(0, myIndex), me?.symbol)
 
-  useEffect(() => {
-    if (me?.name) setPlayerName(me.name)
-  }, [me?.name])
   const canStart = useMemo(
     () => Boolean(isHost && playerCount >= 2),
     [isHost, playerCount],
@@ -196,26 +192,24 @@ export function RoomPage() {
                 className="lobby-player-name"
                 onSubmit={(event) => {
                   event.preventDefault()
-                  const name = playerName.trim()
+                  const name = String(
+                    new FormData(event.currentTarget).get('playerName') ?? '',
+                  ).trim()
                   if (name && name !== me.name) updatePlayerName(name)
                 }}
               >
                 <label htmlFor="lobby-player-name">Nazwa gracza</label>
                 <div>
                   <input
+                    key={me.name}
                     id="lobby-player-name"
-                    value={playerName}
+                    name="playerName"
+                    defaultValue={me.name}
                     minLength={1}
                     maxLength={24}
-                    onChange={(event) => setPlayerName(event.target.value)}
                     required
                   />
-                  <button
-                    type="submit"
-                    disabled={
-                      !playerName.trim() || playerName.trim() === me.name
-                    }
-                  >
+                  <button type="submit">
                     Zapisz
                   </button>
                 </div>
@@ -333,6 +327,56 @@ export function RoomPage() {
                 }
               >
                 {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                  (count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ),
+                )}
+              </select>
+            </label>
+            <label>
+              Min. obozów na płatek
+              <select
+                value={settings.campCountMinPerPetal}
+                disabled={!isHost}
+                onChange={(event) => {
+                  const minimum = Number(event.target.value)
+                  updateSettings({
+                    ...settings,
+                    campCountMinPerPetal: minimum,
+                    campCountMaxPerPetal: Math.max(
+                      minimum,
+                      settings.campCountMaxPerPetal,
+                    ),
+                  })
+                }}
+              >
+                {Array.from({ length: 4 }, (_, count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Maks. obozów na płatek
+              <select
+                value={settings.campCountMaxPerPetal}
+                disabled={!isHost}
+                onChange={(event) => {
+                  const maximum = Number(event.target.value)
+                  updateSettings({
+                    ...settings,
+                    campCountMinPerPetal: Math.min(
+                      settings.campCountMinPerPetal,
+                      maximum,
+                    ),
+                    campCountMaxPerPetal: maximum,
+                  })
+                }}
+              >
+                {Array.from({ length: 5 }, (_, index) => index + 1).map(
                   (count) => (
                     <option key={count} value={count}>
                       {count}

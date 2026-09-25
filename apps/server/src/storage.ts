@@ -91,6 +91,8 @@ export async function connectStorage(url: string): Promise<Storage> {
             routeCount: room.status === 'LOBBY' ? 1 : room.settings.routeCount,
             allowSharedTiles: room.settings.allowSharedTiles ?? true,
             petalCount: room.settings.petalCount ?? 1,
+            campCountMinPerPetal: room.settings.campCountMinPerPetal ?? 1,
+            campCountMaxPerPetal: room.settings.campCountMaxPerPetal ?? 1,
             fogMode: room.settings.fogMode ?? 'NONE',
           },
           players: room.players.map(({ socketId, ...player }) => {
@@ -129,6 +131,10 @@ export async function connectStorage(url: string): Promise<Storage> {
                     allowSharedTiles:
                       room.gameState.settings.allowSharedTiles ?? true,
                     petalCount: room.gameState.settings.petalCount ?? 1,
+                    campCountMinPerPetal:
+                      room.gameState.settings.campCountMinPerPetal ?? 1,
+                    campCountMaxPerPetal:
+                      room.gameState.settings.campCountMaxPerPetal ?? 1,
                     fogMode: room.gameState.settings.fogMode ?? 'NONE',
                   },
                   roundPlayedCards: room.gameState.roundPlayedCards ?? [],

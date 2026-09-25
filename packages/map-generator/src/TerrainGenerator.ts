@@ -170,10 +170,13 @@ const placeCamps = (
   tiles: HexTile[],
   routes: Set<string>,
   petalCount: number,
+  countMinPerPetal: number,
+  countMaxPerPetal: number,
   random: SeededRandom,
 ): void => {
   const camps: HexTile[] = []
   for (let petalId = 0; petalId < petalCount; petalId += 1) {
+    const campCount = random.int(countMinPerPetal, countMaxPerPetal)
     const candidates = random.shuffle(
       tiles.filter(
         (tile) =>
@@ -184,14 +187,26 @@ const placeCamps = (
           tile.terrain !== 'GOAL',
       ),
     )
-    const eligible = candidates.filter((tile) =>
-      camps.every((camp) => axialDistance(tile, camp) >= 3),
-    )
-    const camp = eligible.find((tile) => routes.has(tile.id)) ?? eligible[0]
-    if (!camp) continue
-    camp.terrain = 'CAMP'
-    camp.specialType = 'CAMP'
-    camps.push(camp)
+    for (let index = 0; index < campCount; index += 1) {
+      const available = candidates.filter(
+        (tile) => !camps.some((camp) => camp.id === tile.id),
+      )
+      const eligible =
+        [3, 2, 1]
+          .map((minimumDistance) =>
+            available.filter((tile) =>
+              camps.every(
+                (camp) => axialDistance(tile, camp) >= minimumDistance,
+              ),
+            ),
+          )
+          .find((entries) => entries.length > 0) ?? []
+      const camp = eligible.find((tile) => routes.has(tile.id)) ?? eligible[0]
+      if (!camp) break
+      camp.terrain = 'CAMP'
+      camp.specialType = 'CAMP'
+      camps.push(camp)
+    }
   }
 }
 
@@ -231,9 +246,14 @@ export const applyTerrain = (
   const goalTile = tiles.find((tile) => tile.id === goalId)!
   for (const startTile of startTiles) startTile.terrain = 'START'
   goalTile.terrain = 'GOAL'
-  if (settings.specialTileDensity > 0) {
-    placeCamps(tiles, routes, settings.petalCount ?? 1, random)
-  }
+  placeCamps(
+    tiles,
+    routes,
+    settings.petalCount ?? 1,
+    settings.campCountMinPerPetal ?? 1,
+    settings.campCountMaxPerPetal ?? 1,
+    random,
+  )
 
   for (const tile of tiles) {
     if (tile.terrain in costRanges) {

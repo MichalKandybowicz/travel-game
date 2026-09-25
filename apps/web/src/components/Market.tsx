@@ -70,8 +70,8 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
               {isLocked
                 ? 'Klątwa blokuje wszystkie zakupy do kolejnej tury gracza, który jej użył.'
                 : hasBoughtThisTurn
-                ? 'Zakup w tej turze został wykorzystany.'
-                : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
+                  ? 'Zakup w tej turze został wykorzystany.'
+                  : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
             </p>
           </div>
           <div
@@ -102,12 +102,12 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                     {isLocked
                       ? 'Sklep zablokowany klątwą'
                       : hasBoughtThisTurn
-                      ? 'Zakup wykorzystany'
-                      : !isActive
-                        ? 'Poczekaj na swoją turę'
-                        : affordable
-                          ? 'Kup kartę'
-                          : `Brakuje ${card.purchaseCost - availableGold} złota`}
+                        ? 'Zakup wykorzystany'
+                        : !isActive
+                          ? 'Poczekaj na swoją turę'
+                          : affordable
+                            ? 'Kup kartę'
+                            : `Brakuje ${card.purchaseCost - availableGold} złota`}
                   </span>
                 </button>
               )

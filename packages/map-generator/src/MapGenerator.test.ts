@@ -17,6 +17,8 @@ const settings: MapSettings = {
   chokepointCount: 2,
   allowSharedTiles: true,
   petalCount: 1,
+  campCountMinPerPetal: 1,
+  campCountMaxPerPetal: 1,
   fogMode: 'NONE',
 }
 
@@ -39,6 +41,23 @@ describe('generateMap', () => {
     const second = generateMap(settings)
 
     expect(first).toEqual(second)
+  })
+
+  it('validates the camp range per petal', () => {
+    expect(
+      mapSettingsSchema.safeParse({
+        ...settings,
+        campCountMinPerPetal: 0,
+        campCountMaxPerPetal: 5,
+      }).success,
+    ).toBe(true)
+    expect(
+      mapSettingsSchema.safeParse({
+        ...settings,
+        campCountMinPerPetal: 3,
+        campCountMaxPerPetal: 2,
+      }).success,
+    ).toBe(false)
   })
 
   it('usually returns a different map for a different seed', () => {
@@ -178,6 +197,24 @@ describe('generateMap', () => {
         expect(cross).not.toBe(0)
       }
     }
+  })
+
+  it('places the configured number of camps on every petal', () => {
+    const map = generateMap({
+      ...settings,
+      petalCount: 3,
+      campCountMinPerPetal: 2,
+      campCountMaxPerPetal: 2,
+    })
+    const campCounts = Array.from(
+      { length: 3 },
+      (_, petalId) =>
+        map.tiles.filter(
+          (tile) => tile.petalId === petalId && tile.terrain === 'CAMP',
+        ).length,
+    )
+
+    expect(campCounts).toEqual([2, 2, 2])
   })
 
   it('uses terrain cost ranges and creates spaced camps, mountain groups and water bodies', () => {

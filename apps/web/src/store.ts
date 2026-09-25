@@ -25,6 +25,8 @@ const defaultSettings: MapSettings = {
   chokepointCount: 2,
   allowSharedTiles: true,
   petalCount: 3,
+  campCountMinPerPetal: 1,
+  campCountMaxPerPetal: 1,
   fogMode: 'NONE',
 }
 

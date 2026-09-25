@@ -48,6 +48,8 @@ export interface MapSettings {
   chokepointCount: number
   allowSharedTiles: boolean
   petalCount: number
+  campCountMinPerPetal: number
+  campCountMaxPerPetal: number
   fogMode: FogMode
 }
 

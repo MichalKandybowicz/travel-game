@@ -65,18 +65,14 @@ export function PlayerTokens({
 }: PlayerTokensProps) {
   const tokens = player.tokens ?? []
   const usedThisRound = player.tokenUsedInRound === roundNumber
-  const [targetPlayerId, setTargetPlayerId] = useState(
-    opponents[0]?.id ?? '',
-  )
+  const [targetPlayerId, setTargetPlayerId] = useState(opponents[0]?.id ?? '')
 
   return (
     <section className="player-tokens" aria-label="Twoje żetony">
       <div className="player-tokens-heading">
         <div>
           <strong>Żetony obozowe</strong>
-          <small>
-            Obozy odwiedzone: {player.claimedCampIds?.length ?? 0}
-          </small>
+          <small>Obozy odwiedzone: {player.claimedCampIds?.length ?? 0}</small>
         </div>
         <small>
           {usedThisRound

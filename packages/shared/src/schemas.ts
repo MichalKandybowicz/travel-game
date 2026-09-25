@@ -1,20 +1,32 @@
 import { z } from 'zod'
 import { PLAYER_COLORS, PLAYER_SYMBOLS } from './playerAppearance.js'
 
-export const mapSettingsSchema = z.object({
-  seed: z.string().min(1),
-  mapSize: z.enum(['SMALL', 'MEDIUM', 'LARGE']),
-  difficulty: z.enum(['EASY', 'NORMAL', 'HARD']),
-  routeCount: z.number().int().min(1).max(4),
-  jungleDensity: z.number().min(0).max(0.8),
-  waterDensity: z.number().min(0).max(0.6),
-  mountainDensity: z.number().min(0).max(0.4),
-  specialTileDensity: z.number().min(0).max(0.2),
-  chokepointCount: z.number().int().min(0).max(6),
-  allowSharedTiles: z.boolean().default(true),
-  petalCount: z.number().int().min(1).max(12).default(3),
-  fogMode: z.enum(['NONE', 'PETAL', 'MEDIUM', 'FULL']).default('NONE'),
-})
+export const mapSettingsSchema = z
+  .object({
+    seed: z.string().min(1),
+    mapSize: z.enum(['SMALL', 'MEDIUM', 'LARGE']),
+    difficulty: z.enum(['EASY', 'NORMAL', 'HARD']),
+    routeCount: z.number().int().min(1).max(4),
+    jungleDensity: z.number().min(0).max(0.8),
+    waterDensity: z.number().min(0).max(0.6),
+    mountainDensity: z.number().min(0).max(0.4),
+    specialTileDensity: z.number().min(0).max(0.2),
+    chokepointCount: z.number().int().min(0).max(6),
+    allowSharedTiles: z.boolean().default(true),
+    petalCount: z.number().int().min(1).max(12).default(3),
+    campCountMinPerPetal: z.number().int().min(0).max(3).default(1),
+    campCountMaxPerPetal: z.number().int().min(1).max(5).default(1),
+    fogMode: z.enum(['NONE', 'PETAL', 'MEDIUM', 'FULL']).default('NONE'),
+  })
+  .refine(
+    ({ campCountMinPerPetal, campCountMaxPerPetal }) =>
+      campCountMinPerPetal <= campCountMaxPerPetal,
+    {
+      message:
+        'Minimum camp count per petal cannot exceed the maximum camp count.',
+      path: ['campCountMaxPerPetal'],
+    },
+  )
 
 export const roomCreateSchema = z.object({
   playerName: z.string().min(1).max(24),

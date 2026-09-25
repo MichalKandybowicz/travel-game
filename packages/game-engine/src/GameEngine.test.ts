@@ -11,6 +11,7 @@ import {
   playCard,
   removePlayer,
   serializePublicGameState,
+  useToken,
 } from './GameEngine.js'
 import { buildStartingDeck } from './Deck.js'
 
@@ -26,6 +27,8 @@ const settings: MapSettings = {
   chokepointCount: 1,
   allowSharedTiles: true,
   petalCount: 1,
+  campCountMinPerPetal: 1,
+  campCountMaxPerPetal: 1,
   fogMode: 'NONE',
 }
 
@@ -282,9 +285,9 @@ describe('GameEngine', () => {
     endTurn(game, 'p2')
 
     expect(game.market).toHaveLength(4)
-    expect(game.market.every((cardId) => !previousMarket.includes(cardId))).toBe(
-      true,
-    )
+    expect(
+      game.market.every((cardId) => !previousMarket.includes(cardId)),
+    ).toBe(true)
   })
 
   it('keeps the current offers after a round with a purchase', () => {
@@ -299,6 +302,106 @@ describe('GameEngine', () => {
     endTurn(game, 'p2')
 
     expect(game.market).toEqual(marketAfterPurchase)
+  })
+
+  it('blocks the market until the curse caster gets the turn again', () => {
+    const game = buildTestGame()
+    const caster = game.players[0]!
+    const opponent = game.players[1]!
+    caster.tokens.push({
+      instanceId: 'market-curse',
+      type: 'CURSE_MARKET',
+    })
+    caster.availableGold = 10
+    opponent.availableGold = 10
+
+    useToken(game, caster.id, 'market-curse')
+
+    expect(game.marketLockedUntilPlayerId).toBe(caster.id)
+    expect(() => buyCard(game, caster.id, game.market[0]!)).toThrow(
+      expect.objectContaining({ code: 'MARKET_LOCKED' }),
+    )
+    endTurn(game, caster.id)
+    expect(() => buyCard(game, opponent.id, game.market[0]!)).toThrow(
+      expect.objectContaining({ code: 'MARKET_LOCKED' }),
+    )
+    endTurn(game, opponent.id)
+    expect(game.currentPlayerId).toBe(caster.id)
+    expect(game.marketLockedUntilPlayerId).toBeUndefined()
+  })
+
+  it('skips the leading opponent exactly once', () => {
+    const game = createGameState('ABCDE', settings, [
+      { id: 'p1', name: 'Player 1' },
+      { id: 'p2', name: 'Player 2' },
+      { id: 'p3', name: 'Player 3' },
+    ])
+    game.status = 'ACTIVE'
+    game.players.forEach((player, index) => {
+      player.position = game.map.startHexIds![index]!
+    })
+    const caster = game.players[0]!
+    const leader = game.players[1]!
+    leader.position = game.map.goalHexId
+    caster.tokens.push({
+      instanceId: 'skip-curse',
+      type: 'CURSE_SKIP_LEADER',
+    })
+
+    useToken(game, caster.id, 'skip-curse')
+    expect(leader.skipNextTurn).toBe(true)
+
+    endTurn(game, caster.id)
+    expect(game.currentPlayerId).toBe('p3')
+    expect(leader.skipNextTurn).toBe(false)
+    endTurn(game, 'p3')
+    endTurn(game, 'p1')
+    expect(game.currentPlayerId).toBe('p2')
+  })
+
+  it('removes a random opponent card without touching their hand', () => {
+    const game = buildTestGame()
+    const caster = game.players[0]!
+    const opponent = game.players[1]!
+    const handBefore = [...opponent.hand]
+    const removableBefore =
+      opponent.drawPile.length + opponent.discardPile.length
+    caster.tokens.push({
+      instanceId: 'remove-curse',
+      type: 'CURSE_REMOVE_CARD',
+    })
+
+    useToken(game, caster.id, 'remove-curse', opponent.id)
+
+    expect(opponent.hand).toEqual(handBefore)
+    expect(opponent.drawPile.length + opponent.discardPile.length).toBe(
+      removableBefore - 1,
+    )
+    expect(opponent.removedCards).toHaveLength(1)
+  })
+
+  it('allows only one stored token per round and preserves the others', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.tokens.push(
+      { instanceId: 'green-token', type: 'GREEN_1' },
+      { instanceId: 'gold-token', type: 'GOLD_2' },
+    )
+
+    useToken(game, player.id, 'green-token')
+
+    expect(player.availableMovement.GREEN).toBe(1)
+    expect(player.tokens.map((token) => token.instanceId)).toEqual([
+      'gold-token',
+    ])
+    expect(() => useToken(game, player.id, 'gold-token')).toThrow(
+      expect.objectContaining({ code: 'TOKEN_LIMIT' }),
+    )
+    endTurn(game, 'p1')
+    endTurn(game, 'p2')
+    useToken(game, player.id, 'gold-token')
+    expect(player.availableGold).toBe(2)
+    expect(player.tokens).toEqual([])
   })
 
   it('grants movement without gold when new cards are played for movement', () => {

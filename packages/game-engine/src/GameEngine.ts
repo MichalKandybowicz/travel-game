@@ -332,9 +332,7 @@ const refreshMarket = (gameState: GameState, reason: string): void => {
   gameState.marketCycle += 1
   gameState.marketDrawPile = new SeededRandom(
     `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
-  ).shuffle(
-    MARKET_CARD_IDS.filter((cardId) => !previousMarket.has(cardId)),
-  )
+  ).shuffle(MARKET_CARD_IDS.filter((cardId) => !previousMarket.has(cardId)))
   gameState.market = gameState.marketDrawPile.splice(0, 4)
 }
 
@@ -453,7 +451,10 @@ export const useToken = (
   )
   const token = player.tokens[tokenIndex]
   if (!token) {
-    error('TOKEN_NOT_FOUND', 'That token is not in the player inventory.')
+    return error(
+      'TOKEN_NOT_FOUND',
+      'That token is not in the player inventory.',
+    )
   }
   const definition = TOKEN_BY_TYPE[token.type]
   if (!definition) {
@@ -492,7 +493,7 @@ export const useToken = (
       break
     case 'CURSE_REMOVE_CARD': {
       if (!targetPlayerId || targetPlayerId === playerId) {
-        error('INVALID_ACTION', 'Choose an opponent for this curse.')
+        return error('INVALID_ACTION', 'Choose an opponent for this curse.')
       }
       const target = findPlayer(gameState, targetPlayerId)
       const candidates = [
@@ -572,6 +573,7 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.availableMovement = createMovementPool()
   player.availableGold = 0
   player.hasBoughtThisTurn = false
+  let shouldSkipPlayer: boolean
   do {
     gameState.turnNumber += 1
     gameState.currentPlayerId = nextPlayerId(gameState)
@@ -587,9 +589,10 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
       delete gameState.marketLockedUntilPlayerId
     }
     const skippedPlayer = findPlayer(gameState, gameState.currentPlayerId)
-    if (!skippedPlayer.skipNextTurn) break
+    shouldSkipPlayer = skippedPlayer.skipNextTurn === true
+    if (!shouldSkipPlayer) break
     skippedPlayer.skipNextTurn = false
-  } while (true)
+  } while (shouldSkipPlayer)
 
   const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
   if (nextPlayer.hand.length < 4) {

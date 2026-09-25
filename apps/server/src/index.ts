@@ -15,7 +15,7 @@ import {
   playCard,
   removePlayer,
   serializePublicGameState,
-  useToken,
+  useToken as activateToken,
 } from '../../../packages/game-engine/src/index.js'
 import {
   axialDistance,
@@ -130,6 +130,37 @@ const emitRoom = async (io: Server, room: RoomRecord): Promise<void> => {
     }
   }
 }
+
+const logGameAction = (
+  room: RoomRecord,
+  playerId: string,
+  action: string,
+  details: Record<string, unknown> = {},
+): void => {
+  const game = room.gameState
+  const player = room.players.find((entry) => entry.id === playerId)
+  fastify.log.info(
+    {
+      event: 'game_action',
+      action,
+      roomCode: room.roomCode,
+      playerId,
+      playerName: player?.name,
+      isBot: player?.isBot === true,
+      turnNumber: game?.turnNumber,
+      roundNumber: game?.roundNumber,
+      currentPlayerId: game?.currentPlayerId,
+      ...details,
+    },
+    `${player?.name ?? playerId}: ${action}`,
+  )
+}
+
+const isGameError = (caught: unknown): caught is GameError =>
+  typeof caught === 'object' &&
+  caught !== null &&
+  'code' in caught &&
+  'message' in caught
 
 const botRooms = new Set<string>()
 
@@ -338,18 +369,13 @@ const chooseBotToken = (
   const possibleMovement =
     currentMovement +
     player.hand.reduce(
-      (sum, card) =>
-        sum + cardMovementFor(CARD_BY_ID[card.cardId]!, target),
+      (sum, card) => sum + cardMovementFor(CARD_BY_ID[card.cardId]!, target),
       0,
     )
   if (possibleMovement < requiredMovement) {
-    const drawToken = player.tokens.find(
-      (token) => token.type === 'DRAW_CARD',
-    )
+    const drawToken = player.tokens.find((token) => token.type === 'DRAW_CARD')
     if (drawToken) return { tokenInstanceId: drawToken.instanceId }
-    const swapToken = player.tokens.find(
-      (token) => token.type === 'SWAP_HAND',
-    )
+    const swapToken = player.tokens.find((token) => token.type === 'SWAP_HAND')
     if (swapToken && player.hand.length > 0) {
       return { tokenInstanceId: swapToken.instanceId }
     }
@@ -411,6 +437,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         )
         if (!hexId) return
         chooseStart(game, bot.id, hexId)
+        logGameAction(room, bot.id, 'choose_start', { hexId })
         await emitRoom(io, room)
         continue
       }
@@ -419,6 +446,9 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       const target = findBotRoute(game, player)[0]
       if (!target) {
         endTurn(game, bot.id)
+        logGameAction(room, bot.id, 'end_turn', {
+          reason: 'no_route_to_goal',
+        })
         await emitRoom(io, room)
         continue
       }
@@ -426,6 +456,11 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
 
       if (legalMove) {
         movePlayer(game, bot.id, target.id)
+        logGameAction(room, bot.id, 'move', {
+          targetHexId: target.id,
+          terrain: target.terrain,
+          difficulty: target.difficulty,
+        })
         if (game.winnerId) room.status = 'FINISHED'
         await emitRoom(io, room)
         continue
@@ -433,20 +468,25 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
 
       const tokenChoice = chooseBotToken(game, player, target)
       if (tokenChoice) {
-        useToken(
+        activateToken(
           game,
           bot.id,
           tokenChoice.tokenInstanceId,
           tokenChoice.targetPlayerId,
         )
+        logGameAction(room, bot.id, 'use_token', tokenChoice)
         await emitRoom(io, room)
         continue
       }
 
-      if (!player.hasBoughtThisTurn) {
+      if (!player.hasBoughtThisTurn && !game.marketLockedUntilPlayerId) {
         const purchase = chooseBotPurchase(game, player, target)
         if (purchase && purchase.purchaseCost <= player.availableGold) {
           buyCard(game, bot.id, purchase.id)
+          logGameAction(room, bot.id, 'buy_card', {
+            cardId: purchase.id,
+            purchaseCost: purchase.purchaseCost,
+          })
           await emitRoom(io, room)
           continue
         }
@@ -474,6 +514,10 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
           : undefined
       if (movementCard) {
         playCard(game, bot.id, movementCard.instanceId, 'MOVEMENT')
+        logGameAction(room, bot.id, 'play_card', {
+          cardId: movementCard.cardId,
+          mode: 'MOVEMENT',
+        })
         await emitRoom(io, room)
         continue
       }
@@ -481,10 +525,19 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       const goldCard = chooseBotGoldCard(player, target)
       if (goldCard) {
         playCard(game, bot.id, goldCard.instanceId, 'GOLD')
+        logGameAction(room, bot.id, 'play_card', {
+          cardId: goldCard.cardId,
+          mode: 'GOLD',
+        })
         await emitRoom(io, room)
         continue
       }
       endTurn(game, bot.id)
+      logGameAction(room, bot.id, 'end_turn', {
+        reason: game.marketLockedUntilPlayerId
+          ? 'market_locked_and_no_other_action'
+          : 'no_other_action',
+      })
       await emitRoom(io, room)
     }
     fastify.log.error({ roomCode: room.roomCode }, 'Bot action limit reached')
@@ -495,8 +548,37 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
 
 const scheduleBotTurns = (io: Server, room: RoomRecord): void => {
   setTimeout(() => {
-    void runBotTurns(io, room).catch((caught: unknown) => {
-      fastify.log.error(caught, 'Bot turn failed')
+    void runBotTurns(io, room).catch(async (caught: unknown) => {
+      const game = room.gameState
+      const bot = game
+        ? room.players.find(
+            (player) => player.id === game.currentPlayerId && player.isBot,
+          )
+        : undefined
+      if (game && bot && game.status === 'ACTIVE' && isGameError(caught)) {
+        fastify.log.warn(
+          {
+            event: 'bot_action_recovered',
+            roomCode: room.roomCode,
+            playerId: bot.id,
+            errorCode: caught.code,
+            errorMessage: caught.message,
+          },
+          'Bot action failed; ending its turn to keep the game moving',
+        )
+        endTurn(game, bot.id)
+        logGameAction(room, bot.id, 'end_turn', {
+          reason: 'recovered_from_error',
+          errorCode: caught.code,
+        })
+        await emitRoom(io, room)
+        scheduleBotTurns(io, room)
+        return
+      }
+      fastify.log.error(
+        { err: caught, roomCode: room.roomCode },
+        'Bot turn failed',
+      )
     })
   }, 0)
 }
@@ -1148,6 +1230,14 @@ io.on('connection', (socket) => {
       })),
     )
     room.status = 'IN_GAME'
+    logGameAction(room, parsed.data.playerId, 'start_game', {
+      players: room.players.map((player) => ({
+        id: player.id,
+        name: player.name,
+        isBot: player.isBot === true,
+      })),
+      seed: room.settings.seed,
+    })
     await emitRoom(io, room)
     scheduleBotTurns(io, room)
   })
@@ -1178,6 +1268,9 @@ io.on('connection', (socket) => {
     }
     try {
       chooseStart(room.gameState, parsed.data.playerId, parsed.data.hexId)
+      logGameAction(room, parsed.data.playerId, 'choose_start', {
+        hexId: parsed.data.hexId,
+      })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
     } catch (caught) {
@@ -1216,6 +1309,11 @@ io.on('connection', (socket) => {
         parsed.data.cardInstanceId,
         parsed.data.mode,
       )
+      logGameAction(room, parsed.data.playerId, 'play_card', {
+        cardInstanceId: parsed.data.cardInstanceId,
+        cardId: room.gameState.roundPlayedCards.at(-1)?.cardId,
+        mode: parsed.data.mode,
+      })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
     } catch (caught) {
@@ -1249,6 +1347,18 @@ io.on('connection', (socket) => {
         return
       }
       movePlayer(room.gameState, parsed.data.playerId, parsed.data.targetHexId)
+      const targetTile = room.gameState.map.tiles.find(
+        (tile) => tile.id === parsed.data.targetHexId,
+      )
+      logGameAction(room, parsed.data.playerId, 'move', {
+        targetHexId: parsed.data.targetHexId,
+        terrain: targetTile?.terrain,
+        difficulty: targetTile?.difficulty,
+        tokenCount:
+          room.gameState.players.find(
+            (player) => player.id === parsed.data.playerId,
+          )?.tokens?.length ?? 0,
+      })
       if (room.gameState.status === 'FINISHED') {
         room.status = 'FINISHED'
       }
@@ -1285,6 +1395,10 @@ io.on('connection', (socket) => {
         return
       }
       buyCard(room.gameState, parsed.data.playerId, parsed.data.cardId)
+      logGameAction(room, parsed.data.playerId, 'buy_card', {
+        cardId: parsed.data.cardId,
+        purchaseCost: CARD_BY_ID[parsed.data.cardId]?.purchaseCost,
+      })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
     } catch (caught) {
@@ -1317,12 +1431,16 @@ io.on('connection', (socket) => {
         })
         return
       }
-      useToken(
+      activateToken(
         room.gameState,
         parsed.data.playerId,
         parsed.data.tokenInstanceId,
         parsed.data.targetPlayerId,
       )
+      logGameAction(room, parsed.data.playerId, 'use_token', {
+        tokenInstanceId: parsed.data.tokenInstanceId,
+        targetPlayerId: parsed.data.targetPlayerId,
+      })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
     } catch (caught) {
@@ -1356,6 +1474,9 @@ io.on('connection', (socket) => {
         return
       }
       endTurn(room.gameState, parsed.data.playerId)
+      logGameAction(room, parsed.data.playerId, 'end_turn', {
+        nextPlayerId: room.gameState.currentPlayerId,
+      })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
     } catch (caught) {
