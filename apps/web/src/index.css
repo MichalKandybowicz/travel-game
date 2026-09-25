@@ -1029,6 +1029,16 @@ select {
   gap: 2px;
 }
 
+.hand-turn-actions {
+  display: grid;
+  width: min(100%, 220px);
+  gap: 8px;
+}
+
+.hand-turn-actions .market-trigger {
+  padding: 9px 12px;
+}
+
 .hand-movement span {
   border: 1px solid #475569;
   border-radius: 999px;
@@ -1712,6 +1722,24 @@ select {
   color: #edc185;
   font-size: 0.66rem;
   font-weight: 800;
+}
+
+.lobby-add-bot {
+  padding: 7px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.lobby-remove-bot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  flex: none;
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fca5a5;
+  font-size: 1.1rem;
 }
 
 .lobby-player-hint {

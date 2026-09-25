@@ -7,6 +7,8 @@ export const EVENTS = {
   roomUpdateSettings: 'room:update-settings',
   roomUpdateAppearance: 'room:update-appearance',
   roomUpdatePlayerName: 'room:update-player-name',
+  roomAddBot: 'room:add-bot',
+  roomRemoveBot: 'room:remove-bot',
   gameStart: 'game:start',
   gameChooseStart: 'game:choose-start',
   gameState: 'game:state',

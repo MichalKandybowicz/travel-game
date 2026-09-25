@@ -8,15 +8,22 @@ import {
   buyCard,
   chooseStart,
   createGameState,
+  canAffordMove,
+  getTerrainCost,
   endTurn,
   movePlayer,
   playCard,
   removePlayer,
   serializePublicGameState,
 } from '../../../packages/game-engine/src/index.js'
-import { generateMap } from '../../../packages/map-generator/src/index.js'
+import {
+  axialDistance,
+  generateMap,
+  getNeighbors,
+} from '../../../packages/map-generator/src/index.js'
 import {
   EVENTS,
+  CARD_BY_ID,
   PLAYER_COLORS,
   PLAYER_SYMBOLS,
   roomCodeSchema,
@@ -25,11 +32,18 @@ import {
   roomUpdateSettingsSchema,
   roomUpdateAppearanceSchema,
   roomUpdatePlayerNameSchema,
+  roomBotSchema,
   playCardSchema,
   movePlayerSchema,
   buyCardSchema,
   chooseStartSchema,
   type GameError,
+  type CardDefinition,
+  type CardInstance,
+  type GameState,
+  type HexTile,
+  type MovementPool,
+  type PlayerState,
   type RoomState,
   type SessionState,
 } from '../../../packages/shared/src/index.js'
@@ -86,6 +100,7 @@ const serializeRoom = (room: RoomRecord): RoomState => ({
   players: room.players.map((player) => ({
     id: player.id,
     name: player.name,
+    ...(player.isBot ? { isBot: true } : {}),
     ...(player.color ? { color: player.color } : {}),
     ...(player.symbol ? { symbol: player.symbol } : {}),
     connected: player.connected,
@@ -111,6 +126,254 @@ const emitRoom = async (io: Server, room: RoomRecord): Promise<void> => {
       )
     }
   }
+}
+
+const botRooms = new Set<string>()
+
+const wait = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds))
+
+const findBotRoute = (game: GameState, player: PlayerState): HexTile[] => {
+  const start = game.map.tiles.find((tile) => tile.id === player.position)
+  const goal = game.map.tiles.find((tile) => tile.id === game.map.goalHexId)
+  if (!start || !goal) return []
+
+  const queue = [start]
+  const previous = new Map<string, string>()
+  const visited = new Set([start.id])
+  while (queue.length > 0) {
+    const tile = queue.shift()!
+    if (tile.id === goal.id) break
+    const neighbors = getNeighbors(game.map.tiles, tile)
+      .filter(
+        (neighbor) =>
+          !neighbor.isBlocked &&
+          neighbor.terrain !== 'MOUNTAIN' &&
+          (game.settings.allowSharedTiles ||
+            neighbor.id === goal.id ||
+            !game.players.some(
+              (other) =>
+                other.id !== player.id && other.position === neighbor.id,
+            )),
+      )
+      .sort(
+        (left, right) => axialDistance(left, goal) - axialDistance(right, goal),
+      )
+    for (const neighbor of neighbors) {
+      if (visited.has(neighbor.id)) continue
+      visited.add(neighbor.id)
+      previous.set(neighbor.id, tile.id)
+      queue.push(neighbor)
+    }
+  }
+  if (!visited.has(goal.id)) return []
+
+  const route: HexTile[] = []
+  let id = goal.id
+  while (id !== start.id) {
+    const tile = game.map.tiles.find((candidate) => candidate.id === id)
+    const parent = previous.get(id)
+    if (!tile || !parent) return []
+    route.unshift(tile)
+    id = parent
+  }
+  return route
+}
+
+const cardMovementFor = (card: CardDefinition, target: HexTile): number => {
+  const costType = getTerrainCost(target.terrain, target.difficulty)
+  if (costType === 'BLOCKED') return 0
+  if (
+    costType === 'ANY' ||
+    card.movementType === costType ||
+    card.movementType === 'WILD'
+  ) {
+    return card.movementValue
+  }
+  return 0
+}
+
+const cardPlanScore = (card: CardDefinition, target: HexTile): number =>
+  cardMovementFor(card, target) * 10 + card.goldValue
+
+const movementForTarget = (movement: MovementPool, target: HexTile): number => {
+  const costType = getTerrainCost(target.terrain, target.difficulty)
+  if (costType === 'BLOCKED') return 0
+  if (costType === 'ANY') {
+    return Object.values(movement).reduce((sum, value) => sum + value, 0)
+  }
+  return movement[costType] + movement.WILD
+}
+
+const chooseBotPurchase = (
+  game: GameState,
+  player: PlayerState,
+  target: HexTile,
+): CardDefinition | undefined => {
+  const possibleGold =
+    player.availableGold +
+    player.hand.reduce(
+      (sum, card) => sum + (CARD_BY_ID[card.cardId]?.goldValue ?? 0),
+      0,
+    )
+  return game.market
+    .map((cardId) => CARD_BY_ID[cardId])
+    .filter((card): card is CardDefinition => Boolean(card))
+    .filter((card) => card.purchaseCost <= possibleGold)
+    .sort(
+      (left, right) =>
+        cardPlanScore(right, target) -
+        right.purchaseCost -
+        (cardPlanScore(left, target) - left.purchaseCost),
+    )[0]
+}
+
+const chooseBotGoldCard = (
+  player: PlayerState,
+  target: HexTile,
+): CardInstance | undefined => {
+  const upcoming = player.drawPile
+    .slice(0, 4)
+    .map((card) => CARD_BY_ID[card.cardId])
+    .filter((card): card is CardDefinition => Boolean(card))
+  const weakestUpcomingScore = upcoming.length
+    ? Math.max(...upcoming.map((card) => cardPlanScore(card, target)))
+    : 0
+
+  const candidates = player.hand
+    .map((card) => ({ card, definition: CARD_BY_ID[card.cardId] }))
+    .filter(
+      (entry): entry is { card: CardInstance; definition: CardDefinition } =>
+        Boolean(entry.definition),
+    )
+    .sort((left, right) => {
+      const leftScore = cardPlanScore(left.definition, target)
+      const rightScore = cardPlanScore(right.definition, target)
+      const leftReplaceable =
+        leftScore === 0 || weakestUpcomingScore > leftScore ? 0 : 1
+      const rightReplaceable =
+        rightScore === 0 || weakestUpcomingScore > rightScore ? 0 : 1
+      return (
+        leftReplaceable - rightReplaceable ||
+        leftScore - rightScore ||
+        right.definition.goldValue - left.definition.goldValue
+      )
+    })
+  const replaceable = candidates.find((entry) => {
+    const score = cardPlanScore(entry.definition, target)
+    return score === 0 || weakestUpcomingScore > score
+  })
+  if (replaceable) return replaceable.card
+
+  const possibleMovement =
+    movementForTarget(player.availableMovement, target) +
+    candidates.reduce(
+      (sum, entry) => sum + cardMovementFor(entry.definition, target),
+      0,
+    )
+  const requiredMovement = Math.max(1, target.difficulty)
+  if (player.hand.length >= 4 && possibleMovement < requiredMovement) {
+    return candidates[0]?.card
+  }
+  return undefined
+}
+
+const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
+  if (botRooms.has(room.roomCode)) return
+  botRooms.add(room.roomCode)
+  try {
+    for (let action = 0; action < 60; action += 1) {
+      const game = room.gameState
+      if (!game || game.status === 'FINISHED') return
+      const bot = room.players.find(
+        (player) => player.id === game.currentPlayerId && player.isBot,
+      )
+      if (!bot) return
+
+      await wait(350)
+      if (game.status === 'CHOOSING_START') {
+        const startIds = game.map.startHexIds ?? [game.map.startHexId]
+        const hexId = startIds.find(
+          (id) => !game.players.some((player) => player.position === id),
+        )
+        if (!hexId) return
+        chooseStart(game, bot.id, hexId)
+        await emitRoom(io, room)
+        continue
+      }
+
+      const player = game.players.find((entry) => entry.id === bot.id)!
+      const target = findBotRoute(game, player)[0]
+      if (!target) {
+        endTurn(game, bot.id)
+        await emitRoom(io, room)
+        continue
+      }
+      const legalMove = canAffordMove(player, target)
+
+      if (legalMove) {
+        movePlayer(game, bot.id, target.id)
+        if (game.winnerId) room.status = 'FINISHED'
+        await emitRoom(io, room)
+        continue
+      }
+
+      if (!player.hasBoughtThisTurn) {
+        const purchase = chooseBotPurchase(game, player, target)
+        if (purchase && purchase.purchaseCost <= player.availableGold) {
+          buyCard(game, bot.id, purchase.id)
+          await emitRoom(io, room)
+          continue
+        }
+      }
+
+      const plannedMovement =
+        movementForTarget(player.availableMovement, target) +
+        player.hand.reduce(
+          (sum, card) =>
+            sum + cardMovementFor(CARD_BY_ID[card.cardId]!, target),
+          0,
+        )
+      const movementCard =
+        plannedMovement >= Math.max(1, target.difficulty)
+          ? player.hand
+              .filter((card) => {
+                const definition = CARD_BY_ID[card.cardId]
+                return definition && cardMovementFor(definition, target) > 0
+              })
+              .sort(
+                (left, right) =>
+                  cardMovementFor(CARD_BY_ID[right.cardId]!, target) -
+                  cardMovementFor(CARD_BY_ID[left.cardId]!, target),
+              )[0]
+          : undefined
+      if (movementCard) {
+        playCard(game, bot.id, movementCard.instanceId, 'MOVEMENT')
+        await emitRoom(io, room)
+        continue
+      }
+
+      const goldCard = chooseBotGoldCard(player, target)
+      if (goldCard) {
+        playCard(game, bot.id, goldCard.instanceId, 'GOLD')
+        await emitRoom(io, room)
+        continue
+      }
+      endTurn(game, bot.id)
+      await emitRoom(io, room)
+    }
+    fastify.log.error({ roomCode: room.roomCode }, 'Bot action limit reached')
+  } finally {
+    botRooms.delete(room.roomCode)
+  }
+}
+
+const scheduleBotTurns = (io: Server, room: RoomRecord): void => {
+  setTimeout(() => {
+    void runBotTurns(io, room).catch((caught: unknown) => {
+      fastify.log.error(caught, 'Bot turn failed')
+    })
+  }, 0)
 }
 
 const emitSession = (
@@ -617,6 +880,98 @@ io.on('connection', (socket) => {
     await emitRoom(io, room)
   })
 
+  socket.on(EVENTS.roomAddBot, async (payload: unknown) => {
+    const parsed = roomBotSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room || room.status !== 'LOBBY' || room.gameState) {
+      sendError(socket.id, io, {
+        code: 'ROOM_NOT_FOUND',
+        message: 'The waiting room is no longer available.',
+      })
+      return
+    }
+    if (
+      !authorizeRoomPlayer(room, socket.id, parsed.data.playerId) ||
+      room.hostPlayerId !== parsed.data.playerId
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'Only the host can add bots.',
+      })
+      return
+    }
+    if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
+      sendError(socket.id, io, {
+        code: 'ROOM_FULL',
+        message: 'This room already has the maximum number of players.',
+      })
+      return
+    }
+    const botNumber = room.players.filter((player) => player.isBot).length + 1
+    const color =
+      PLAYER_COLORS.find((candidate) =>
+        room.players.every((player) => player.color !== candidate),
+      ) ?? PLAYER_COLORS[room.players.length % PLAYER_COLORS.length]!
+    room.players.push({
+      id: `bot-${randomUUID()}`,
+      name: `Bot ${botNumber}`,
+      isBot: true,
+      color,
+      symbol: PLAYER_SYMBOLS[room.players.length % PLAYER_SYMBOLS.length]!,
+      sessionTokenHash: '',
+      connected: true,
+    })
+    await emitRoom(io, room)
+  })
+
+  socket.on(EVENTS.roomRemoveBot, async (payload: unknown) => {
+    const parsed = roomBotSchema.safeParse(payload)
+    if (!parsed.success || !parsed.data.botId) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.success ? 'Bot id is required.' : parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room || room.status !== 'LOBBY' || room.gameState) {
+      sendError(socket.id, io, {
+        code: 'ROOM_NOT_FOUND',
+        message: 'The waiting room is no longer available.',
+      })
+      return
+    }
+    if (
+      !authorizeRoomPlayer(room, socket.id, parsed.data.playerId) ||
+      room.hostPlayerId !== parsed.data.playerId
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'Only the host can remove bots.',
+      })
+      return
+    }
+    const bot = room.players.find(
+      (player) => player.id === parsed.data.botId && player.isBot,
+    )
+    if (!bot) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Bot was not found.',
+      })
+      return
+    }
+    room.players = room.players.filter((player) => player !== bot)
+    await emitRoom(io, room)
+  })
+
   socket.on(EVENTS.gameStart, async (payload: unknown) => {
     const parsed = roomCodeSchema.safeParse(payload)
     if (!parsed.success) {
@@ -662,12 +1017,14 @@ io.on('connection', (socket) => {
       room.players.map((player) => ({
         id: player.id,
         name: player.name,
+        ...(player.isBot ? { isBot: true } : {}),
         ...(player.color ? { color: player.color } : {}),
         ...(player.symbol ? { symbol: player.symbol } : {}),
       })),
     )
     room.status = 'IN_GAME'
     await emitRoom(io, room)
+    scheduleBotTurns(io, room)
   })
 
   socket.on(EVENTS.gameChooseStart, async (payload: unknown) => {
@@ -697,6 +1054,7 @@ io.on('connection', (socket) => {
     try {
       chooseStart(room.gameState, parsed.data.playerId, parsed.data.hexId)
       await emitRoom(io, room)
+      scheduleBotTurns(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
@@ -734,6 +1092,7 @@ io.on('connection', (socket) => {
         parsed.data.mode,
       )
       await emitRoom(io, room)
+      scheduleBotTurns(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
@@ -769,6 +1128,7 @@ io.on('connection', (socket) => {
         room.status = 'FINISHED'
       }
       await emitRoom(io, room)
+      scheduleBotTurns(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
@@ -801,6 +1161,7 @@ io.on('connection', (socket) => {
       }
       buyCard(room.gameState, parsed.data.playerId, parsed.data.cardId)
       await emitRoom(io, room)
+      scheduleBotTurns(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }
@@ -833,6 +1194,7 @@ io.on('connection', (socket) => {
       }
       endTurn(room.gameState, parsed.data.playerId)
       await emitRoom(io, room)
+      scheduleBotTurns(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }

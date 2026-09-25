@@ -61,6 +61,15 @@ export const roomUpdatePlayerNameSchema = z.object({
   playerName: z.string().trim().min(1).max(24),
 })
 
+export const roomBotSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  botId: z.string().optional(),
+})
+
 export const roomCodeSchema = z.object({
   roomCode: z
     .string()

@@ -187,14 +187,6 @@ export function GamePage() {
             </ul>
           </aside>
           <PlayedCards game={game} />
-          {!isChoosingStart && (
-            <Market
-              game={game}
-              player={localPlayer}
-              isActive={isActive}
-              onBuyCard={buyCard}
-            />
-          )}
         </div>
         <div className="game-main">
           {isChoosingStart && (
@@ -234,6 +226,14 @@ export function GamePage() {
               isActive={isActive}
               onPlayCard={playCard}
               onEndTurn={endTurn}
+              market={
+                <Market
+                  game={game}
+                  player={localPlayer}
+                  isActive={isActive}
+                  onBuyCard={buyCard}
+                />
+              }
             />
           )}
           <HexMap

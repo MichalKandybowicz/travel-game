@@ -28,6 +28,8 @@ export function RoomPage() {
   const updateSettings = useGameStore((state) => state.updateSettings)
   const updateAppearance = useGameStore((state) => state.updateAppearance)
   const updatePlayerName = useGameStore((state) => state.updatePlayerName)
+  const addBot = useGameStore((state) => state.addBot)
+  const removeBot = useGameStore((state) => state.removeBot)
   const [leaving, setLeaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [playerName, setPlayerName] = useState('')
@@ -138,6 +140,16 @@ export function RoomPage() {
                 Gracze <span>{playerCount}/4</span>
               </h2>
             </div>
+            {isHost && room?.status === 'LOBBY' && (
+              <button
+                type="button"
+                className="lobby-add-bot"
+                disabled={playerCount >= 4}
+                onClick={addBot}
+              >
+                + Dodaj bota
+              </button>
+            )}
           </div>
           <ul className="player-list">
             {room?.players.map((player, index) => (
@@ -150,11 +162,26 @@ export function RoomPage() {
                 <span className="lobby-player-copy">
                   <strong>{player.name}</strong>
                   <small>
-                    {player.connected ? 'Połączony' : 'Łączy się ponownie'}
+                    {player.isBot
+                      ? 'Bot'
+                      : player.connected
+                        ? 'Połączony'
+                        : 'Łączy się ponownie'}
                   </small>
                 </span>
                 {player.id === room.hostPlayerId && (
                   <span className="lobby-host-badge">Gospodarz</span>
+                )}
+                {isHost && player.isBot && (
+                  <button
+                    type="button"
+                    className="lobby-remove-bot"
+                    aria-label={`Usuń ${player.name}`}
+                    title={`Usuń ${player.name}`}
+                    onClick={() => removeBot(player.id)}
+                  >
+                    ×
+                  </button>
                 )}
               </li>
             ))}

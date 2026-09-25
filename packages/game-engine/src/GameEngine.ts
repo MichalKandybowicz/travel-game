@@ -162,6 +162,7 @@ const nextPlayerId = (gameState: GameState): string => {
 export interface PlayerSetup {
   id: string
   name: string
+  isBot?: boolean
   color?: PlayerColor
   symbol?: PlayerSymbol
 }
@@ -183,6 +184,7 @@ export const createGameState = (
     const state: PlayerState = {
       id: player.id,
       name: player.name,
+      ...(player.isBot ? { isBot: true } : {}),
       ...(player.color ? { color: player.color } : {}),
       ...(player.symbol ? { symbol: player.symbol } : {}),
       position: '',

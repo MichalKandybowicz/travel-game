@@ -89,6 +89,7 @@ export interface MovementPool {
 export interface PlayerState {
   id: string
   name: string
+  isBot?: boolean
   color?: PlayerColor
   symbol?: PlayerSymbol
   position: string
@@ -130,6 +131,7 @@ export interface GameState {
 export interface LobbyPlayer {
   id: string
   name: string
+  isBot?: boolean
   color?: PlayerColor
   symbol?: PlayerSymbol
   isReady: boolean

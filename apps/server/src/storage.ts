@@ -10,6 +10,7 @@ import type {
 export interface RoomPlayerRecord {
   id: string
   name: string
+  isBot?: boolean
   color?: PlayerColor
   symbol?: PlayerSymbol
   sessionTokenHash: string
@@ -94,7 +95,10 @@ export async function connectStorage(url: string): Promise<Storage> {
           },
           players: room.players.map(({ socketId, ...player }) => {
             void socketId
-            return { ...player, connected: false }
+            return {
+              ...player,
+              connected: player.isBot === true,
+            }
           }),
           ...(room.gameState
             ? {
@@ -130,7 +134,7 @@ export async function connectStorage(url: string): Promise<Storage> {
                   roundPlayedCards: room.gameState.roundPlayedCards ?? [],
                   players: room.gameState.players.map((player) => ({
                     ...player,
-                    connected: false,
+                    connected: player.isBot === true,
                   })),
                 },
               }

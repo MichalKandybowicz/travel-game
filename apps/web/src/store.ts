@@ -87,6 +87,8 @@ interface GameStore {
   updateSettings: (settings: MapSettings) => void
   updateAppearance: (color: PlayerColor, symbol: PlayerSymbol) => void
   updatePlayerName: (playerName: string) => void
+  addBot: () => void
+  removeBot: (botId: string) => void
   startGame: () => void
   chooseStart: (hexId: string) => void
   playCard: (cardInstanceId: string, mode: CardPlayMode) => void
@@ -275,6 +277,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomCode: session.roomCode,
       playerId: session.playerId,
       playerName,
+    })
+  },
+  addBot: () => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.roomAddBot, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+    })
+  },
+  removeBot: (botId) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.roomRemoveBot, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      botId,
     })
   },
   startGame: () => {

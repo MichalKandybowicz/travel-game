@@ -1,4 +1,5 @@
 import { CARD_BY_ID } from '@shared'
+import type { ReactNode } from 'react'
 import type { CardPlayMode, PlayerState } from '@shared'
 import { CardFace } from './CardFace.js'
 
@@ -7,6 +8,7 @@ interface PlayerHandProps {
   isActive: boolean
   onPlayCard: (cardInstanceId: string, mode: CardPlayMode) => void
   onEndTurn: () => void
+  market?: ReactNode
 }
 
 export function PlayerHand({
@@ -14,6 +16,7 @@ export function PlayerHand({
   isActive,
   onPlayCard,
   onEndTurn,
+  market,
 }: PlayerHandProps) {
   return (
     <div className="panel hand-panel">
@@ -34,14 +37,17 @@ export function PlayerHand({
             )}
           </small>
         </div>
-        <button
-          type="button"
-          className="primary-button"
-          disabled={!isActive}
-          onClick={onEndTurn}
-        >
-          Zakończ turę
-        </button>
+        <div className="hand-turn-actions">
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!isActive}
+            onClick={onEndTurn}
+          >
+            Zakończ turę
+          </button>
+          {market}
+        </div>
       </div>
 
       <div className="card-grid hand-card-grid">
