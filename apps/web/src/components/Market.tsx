@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { CARD_BY_ID } from '@shared'
 import type { GameState, PlayerState } from '@shared'
-import { cardLabels } from '../labels.js'
+import { cardDescription } from '../labels.js'
 import { CardFace } from './CardFace.js'
 
 interface MarketProps {
@@ -86,7 +86,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                   className="card game-card market-card"
                   data-movement={card.movementType}
                   disabled={!canBuy}
-                  title={cardLabels[card.id]?.description ?? card.description}
+                  title={cardDescription(card)}
                   onClick={() => {
                     onBuyCard(card.id)
                     dialogRef.current?.close()

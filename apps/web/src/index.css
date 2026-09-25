@@ -798,16 +798,63 @@ select {
   font-size: 1rem;
 }
 
-.deck-card-list {
-  list-style: none;
-  padding: 0;
+.deck-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
 }
 
-.deck-card-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+.deck-card {
+  min-height: 174px;
+  border-radius: 11px;
+  pointer-events: none;
+}
+
+.deck-card .game-card__inner {
+  padding: 8px 8px 0;
+}
+
+.deck-card .game-card__topline {
+  font-size: 0.5rem;
+}
+
+.deck-card .game-card__name {
+  min-height: 2.5em;
+  font-size: 0.72rem;
+}
+
+.deck-card .game-card__art {
+  min-height: 42px;
+  margin: 3px 0;
+  border-radius: 7px;
+}
+
+.deck-card .game-card__art svg {
+  width: 34px;
+  height: 34px;
+}
+
+.deck-card .game-card__effect {
+  gap: 4px;
+}
+
+.deck-card .game-card__effect strong {
+  font-size: 1rem;
+}
+
+.deck-card .game-card__effect span {
+  font-size: 0.58rem;
+}
+
+.deck-card .game-card__footer {
+  margin-left: -8px;
+  margin-right: -8px;
+  padding: 5px 8px;
+  font-size: 0.55rem;
+}
+
+.deck-empty {
+  color: #94a3b8;
 }
 
 .reachable-hex {

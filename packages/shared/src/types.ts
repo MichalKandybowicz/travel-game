@@ -70,7 +70,6 @@ export interface CardDefinition {
   movementValue: number
   goldValue: number
   purchaseCost: number
-  description: string
 }
 
 export interface CardInstance {

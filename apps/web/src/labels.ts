@@ -1,4 +1,4 @@
-import type { MovementType, TerrainType } from '@shared'
+import type { CardDefinition, MovementType, TerrainType } from '@shared'
 
 export const movementLabels: Record<MovementType, string> = {
   GREEN: 'zielone',
@@ -19,50 +19,40 @@ export const terrainLabels: Record<TerrainType, string> = {
   MOUNTAIN: 'Góry',
 }
 
-export const cardLabels: Record<string, { name: string; description: string }> =
-  {
-    hidden: { name: 'Ukryta karta', description: 'Karta innego gracza.' },
-    explorer: { name: 'Odkrywca', description: 'Daje 1 zielony punkt ruchu.' },
-    scout: { name: 'Zwiadowca', description: 'Daje 2 zielone punkty ruchu.' },
-    ranger: { name: 'Łowca', description: 'Daje 3 zielone punkty ruchu.' },
-    pathfinder: {
-      name: 'Przewodnik',
-      description: 'Daje 4 zielone punkty ruchu albo 1 sztukę złota.',
-    },
-    sailor: { name: 'Żeglarz', description: 'Daje 1 niebieski punkt ruchu.' },
-    seasoned_sailor: {
-      name: 'Doświadczony żeglarz',
-      description: 'Daje 2 niebieskie punkty ruchu.',
-    },
-    captain: {
-      name: 'Kapitan',
-      description: 'Daje 3 niebieskie punkty ruchu albo 1 sztukę złota.',
-    },
-    coin: {
-      name: 'Moneta',
-      description: 'Daje 1 żółty punkt ruchu albo 2 sztuki złota.',
-    },
-    trader: {
-      name: 'Kupiec',
-      description: 'Daje 2 żółte punkty ruchu albo 1 sztukę złota.',
-    },
-    master_trader: {
-      name: 'Mistrz kupiecki',
-      description: 'Daje 3 żółte punkty ruchu albo 1 sztukę złota.',
-    },
-    caravan: {
-      name: 'Karawana',
-      description: 'Daje 4 żółte punkty ruchu albo 1 sztukę złota.',
-    },
-    adventurer: {
-      name: 'Poszukiwacz przygód',
-      description: 'Daje 1 dowolny punkt ruchu.',
-    },
-    trailblazer: {
-      name: 'Pionier',
-      description: 'Daje 2 dowolne punkty ruchu albo 1 sztukę złota.',
-    },
+export const cardLabels: Record<string, { name: string }> = {
+  hidden: { name: 'Ukryta karta' },
+  explorer: { name: 'Odkrywca' },
+  scout: { name: 'Zwiadowca' },
+  ranger: { name: 'Łowca' },
+  pathfinder: { name: 'Przewodnik' },
+  sailor: { name: 'Żeglarz' },
+  seasoned_sailor: { name: 'Doświadczony żeglarz' },
+  captain: { name: 'Kapitan' },
+  coin: { name: 'Moneta' },
+  trader: { name: 'Kupiec' },
+  master_trader: { name: 'Mistrz kupiecki' },
+  caravan: { name: 'Karawana' },
+  adventurer: { name: 'Poszukiwacz przygód' },
+  trailblazer: { name: 'Pionier' },
+}
+
+export function cardDescription(card: CardDefinition): string {
+  if (card.id === 'hidden') {
+    return 'Karta innego gracza.'
   }
+
+  const movement = `${card.movementValue} ${movementLabels[card.movementType]} ${
+    card.movementValue === 1 ? 'punkt' : 'punkty'
+  } ruchu`
+  const gold =
+    card.goldValue > 0
+      ? ` albo ${card.goldValue} ${
+          card.goldValue === 1 ? 'sztukę' : 'sztuki'
+        } złota`
+      : ''
+
+  return `Daje ${movement}${gold}.`
+}
 
 export const errorLabels: Record<string, string> = {
   NOT_YOUR_TURN: 'Teraz jest tura innego gracza.',
