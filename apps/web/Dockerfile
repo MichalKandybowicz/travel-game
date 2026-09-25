@@ -1,4 +1,21 @@
-FROM node:22-bookworm-slim
+FROM node:22-alpine
+
 WORKDIR /app
-COPY . .
-EXPOSE 5173
+
+# Copy monorepo structure
+COPY package*.json ./
+COPY packages ./packages
+COPY apps/web ./apps/web
+COPY apps/web/tsconfig*.json ./
+
+# Install and build only web
+RUN npm ci && \
+    npm run build --workspace=@travel-game/web
+
+# Serve with http-server
+RUN npm install -g http-server
+
+EXPOSE 8080
+
+CMD ["http-server", "apps/web/dist", "-p", "8080", "--gzip", "-c-1"]
+
