@@ -3,11 +3,12 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000'
+const railwayHost = process.env.RAILWAY_PUBLIC_DOMAIN
 
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['.trycloudflare.com'],
+    allowedHosts: ['.trycloudflare.com', ...(railwayHost ? [railwayHost] : [])],
     proxy: {
       '/auth': apiTarget,
       '/health': apiTarget,
