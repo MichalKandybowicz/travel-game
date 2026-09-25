@@ -50,18 +50,23 @@ export const terrainLabels: Record<TerrainType, string> = {
 export const cardLabels: Record<string, { name: string }> = {
   hidden: { name: 'Ukryta karta' },
   explorer: { name: 'Odkrywca' },
+  herbalist: { name: 'Zielarz' },
   scout: { name: 'Zwiadowca' },
   ranger: { name: 'Łowca' },
   pathfinder: { name: 'Przewodnik' },
   sailor: { name: 'Żeglarz' },
   seasoned_sailor: { name: 'Doświadczony żeglarz' },
+  navigator: { name: 'Nawigator' },
   captain: { name: 'Kapitan' },
+  admiral: { name: 'Admirał' },
   coin: { name: 'Moneta' },
   trader: { name: 'Kupiec' },
+  treasurer: { name: 'Skarbnik' },
   master_trader: { name: 'Mistrz kupiecki' },
   caravan: { name: 'Karawana' },
   adventurer: { name: 'Poszukiwacz przygód' },
   trailblazer: { name: 'Pionier' },
+  wayfarer: { name: 'Wędrowiec' },
 }
 
 export function cardDescription(card: CardDefinition): string {

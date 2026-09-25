@@ -217,6 +217,7 @@ export const createGameState = (
     market: marketDrawPile.splice(0, 4),
     marketDrawPile,
     marketCycle: 0,
+    marketPurchasedThisRound: false,
     roundPlayedCards: [],
   }
 }
@@ -267,6 +268,17 @@ const replenishMarket = (gameState: GameState): void => {
   if (nextCardId) {
     gameState.market.push(nextCardId)
   }
+}
+
+const refreshStaleMarket = (gameState: GameState): void => {
+  const previousMarket = new Set(gameState.market)
+  gameState.marketCycle += 1
+  gameState.marketDrawPile = new SeededRandom(
+    `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:stale`,
+  ).shuffle(
+    MARKET_CARD_IDS.filter((cardId) => !previousMarket.has(cardId)),
+  )
+  gameState.market = gameState.marketDrawPile.splice(0, 4)
 }
 
 export const playCard = (
@@ -375,6 +387,7 @@ export const buyCard = (
   )
   player.discardPile.push(nextCard)
   player.hasBoughtThisTurn = true
+  gameState.marketPurchasedThisRound = true
   gameState.market = gameState.market.filter((entry) => entry !== cardId)
   replenishMarket(gameState)
   return gameState
@@ -392,6 +405,10 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   gameState.currentPlayerId = nextPlayerId(gameState)
   if (gameState.currentPlayerId === gameState.players[0]?.id) {
     gameState.roundPlayedCards = []
+    if (!(gameState.marketPurchasedThisRound ?? false)) {
+      refreshStaleMarket(gameState)
+    }
+    gameState.marketPurchasedThisRound = false
   }
   const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
   if (nextPlayer.hand.length < 4) {

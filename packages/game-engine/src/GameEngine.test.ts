@@ -263,6 +263,44 @@ describe('GameEngine', () => {
     expect(serializePublicGameState(game, 'p1').marketDrawPile).toEqual([])
   })
 
+  it('keeps starter cards out of an affordable market', () => {
+    expect(MARKET_CARD_IDS).not.toEqual(
+      expect.arrayContaining(['explorer', 'sailor', 'coin']),
+    )
+    expect(
+      MARKET_CARD_IDS.every(
+        (cardId) => (CARD_BY_ID[cardId]?.purchaseCost ?? Infinity) <= 6,
+      ),
+    ).toBe(true)
+  })
+
+  it('replaces every unsold offer after a round without purchases', () => {
+    const game = buildTestGame()
+    const previousMarket = [...game.market]
+
+    endTurn(game, 'p1')
+    endTurn(game, 'p2')
+
+    expect(game.market).toHaveLength(4)
+    expect(game.market.every((cardId) => !previousMarket.includes(cardId))).toBe(
+      true,
+    )
+  })
+
+  it('keeps the current offers after a round with a purchase', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const cardId = game.market[0]!
+    player.availableGold = CARD_BY_ID[cardId]!.purchaseCost
+    buyCard(game, 'p1', cardId)
+    const marketAfterPurchase = [...game.market]
+
+    endTurn(game, 'p1')
+    endTurn(game, 'p2')
+
+    expect(game.market).toEqual(marketAfterPurchase)
+  })
+
   it('grants movement without gold when new cards are played for movement', () => {
     const game = buildTestGame()
     const player = game.players[0]!

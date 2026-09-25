@@ -119,6 +119,7 @@ export interface GameState {
   market: string[]
   marketDrawPile: string[]
   marketCycle: number
+  marketPurchasedThisRound?: boolean
   roundPlayedCards: Array<{
     instanceId: string
     playerId: string

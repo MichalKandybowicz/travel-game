@@ -20,13 +20,22 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     purchaseCost: 2,
   },
   {
+    id: 'herbalist',
+    name: 'Herbalist',
+    type: 'MOVEMENT',
+    movementType: 'GREEN',
+    movementValue: 2,
+    goldValue: 2,
+    purchaseCost: 2,
+  },
+  {
     id: 'scout',
     name: 'Scout',
     type: 'MOVEMENT',
     movementType: 'GREEN',
     movementValue: 3,
     goldValue: 1,
-    purchaseCost: 4,
+    purchaseCost: 3,
   },
   {
     id: 'ranger',
@@ -35,7 +44,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 5,
     goldValue: 2,
-    purchaseCost: 7,
+    purchaseCost: 6,
   },
   {
     id: 'pathfinder',
@@ -44,7 +53,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 4,
     goldValue: 2,
-    purchaseCost: 6,
+    purchaseCost: 4,
   },
   {
     id: 'sailor',
@@ -62,6 +71,15 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 2,
     goldValue: 1,
+    purchaseCost: 2,
+  },
+  {
+    id: 'navigator',
+    name: 'Navigator',
+    type: 'MOVEMENT',
+    movementType: 'BLUE',
+    movementValue: 3,
+    goldValue: 2,
     purchaseCost: 4,
   },
   {
@@ -69,8 +87,17 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     name: 'Captain',
     type: 'MOVEMENT',
     movementType: 'BLUE',
-    movementValue: 3,
-    goldValue: 1,
+    movementValue: 4,
+    goldValue: 2,
+    purchaseCost: 5,
+  },
+  {
+    id: 'admiral',
+    name: 'Admiral',
+    type: 'MOVEMENT',
+    movementType: 'BLUE',
+    movementValue: 5,
+    goldValue: 2,
     purchaseCost: 6,
   },
   {
@@ -89,7 +116,16 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 2,
     goldValue: 2,
-    purchaseCost: 3,
+    purchaseCost: 2,
+  },
+  {
+    id: 'treasurer',
+    name: 'Treasurer',
+    type: 'MOVEMENT',
+    movementType: 'YELLOW',
+    movementValue: 3,
+    goldValue: 3,
+    purchaseCost: 4,
   },
   {
     id: 'master_trader',
@@ -98,7 +134,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 4,
     goldValue: 2,
-    purchaseCost: 5,
+    purchaseCost: 4,
   },
   {
     id: 'caravan',
@@ -107,7 +143,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 5,
     goldValue: 3,
-    purchaseCost: 7,
+    purchaseCost: 6,
   },
   {
     id: 'adventurer',
@@ -116,7 +152,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 2,
     goldValue: 1,
-    purchaseCost: 4,
+    purchaseCost: 3,
   },
   {
     id: 'trailblazer',
@@ -125,7 +161,16 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 3,
     goldValue: 2,
-    purchaseCost: 8,
+    purchaseCost: 5,
+  },
+  {
+    id: 'wayfarer',
+    name: 'Wayfarer',
+    type: 'MOVEMENT',
+    movementType: 'WILD',
+    movementValue: 4,
+    goldValue: 2,
+    purchaseCost: 6,
   },
 ]
 
@@ -140,18 +185,21 @@ export const STARTING_DECK: Array<{ cardId: string; count: number }> = [
 ]
 
 export const MARKET_CARD_IDS = [
-  'explorer',
+  'herbalist',
   'scout',
   'ranger',
   'pathfinder',
-  'sailor',
   'seasoned_sailor',
+  'navigator',
   'captain',
+  'admiral',
   'trader',
+  'treasurer',
   'master_trader',
   'caravan',
   'adventurer',
   'trailblazer',
+  'wayfarer',
 ]
 
 export const createCardInstance = (
