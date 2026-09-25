@@ -504,18 +504,20 @@ button {
 .secondary-link,
 .primary-button,
 button {
-  border: 1px solid #475569;
+  border: 1px solid #42605d;
   border-radius: 12px;
   padding: 10px 14px;
-  background: #1e293b;
-  color: #e2e8f0;
+  background: #19323b;
+  color: #f3f0e7;
   text-decoration: none;
 }
 
 .primary-link,
 .primary-button {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: #e9b669;
+  border-color: #e9b669;
+  color: #17251f;
+  font-weight: 800;
 }
 
 button:disabled {
@@ -576,8 +578,8 @@ input,
 select {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid #475569;
-  background: #0f172a;
+  border: 1px solid #42605d;
+  background: #0b1d25;
   color: inherit;
   padding: 10px 12px;
 }
@@ -697,12 +699,16 @@ select {
 }
 
 .start-choice-options button {
-  border: 1px solid #60a5fa;
+  border: 1px solid #c69a61;
   border-radius: 10px;
   padding: 10px 14px;
-  background: #1e3a5f;
+  background: #294239;
   color: #f8fafc;
   cursor: pointer;
+}
+
+.start-choice-options button:not(:disabled):hover {
+  background: #3b604b;
 }
 
 .start-choice-options button:disabled {
@@ -718,11 +724,11 @@ select {
 }
 
 .panel {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid #334155;
+  background: rgba(17, 43, 48, 0.96);
+  border: 1px solid rgba(205, 210, 180, 0.2);
   border-radius: 18px;
-  padding: 16px;
-  box-shadow: 0 16px 40px rgba(2, 6, 23, 0.3);
+  padding: 18px;
+  box-shadow: 0 16px 40px rgba(2, 10, 14, 0.24);
 }
 
 .player-list {
@@ -892,7 +898,7 @@ select {
   overflow: auto;
   border: 1px solid #facc15;
   border-radius: 20px;
-  background: #0f172a;
+  background: #102a32;
   color: #f8fafc;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
 }
@@ -1054,7 +1060,7 @@ select {
   border: 1px solid var(--mini-accent);
   border-radius: 9px;
   padding: 5px 6px;
-  background: #1e293b;
+  background: #173239;
   color: var(--mini-accent);
   line-height: 1.1;
 }
@@ -1104,7 +1110,7 @@ select {
   overflow: hidden;
   border: 1px solid var(--card-accent);
   border-radius: 16px;
-  background: linear-gradient(155deg, var(--card-glow), #1e293b 45%, #0f172a);
+  background: linear-gradient(155deg, var(--card-glow), #173239 45%, #0a1c24);
   box-shadow:
     inset 0 0 0 3px rgba(15, 23, 42, 0.75),
     0 7px 16px rgba(0, 0, 0, 0.22);
@@ -1245,7 +1251,7 @@ select {
   margin: auto -12px 0;
   padding: 7px 12px;
   border-top: 1px solid var(--card-glow);
-  background: rgba(2, 6, 23, 0.38);
+  background: rgba(4, 21, 26, 0.48);
   color: var(--card-accent);
   font-size: 0.72rem;
   font-weight: 700;
@@ -1358,5 +1364,593 @@ select {
       'main'
       'sidebar';
     grid-template-rows: auto;
+  }
+}
+
+/* Shared visual language for joining, the lobby and the game. */
+.journey-page {
+  max-width: none;
+  min-height: 100vh;
+  color: #f5f1e8;
+  background:
+    radial-gradient(circle at 87% 5%, rgba(33, 90, 80, 0.27), transparent 33%),
+    #091720;
+}
+
+.journey-page > * {
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.journey-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 58px;
+  margin-bottom: 22px;
+}
+
+.journey-nav-label,
+.journey-back {
+  color: #afc5bc;
+  font-size: 0.86rem;
+  text-decoration: none;
+}
+
+.journey-back:hover {
+  color: #f0c27e;
+}
+
+.join-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
+  min-height: 620px;
+  overflow: hidden;
+  border: 1px solid rgba(224, 195, 150, 0.26);
+  border-radius: 26px;
+  background: #122b31;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.28);
+}
+
+.join-visual {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 540px;
+  padding: 44px;
+  background-image:
+    linear-gradient(0deg, rgba(8, 22, 27, 0.98), rgba(8, 22, 27, 0.1) 78%),
+    url('/images/expedition-map.webp');
+  background-position:
+    center,
+    64% center;
+  background-size: cover;
+}
+
+.join-visual-copy {
+  position: relative;
+  max-width: 570px;
+}
+
+.join-visual h1 {
+  margin: 12px 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2.7rem, 4.1vw, 4.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.05em;
+}
+
+.join-visual h1 em {
+  color: #edc185;
+  font-weight: 400;
+}
+
+.join-visual p {
+  max-width: 440px;
+  margin: 0;
+  color: #d3e0d7;
+}
+
+.join-form-panel {
+  align-self: center;
+  padding: 46px;
+}
+
+.join-form-panel h2,
+.journey-header h1,
+.lobby-page .panel h2,
+.game-players-panel h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.035em;
+}
+
+.join-form-panel h2 {
+  margin: 12px 0 5px;
+  font-size: 2.3rem;
+}
+
+.join-form-panel > p {
+  margin: 0 0 32px;
+  color: #b5cac1;
+}
+
+.join-form {
+  display: grid;
+  gap: 22px;
+}
+
+.join-form label {
+  color: #e4e9dc;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.join-form input {
+  min-height: 50px;
+  border-color: rgba(224, 195, 150, 0.38);
+}
+
+.join-form input:focus-visible,
+.lobby-settings-panel input:focus-visible,
+.lobby-settings-panel select:focus-visible {
+  outline: 2px solid #edbd76;
+  outline-offset: 2px;
+}
+
+.join-code-input {
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: 0.25em;
+}
+
+.join-submit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 52px;
+}
+
+.join-submit span {
+  font-size: 1.3rem;
+}
+
+.join-form-footnote {
+  display: block;
+  margin-top: 27px;
+  color: #a7bdb4;
+  line-height: 1.5;
+}
+
+.journey-header {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  overflow: hidden;
+  min-height: 230px;
+  margin-bottom: 22px;
+  padding: 30px 36px;
+  border: 1px solid rgba(224, 195, 150, 0.28);
+  border-radius: 24px;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(9, 25, 30, 0.99),
+      rgba(9, 25, 30, 0.79) 53%,
+      rgba(9, 25, 30, 0.4)
+    ),
+    url('/images/expedition-map.webp');
+  background-position:
+    center,
+    center 43%;
+  background-size: cover;
+}
+
+.journey-header > * {
+  position: relative;
+}
+
+.journey-header h1 {
+  margin: 6px 0;
+  font-size: clamp(2.5rem, 4.3vw, 4rem);
+}
+
+.journey-header p {
+  max-width: 490px;
+  margin: 0;
+  color: #d4e0d7;
+}
+
+.lobby-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.room-code-badge {
+  display: grid;
+  justify-items: center;
+  min-width: 140px;
+  padding: 10px 16px;
+  border: 1px solid rgba(234, 191, 125, 0.52);
+  border-radius: 14px;
+  background: rgba(8, 25, 29, 0.9);
+}
+
+.room-code-badge small,
+.panel-kicker,
+.game-room-line small,
+.game-turn-line small,
+.game-current-player small {
+  color: #edc185;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.room-code-badge strong {
+  font-size: 1.35rem;
+  letter-spacing: 0.2em;
+}
+
+.lobby-header-actions button {
+  border-color: rgba(237, 193, 133, 0.55);
+  background: rgba(9, 28, 32, 0.92);
+}
+
+.lobby-header-actions .lobby-leave-button {
+  border-color: rgba(194, 213, 199, 0.26);
+  color: #c2d3ce;
+}
+
+.lobby-layout {
+  grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.8fr);
+  align-items: start;
+}
+
+.lobby-page .panel,
+.game-shell .panel {
+  background: linear-gradient(
+    145deg,
+    rgba(20, 49, 52, 0.97),
+    rgba(11, 30, 38, 0.98)
+  );
+}
+
+.lobby-page .panel h2,
+.game-players-panel h2 {
+  margin: 4px 0 0;
+  font-size: 1.55rem;
+}
+
+.lobby-page .panel h2 span {
+  color: #e9b669;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.86rem;
+}
+
+.lobby-players-panel .player-list {
+  margin-top: 20px;
+  gap: 9px;
+}
+
+.lobby-players-panel .player-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(222, 228, 205, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 25, 31, 0.72);
+}
+
+.lobby-player-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 10px;
+  background: #265649;
+  color: #f2d19b;
+  font-weight: 900;
+}
+
+.lobby-player-copy {
+  display: grid;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.lobby-player-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lobby-player-copy small {
+  color: #a6c5b9;
+}
+
+.lobby-host-badge {
+  color: #edc185;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.lobby-player-hint {
+  margin: 14px 0 0;
+  color: #a6beb5;
+  font-size: 0.82rem;
+}
+
+.lobby-page .map-shape-preview {
+  margin-top: 16px;
+  border: 1px solid rgba(219, 206, 163, 0.2);
+  background: #0a1d24;
+}
+
+.lobby-settings-panel .panel-header {
+  margin-bottom: 24px;
+}
+
+.lobby-settings-panel .panel-header p {
+  margin: 5px 0 0;
+  color: #a9c0b7;
+  font-size: 0.85rem;
+}
+
+.lobby-settings-panel label {
+  color: #d8e3d8;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.lobby-settings-panel .checkbox-field {
+  padding: 12px 14px;
+  border: 1px solid rgba(215, 224, 193, 0.17);
+  border-radius: 12px;
+  background: rgba(8, 25, 30, 0.6);
+}
+
+.lobby-start-actions {
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid rgba(222, 222, 195, 0.16);
+}
+
+.lobby-start-actions .primary-button {
+  min-width: 170px;
+}
+
+.game-shell {
+  max-width: none;
+}
+
+.game-shell .game-layout,
+.game-shell .game-result,
+.game-shell .deck-preview {
+  max-width: 1280px;
+}
+
+.game-shell .game-layout {
+  margin-top: 0;
+}
+
+.game-shell .top-bar {
+  gap: 13px;
+  padding: 20px;
+  border-top: 3px solid #e9b669;
+}
+
+.game-brand-small {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(225, 224, 201, 0.16);
+  font-size: 0.78rem;
+  letter-spacing: 0.11em;
+}
+
+.game-brand-small > span,
+.game-brand-small strong span {
+  color: #e9b669;
+}
+
+.game-brand-small > span {
+  font-size: 1.5rem;
+  line-height: 0.8;
+}
+
+.game-room-line,
+.game-turn-line,
+.game-current-player {
+  display: grid;
+  gap: 2px;
+}
+
+.game-room-line strong {
+  font-size: 1.13rem;
+  letter-spacing: 0.11em;
+}
+
+.game-turn-line strong,
+.game-current-player strong {
+  font-size: 1rem;
+}
+
+.game-current-player {
+  padding: 9px 11px;
+  border: 1px solid rgba(144, 220, 177, 0.37);
+  border-radius: 10px;
+  background: rgba(29, 82, 66, 0.45);
+}
+
+.game-seed {
+  color: #93aca5;
+  font-size: 0.72rem;
+}
+
+.game-shell .top-bar button {
+  margin-top: 6px;
+  border-color: rgba(220, 225, 205, 0.23);
+  background: #17323a;
+}
+
+.game-players-panel .player-list {
+  margin-top: 14px;
+}
+
+.game-players-panel .player-list li {
+  padding: 9px 0;
+  border-top: 1px solid rgba(220, 225, 205, 0.14);
+}
+
+.game-players-panel .player-list li > small {
+  margin-left: 31px;
+  color: #a7beb5;
+}
+
+.game-shell .map-panel {
+  border-top: 3px solid #82bfa9;
+}
+
+.game-shell .map-panel .panel-header > strong,
+.game-shell .hand-panel .panel-header strong,
+.game-shell .played-panel .panel-header strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.35rem;
+}
+
+.game-shell .hex-map {
+  border: 1px solid rgba(225, 228, 207, 0.21);
+  background: radial-gradient(circle, #153638, #081c25 78%);
+}
+
+.game-shell .hand-panel {
+  border-top: 3px solid #e9b669;
+}
+
+.game-shell .hand-movement span {
+  border-color: rgba(221, 223, 201, 0.24);
+  background: rgba(8, 28, 32, 0.66);
+}
+
+.game-shell .market-trigger {
+  border-color: #b68d57;
+  background: linear-gradient(125deg, #594023, #162e33 76%);
+}
+
+.game-shell .deck-preview summary {
+  color: #edc185;
+}
+
+.game-shell .game-result {
+  background:
+    linear-gradient(100deg, rgba(56, 38, 14, 0.96), rgba(10, 30, 37, 0.9)),
+    url('/images/expedition-map.webp') center / cover;
+}
+
+.journey-page .error-banner {
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+@media (max-width: 900px) {
+  .join-layout {
+    grid-template-columns: 1fr;
+  }
+  .join-visual {
+    min-height: 290px;
+  }
+  .join-form-panel {
+    padding: 34px;
+  }
+  .lobby-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .lobby-header-actions {
+    justify-content: flex-start;
+  }
+  .lobby-layout {
+    grid-template-columns: 1fr;
+  }
+  .lobby-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .journey-page {
+    padding: 14px;
+  }
+  .journey-nav {
+    margin-bottom: 14px;
+  }
+  .join-visual {
+    min-height: 260px;
+    padding: 24px;
+  }
+  .join-visual h1 {
+    font-size: 2.65rem;
+  }
+  .join-form-panel {
+    padding: 26px;
+  }
+  .journey-header {
+    min-height: 0;
+    padding: 25px;
+  }
+  .lobby-header-actions {
+    width: 100%;
+  }
+  .lobby-header-actions button {
+    flex: 1;
+  }
+  .lobby-sidebar {
+    grid-template-columns: 1fr;
+  }
+  .lobby-layout {
+    gap: 14px;
+  }
+  .game-shell .game-layout {
+    gap: 14px;
+  }
+  .game-shell .top-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .game-brand-small,
+  .game-current-player,
+  .game-seed,
+  .game-shell .top-bar button {
+    grid-column: 1 / -1;
+  }
+  .game-shell .hand-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .game-shell .hand-card-actions {
+    gap: 4px;
+    padding: 0 5px 6px;
+  }
+  .game-shell .hand-card-actions button {
+    padding: 6px 2px;
+    font-size: 0.66rem;
+  }
+  .game-shell .hand-card .game-card__inner {
+    padding: 8px 8px 0;
+  }
+  .game-shell .hand-card .game-card__footer {
+    margin-left: -8px;
+    margin-right: -8px;
+    padding-left: 8px;
+    padding-right: 8px;
   }
 }

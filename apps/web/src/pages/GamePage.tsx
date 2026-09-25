@@ -64,7 +64,7 @@ export function GamePage() {
   const startIds = game.map.startHexIds ?? [game.map.startHexId]
 
   return (
-    <main className="page shell game-shell">
+    <main className="page shell journey-page game-shell">
       {game.status === 'FINISHED' && (
         <section className="game-result" role="status" aria-live="polite">
           <div className="game-result-icon" aria-hidden="true">
@@ -108,23 +108,42 @@ export function GamePage() {
       )}
       <section className="game-layout">
         <header className="panel top-bar">
-          <span>Pokój {room?.roomCode ?? game.roomCode}</span>
-          <span>
-            {isChoosingStart ? 'Wybór startu' : `Tura ${game.turnNumber}`}
-          </span>
+          <div className="game-brand-small">
+            <span aria-hidden="true">⬡</span>
+            <strong>
+              TRAVEL<span>GAME</span>
+            </strong>
+          </div>
+          <div className="game-room-line">
+            <small>POKÓJ</small>
+            <strong>{room?.roomCode ?? game.roomCode}</strong>
+          </div>
+          <div className="game-turn-line">
+            <small>ETAP WYPRAWY</small>
+            <strong>
+              {isChoosingStart ? 'Wybór startu' : `Tura ${game.turnNumber}`}
+            </strong>
+          </div>
           {game.status === 'FINISHED' ? (
-            <strong>Gra zakończona</strong>
+            <div className="game-current-player">
+              <small>STATUS</small>
+              <strong>Gra zakończona</strong>
+            </div>
           ) : (
-            <span>
-              {isChoosingStart ? 'Wybiera pole: ' : 'Gra teraz: '}
-              {
-                game.players.find(
-                  (player) => player.id === game.currentPlayerId,
-                )?.name
-              }
-            </span>
+            <div className="game-current-player">
+              <small>{isChoosingStart ? 'WYBIERA POLE' : 'GRA TERAZ'}</small>
+              <strong>
+                {
+                  game.players.find(
+                    (player) => player.id === game.currentPlayerId,
+                  )?.name
+                }
+              </strong>
+            </div>
           )}
-          {game.settings.fogMode === 'NONE' && <span>Ziarno: {game.seed}</span>}
+          {game.settings.fogMode === 'NONE' && (
+            <small className="game-seed">Ziarno: {game.seed}</small>
+          )}
           {game.status !== 'FINISHED' && (
             <button
               type="button"
@@ -143,9 +162,12 @@ export function GamePage() {
           )}
         </header>
         <div className="game-sidebar">
-          <aside className="panel sidebar">
+          <aside className="panel sidebar game-players-panel">
             <div className="panel-header">
-              <strong>Gracze</strong>
+              <div>
+                <small className="panel-kicker">WYPRAWA</small>
+                <h2>Gracze</h2>
+              </div>
             </div>
             <ul className="player-list">
               {game.players.map((player, index) => (

@@ -19,6 +19,7 @@ export function RoomPage() {
   const startGame = useGameStore((state) => state.startGame)
   const updateSettings = useGameStore((state) => state.updateSettings)
   const [leaving, setLeaving] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (
@@ -44,60 +45,127 @@ export function RoomPage() {
   )
 
   return (
-    <main className="page shell">
-      <div className="page-header">
+    <main className="page shell journey-page lobby-page">
+      <nav className="journey-nav" aria-label="Nawigacja">
+        <span className="home-brand">
+          <span className="home-brand-mark" aria-hidden="true">
+            ⬡
+          </span>
+          <span>
+            TRAVEL<span className="home-brand-accent">GAME</span>
+          </span>
+        </span>
+        <span className="journey-nav-label">Przygotowanie wyprawy</span>
+      </nav>
+      <header className="journey-header lobby-header">
         <div>
+          <span className="home-eyebrow">WYPRAWA ZARAZ SIĘ ZACZNIE</span>
           <h1>Poczekalnia</h1>
-          <p>Pokój: {room?.roomCode ?? roomCode}</p>
+          <p>
+            Zaproszenie jest gotowe. Zbierz graczy i ustalcie, jak będzie
+            wyglądać mapa.
+          </p>
         </div>
-        <button
-          type="button"
-          disabled={leaving || session?.roomCode !== roomCode}
-          onClick={async () => {
-            setLeaving(true)
-            if (await leaveRoom()) {
-              navigate('/')
-            } else {
-              setLeaving(false)
-            }
-          }}
-        >
-          {leaving ? 'Opuszczanie…' : 'Opuść pokój'}
-        </button>
-      </div>
+        <div className="lobby-header-actions">
+          <div className="room-code-badge">
+            <small>KOD POKOJU</small>
+            <strong>{room?.roomCode ?? roomCode}</strong>
+          </div>
+          <button
+            type="button"
+            disabled={!room}
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(
+                  `${window.location.origin}/join?code=${roomCode}`,
+                )
+                setCopied(true)
+              } catch {
+                setCopied(false)
+              }
+            }}
+          >
+            {copied ? 'Skopiowano' : 'Kopiuj link'}
+          </button>
+          <button
+            type="button"
+            className="lobby-leave-button"
+            disabled={leaving || session?.roomCode !== roomCode}
+            onClick={async () => {
+              setLeaving(true)
+              if (await leaveRoom()) {
+                navigate('/')
+              } else {
+                setLeaving(false)
+              }
+            }}
+          >
+            {leaving ? 'Opuszczanie…' : 'Opuść pokój'}
+          </button>
+        </div>
+      </header>
       {error && (
         <div className="error-banner" role="alert">
           {errorLabels[error.code] ?? error.message}
         </div>
       )}
-      <div className="layout two-column">
+      <div className="layout two-column lobby-layout">
         <div className="lobby-sidebar">
-          <section className="panel">
+          <section className="panel lobby-players-panel">
             <div className="panel-header">
-              <strong>Gracze</strong>
+              <div>
+                <small className="panel-kicker">UCZESTNICY</small>
+                <h2>
+                  Gracze <span>{playerCount}/4</span>
+                </h2>
+              </div>
             </div>
             <ul className="player-list">
-              {room?.players.map((player) => (
+              {room?.players.map((player, index) => (
                 <li key={player.id}>
-                  {player.name} –{' '}
-                  {player.connected ? 'połączony' : 'łączy się ponownie'}
+                  <span className="lobby-player-avatar" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <span className="lobby-player-copy">
+                    <strong>{player.name}</strong>
+                    <small>
+                      {player.connected ? 'Połączony' : 'Łączy się ponownie'}
+                    </small>
+                  </span>
+                  {player.id === room.hostPlayerId && (
+                    <span className="lobby-host-badge">Gospodarz</span>
+                  )}
                 </li>
               ))}
             </ul>
+            <p className="lobby-player-hint">
+              Do rozpoczęcia gry potrzeba co najmniej dwóch graczy.
+            </p>
           </section>
           {room && (
             <section className="panel map-shape-panel">
               <div className="panel-header">
-                <strong>Kształt mapy</strong>
+                <div>
+                  <small className="panel-kicker">PODGLĄD WYPRAWY</small>
+                  <h2>Kształt mapy</h2>
+                </div>
               </div>
               <MapShapePreview shape={room.mapShape} />
               <p>Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.</p>
             </section>
           )}
         </div>
-        <section className="panel">
+        <section className="panel lobby-settings-panel">
           <div className="panel-header">
-            <strong>Ustawienia mapy</strong>
+            <div>
+              <small className="panel-kicker">TWOJA TRASA</small>
+              <h2>Ustawienia mapy</h2>
+              <p>
+                {isHost
+                  ? 'Dopasuj wyprawę przed startem.'
+                  : 'Gospodarz ustala zasady tej wyprawy.'}
+              </p>
+            </div>
           </div>
           <div className="form-grid compact-grid">
             <label>
@@ -224,7 +292,7 @@ export function RoomPage() {
             </label>
           </div>
           {isHost && (
-            <div className="hero-actions">
+            <div className="hero-actions lobby-start-actions">
               <button
                 type="button"
                 onClick={() =>
