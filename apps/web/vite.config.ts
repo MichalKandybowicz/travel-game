@@ -7,7 +7,7 @@ const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:3000'
 export default defineConfig({
   plugins: [react()],
   server: {
-    allowedHosts: ['.trycloudflare.com'],
+    allowedHosts: ['.trycloudflare.com', '.up.railway.app'],
     proxy: {
       '/auth': apiTarget,
       '/health': apiTarget,
@@ -32,3 +32,4 @@ export default defineConfig({
     },
   },
 })
+
