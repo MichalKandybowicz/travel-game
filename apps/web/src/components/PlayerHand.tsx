@@ -76,6 +76,25 @@ export function PlayerHand({
             </div>
           )
         })}
+        {player?.playedCards.map((card) => {
+          const definition = CARD_BY_ID[card.cardId]
+          if (!definition) {
+            return null
+          }
+          return (
+            <div
+              key={card.instanceId}
+              className="card game-card hand-card hand-card--used"
+              data-movement={definition.movementType}
+              aria-label={`${definition.name}, karta wykorzystana w tej rundzie`}
+            >
+              <CardFace card={definition} />
+              <span className="hand-card-used-label">
+                Wykorzystana w tej rundzie
+              </span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

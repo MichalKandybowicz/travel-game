@@ -1161,6 +1161,27 @@ select {
     0 12px 24px var(--card-glow);
 }
 
+.hand-card--used {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.hand-card--used:hover {
+  transform: none;
+  box-shadow:
+    inset 0 0 0 3px rgba(15, 23, 42, 0.75),
+    0 7px 16px rgba(0, 0, 0, 0.22);
+}
+
+.hand-card-used-label {
+  display: block;
+  padding: 0 8px 8px;
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .hand-card .game-card__inner {
   height: auto;
 }
