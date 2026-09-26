@@ -11,6 +11,7 @@ export default defineConfig({
     allowedHosts: ['.trycloudflare.com', ...(railwayHost ? [railwayHost] : [])],
     proxy: {
       '/auth': apiTarget,
+      '/custom-maps': apiTarget,
       '/health': apiTarget,
       '/socket.io': {
         target: apiTarget,

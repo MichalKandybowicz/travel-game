@@ -20,6 +20,7 @@ import {
   useToken as activateToken,
 } from '../../../packages/game-engine/src/index.js'
 import {
+  analyzeMap,
   axialDistance,
   generateMap,
   getNeighbors,
@@ -38,6 +39,7 @@ import {
   roomUpdatePlayerNameSchema,
   roomReorderPlayersSchema,
   roomBotSchema,
+  customMapPayloadSchema,
   playCardSchema,
   useActionCardSchema,
   discardCardSchema,
@@ -82,6 +84,13 @@ const shapeCache = new WeakMap<
 
 const getRoomMapShape = (room: RoomRecord): RoomState['mapShape'] => {
   if (room.status !== 'LOBBY') return undefined
+  if (room.customMap) {
+    return room.customMap.tiles.map(({ q, r, petalId }) => ({
+      q,
+      r,
+      petalId: petalId ?? 0,
+    }))
+  }
   const settingsKey = JSON.stringify(room.settings)
   const cached = shapeCache.get(room)
   if (cached?.settingsKey === settingsKey) return cached.shape
@@ -117,6 +126,8 @@ const serializeRoom = (room: RoomRecord): RoomState => ({
   settings: room.settings,
   status: room.status,
   seed: room.seed,
+  ...(room.customMapId ? { customMapId: room.customMapId } : {}),
+  ...(room.customMapName ? { customMapName: room.customMapName } : {}),
   mapShape: getRoomMapShape(room),
 })
 
@@ -865,6 +876,130 @@ fastify.post('/auth/logout', async (request, reply) => {
   return { ok: true }
 })
 
+const authenticatedAccount = async (authorization: string | undefined) =>
+  findAccountByToken(storage, authorization?.replace(/^Bearer\s+/i, ''))
+
+const normalizeCustomMap = (
+  map: GameState['map'],
+): GameState['map'] | undefined => {
+  const tileIds = new Set(map.tiles.map((tile) => tile.id))
+  const coordinates = new Set(map.tiles.map((tile) => `${tile.q},${tile.r}`))
+  const startIds = map.startHexIds ?? []
+  if (
+    tileIds.size !== map.tiles.length ||
+    coordinates.size !== map.tiles.length ||
+    startIds.length !== 4 ||
+    new Set(startIds).size !== 4 ||
+    startIds.some((id) => !tileIds.has(id)) ||
+    !tileIds.has(map.goalHexId) ||
+    startIds.includes(map.goalHexId)
+  ) {
+    return undefined
+  }
+  const tiles = map.tiles.map((tile) => ({
+    ...tile,
+    terrain: startIds.includes(tile.id)
+      ? ('START' as const)
+      : tile.id === map.goalHexId
+        ? ('GOAL' as const)
+        : tile.terrain === 'START' || tile.terrain === 'GOAL'
+          ? ('RUBBLE' as const)
+          : tile.terrain,
+    difficulty:
+      startIds.includes(tile.id) || tile.id === map.goalHexId
+        ? 1
+        : tile.terrain === 'MOUNTAIN'
+          ? 0
+          : tile.difficulty,
+    isBlocked: tile.terrain === 'MOUNTAIN',
+  }))
+  const normalized = {
+    ...map,
+    tiles,
+    startHexId: startIds[0]!,
+    startHexIds: startIds,
+  }
+  const stats = analyzeMap(normalized)
+  if (
+    !startIds.every((startHexId) =>
+      Number.isFinite(
+        analyzeMap({ ...normalized, startHexId }).shortestPathLength,
+      ),
+    )
+  ) {
+    return undefined
+  }
+  return { ...normalized, stats }
+}
+
+fastify.get('/custom-maps', async (request, reply) => {
+  const account = await authenticatedAccount(request.headers.authorization)
+  if (!account) {
+    return reply.code(401).send({ message: 'Sesja konta wygasła.' })
+  }
+  return storage.customMaps
+    .find({ ownerId: account.id })
+    .sort({ updatedAt: -1 })
+    .toArray()
+})
+
+fastify.post('/custom-maps', async (request, reply) => {
+  const account = await authenticatedAccount(request.headers.authorization)
+  if (!account) {
+    return reply.code(401).send({ message: 'Sesja konta wygasła.' })
+  }
+  const parsed = customMapPayloadSchema.safeParse(request.body)
+  if (!parsed.success) {
+    return reply.code(400).send({ message: parsed.error.message })
+  }
+  const { petalCount, tiles: parsedTiles, ...mapFields } = parsed.data.map
+  const map = normalizeCustomMap({
+    ...mapFields,
+    ...(petalCount !== undefined ? { petalCount } : {}),
+    tiles: parsedTiles.map((tile) => ({
+      id: tile.id,
+      q: tile.q,
+      r: tile.r,
+      terrain: tile.terrain,
+      difficulty: tile.difficulty,
+      isBlocked: tile.isBlocked,
+      ...(tile.petalId !== undefined ? { petalId: tile.petalId } : {}),
+      ...(tile.specialType !== undefined
+        ? { specialType: tile.specialType }
+        : {}),
+    })),
+  })
+  if (!map) {
+    return reply
+      .code(400)
+      .send({ message: 'Mapa musi mieć 4 starty i drogę do portalu.' })
+  }
+  const now = Date.now()
+  const customMap = {
+    id: randomUUID(),
+    ownerId: account.id,
+    name: parsed.data.name,
+    settings: parsed.data.settings,
+    map,
+    createdAt: now,
+    updatedAt: now,
+  }
+  await storage.customMaps.insertOne(customMap)
+  return reply.code(201).send(customMap)
+})
+
+fastify.delete('/custom-maps/:id', async (request, reply) => {
+  const account = await authenticatedAccount(request.headers.authorization)
+  if (!account) {
+    return reply.code(401).send({ message: 'Sesja konta wygasła.' })
+  }
+  const id = z.object({ id: z.string() }).safeParse(request.params)
+  if (!id.success)
+    return reply.code(400).send({ message: 'Nieprawidłowa mapa.' })
+  await storage.customMaps.deleteOne({ id: id.data.id, ownerId: account.id })
+  return { ok: true }
+})
+
 const io = new Server(fastify.server, {
   cors: {
     origin: '*',
@@ -897,6 +1032,19 @@ io.on('connection', (socket) => {
     const playerId = account?.id ?? randomUUID()
     const sessionToken = randomUUID()
     const playerName = account?.username ?? parsed.data.playerName
+    const customMap = parsed.data.customMapId
+      ? await storage.customMaps.findOne({
+          id: parsed.data.customMapId,
+          ownerId: account?.id ?? '',
+        })
+      : undefined
+    if (parsed.data.customMapId && !customMap) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'The selected custom map was not found.',
+      })
+      return
+    }
     const room: RoomRecord = {
       id: randomUUID(),
       roomCode,
@@ -914,12 +1062,19 @@ io.on('connection', (socket) => {
         },
       ],
       settings: {
-        ...parsed.data.settings,
+        ...(customMap?.settings ?? parsed.data.settings),
         difficulty: 'NORMAL',
         routeCount: 1,
       },
+      ...(customMap
+        ? {
+            customMapId: customMap.id,
+            customMapName: customMap.name,
+            customMap: structuredClone(customMap.map),
+          }
+        : {}),
       status: 'LOBBY',
-      seed: parsed.data.settings.seed,
+      seed: customMap?.settings.seed ?? parsed.data.settings.seed,
       updatedAt: Date.now(),
     }
     roomStore.set(roomCode, room)
@@ -1407,6 +1562,7 @@ io.on('connection', (socket) => {
         ...(player.color ? { color: player.color } : {}),
         ...(player.symbol ? { symbol: player.symbol } : {}),
       })),
+      room.customMap,
     )
     room.status = 'IN_GAME'
     logGameAction(room, parsed.data.playerId, 'start_game', {

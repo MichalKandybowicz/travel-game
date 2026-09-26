@@ -1,5 +1,7 @@
 import { MongoClient, type Collection } from 'mongodb'
 import type {
+  CustomMap,
+  GameMap,
   GameState,
   MapSettings,
   RoomState,
@@ -28,6 +30,9 @@ export interface RoomRecord {
   status: RoomState['status']
   seed: string
   updatedAt: number
+  customMapId?: string
+  customMapName?: string
+  customMap?: GameMap
   gameState?: GameState
 }
 
@@ -42,6 +47,7 @@ export interface AccountRecord {
 
 export interface Storage {
   accounts: Collection<AccountRecord>
+  customMaps: Collection<CustomMap>
   loadRooms: () => Promise<RoomRecord[]>
   saveRoom: (room: RoomRecord) => Promise<void>
   deleteRoom: (roomCode: string) => Promise<void>
@@ -54,10 +60,12 @@ export async function connectStorage(url: string): Promise<Storage> {
   const db = client.db(process.env.MONGO_DB ?? 'travel_game')
   const rooms = db.collection<RoomRecord>('rooms')
   const accounts = db.collection<AccountRecord>('accounts')
+  const customMaps = db.collection<CustomMap>('custom_maps')
   await Promise.all([
     rooms.createIndex({ roomCode: 1 }, { unique: true }),
     accounts.createIndex({ usernameKey: 1 }, { unique: true }),
     accounts.createIndex({ authTokenHash: 1 }),
+    customMaps.createIndex({ ownerId: 1, updatedAt: -1 }),
   ])
 
   const pending = new Map<string, Promise<void>>()
@@ -78,6 +86,7 @@ export async function connectStorage(url: string): Promise<Storage> {
 
   return {
     accounts,
+    customMaps,
     async loadRooms() {
       const documents = await rooms.find().toArray()
       return documents.map(({ _id, ...room }) => {

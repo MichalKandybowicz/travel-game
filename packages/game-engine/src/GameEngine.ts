@@ -411,8 +411,9 @@ export const createGameState = (
   roomCode: string,
   settings: MapSettings,
   players: PlayerSetup[],
+  customMap?: GameMap,
 ): GameState => {
-  const map = generateMap(settings)
+  const map = customMap ? structuredClone(customMap) : generateMap(settings)
   const marketDrawPile = new SeededRandom(
     `${settings.seed}:${roomCode}:market:0`,
   ).shuffle(MARKET_CARD_IDS)

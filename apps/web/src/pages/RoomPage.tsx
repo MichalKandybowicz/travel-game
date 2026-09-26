@@ -317,9 +317,11 @@ export function RoomPage() {
               <small className="panel-kicker">TWOJA TRASA</small>
               <h2>Ustawienia mapy</h2>
               <p>
-                {isHost
-                  ? 'Dopasuj wyprawę przed startem.'
-                  : 'Gospodarz ustala zasady tej wyprawy.'}
+                {room?.customMapName
+                  ? `Wybrana mapa: ${room.customMapName}`
+                  : isHost
+                    ? 'Dopasuj wyprawę przed startem.'
+                    : 'Gospodarz ustala zasady tej wyprawy.'}
               </p>
             </div>
           </div>
@@ -328,7 +330,7 @@ export function RoomPage() {
               Ziarno mapy
               <input
                 value={settings.seed}
-                disabled={!isHost}
+                disabled={!isHost || Boolean(room?.customMapId)}
                 onChange={(event) =>
                   updateSettings({ ...settings, seed: event.target.value })
                 }
@@ -338,7 +340,7 @@ export function RoomPage() {
               Rozmiar mapy
               <select
                 value={settings.mapSize}
-                disabled={!isHost}
+                disabled={!isHost || Boolean(room?.customMapId)}
                 onChange={(event) =>
                   updateSettings({
                     ...settings,
@@ -355,7 +357,7 @@ export function RoomPage() {
               Liczba połączonych płatków
               <select
                 value={settings.petalCount}
-                disabled={!isHost}
+                disabled={!isHost || Boolean(room?.customMapId)}
                 onChange={(event) =>
                   updateSettings({
                     ...settings,
@@ -467,6 +469,7 @@ export function RoomPage() {
             <div className="hero-actions lobby-start-actions">
               <button
                 type="button"
+                disabled={Boolean(room?.customMapId)}
                 onClick={() =>
                   updateSettings({ ...settings, seed: randomSeed() })
                 }

@@ -32,6 +32,52 @@ export const roomCreateSchema = z.object({
   playerName: z.string().min(1).max(24),
   settings: mapSettingsSchema,
   authToken: z.string().optional(),
+  customMapId: z.string().optional(),
+})
+
+const terrainSchema = z.enum([
+  'START',
+  'GOAL',
+  'JUNGLE',
+  'WATER',
+  'DESERT',
+  'RUBBLE',
+  'CAMP',
+  'MOUNTAIN',
+])
+
+const hexTileSchema = z.object({
+  id: z.string().min(1),
+  q: z.number().int(),
+  r: z.number().int(),
+  terrain: terrainSchema,
+  difficulty: z.number().int().min(0).max(5),
+  isBlocked: z.boolean(),
+  petalId: z.number().int().min(0).optional(),
+  specialType: z.enum(['CHOKEPOINT', 'LOOP', 'CAMP']).optional(),
+})
+
+const mapAnalysisSchema = z.object({
+  shortestPathLength: z.number(),
+  routeCount: z.number(),
+  junglePercent: z.number(),
+  waterPercent: z.number(),
+  desertPercent: z.number(),
+  mountainPercent: z.number(),
+  difficultyScore: z.number(),
+})
+
+export const customMapPayloadSchema = z.object({
+  name: z.string().trim().min(1).max(40),
+  settings: mapSettingsSchema,
+  map: z.object({
+    tiles: z.array(hexTileSchema).min(1).max(1500),
+    petalCount: z.number().int().min(1).max(12).optional(),
+    startHexId: z.string().min(1),
+    startHexIds: z.array(z.string()).length(4),
+    goalHexId: z.string().min(1),
+    stats: mapAnalysisSchema,
+  }),
 })
 
 export const roomJoinSchema = z.object({

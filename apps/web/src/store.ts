@@ -83,7 +83,11 @@ interface GameStore {
   error: GameError | undefined
   connected: boolean
   initialize: () => void
-  createRoom: (playerName: string, settings: MapSettings) => void
+  createRoom: (
+    playerName: string,
+    settings: MapSettings,
+    customMapId?: string,
+  ) => void
   joinRoom: (roomCode: string, playerName: string) => void
   reconnectToRoom: (roomCode: string) => void
   updateSettings: (settings: MapSettings) => void
@@ -215,12 +219,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         })
     }
   },
-  createRoom: (playerName, settings) => {
+  createRoom: (playerName, settings, customMapId) => {
     set({ room: undefined, game: undefined, error: undefined })
     getSocket().emit(EVENTS.roomCreate, {
       playerName,
       settings,
       authToken: get().account?.token,
+      ...(customMapId ? { customMapId } : {}),
     })
   },
   joinRoom: (roomCode, playerName) => {

@@ -99,6 +99,16 @@ export interface GameMap {
   stats: MapAnalysis
 }
 
+export interface CustomMap {
+  id: string
+  ownerId: string
+  name: string
+  settings: MapSettings
+  map: GameMap
+  createdAt: number
+  updatedAt: number
+}
+
 export interface CardDefinition {
   id: string
   name: string
@@ -214,6 +224,8 @@ export interface RoomState {
   settings: MapSettings
   status: RoomStatus
   seed: string
+  customMapId?: string
+  customMapName?: string
   mapShape?: Array<{ q: number; r: number; petalId: number }> | undefined
 }
 

@@ -343,6 +343,37 @@ describe('GameEngine', () => {
     ).toBeLessThanOrEqual(1)
   })
 
+  it('starts a game from an unchanged custom map snapshot', () => {
+    const generated = createGameState('SOURCE', settings, [
+      { id: 'source-1', name: 'Source 1' },
+      { id: 'source-2', name: 'Source 2' },
+    ]).map
+    const customMap = structuredClone(generated)
+    const editedTile = customMap.tiles.find(
+      (tile) =>
+        !customMap.startHexIds?.includes(tile.id) &&
+        tile.id !== customMap.goalHexId,
+    )!
+    editedTile.terrain = 'WATER'
+    editedTile.difficulty = 3
+
+    const game = createGameState(
+      'CUSTOM',
+      { ...settings, seed: 'DIFFERENT' },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+      customMap,
+    )
+
+    expect(game.map).toEqual(customMap)
+    expect(game.map).not.toBe(customMap)
+    expect(
+      game.map.tiles.find((tile) => tile.id === editedTile.id),
+    ).toMatchObject({ terrain: 'WATER', difficulty: 3 })
+  })
+
   it('uses second wind once, draws two and requires one discard', () => {
     const game = buildTestGame()
     const player = game.players[0]!

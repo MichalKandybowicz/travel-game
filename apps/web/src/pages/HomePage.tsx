@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { defaultSettings, useGameStore } from '../store.js'
 import { errorLabels } from '../labels.js'
+import { deleteCustomMap, loadCustomMaps } from '../customMaps.js'
+import type { CustomMap } from '@shared'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -24,6 +26,8 @@ export function HomePage() {
   const [busy, setBusy] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [createRequested, setCreateRequested] = useState(false)
+  const [customMaps, setCustomMaps] = useState<CustomMap[]>([])
+  const [selectedMapId, setSelectedMapId] = useState('')
   const previousRoomCode = useRef<string | undefined>(undefined)
   const hasFinishedGame =
     game?.status === 'FINISHED' || room?.status === 'FINISHED'
@@ -45,6 +49,13 @@ export function HomePage() {
       navigate(`/room/${room.roomCode}`)
     }
   }, [createRequested, navigate, room, session?.roomCode])
+
+  useEffect(() => {
+    if (!account) return
+    void loadCustomMaps(account.token)
+      .then(setCustomMaps)
+      .catch(() => undefined)
+  }, [account])
 
   return (
     <main className="home-page">
@@ -89,12 +100,35 @@ export function HomePage() {
                 if (!connected || (createRequested && !error)) return
                 previousRoomCode.current = session?.roomCode
                 setCreateRequested(true)
-                createRoom(account?.username ?? 'Gracz', {
-                  ...defaultSettings,
-                  seed: `PATH-${Math.floor(Math.random() * 1000000)}`,
-                })
+                createRoom(
+                  account?.username ?? 'Gracz',
+                  {
+                    ...defaultSettings,
+                    seed: `PATH-${Math.floor(Math.random() * 1000000)}`,
+                  },
+                  selectedMapId || undefined,
+                )
               }}
             >
+              {account && (
+                <div className="home-map-choice">
+                  <label>
+                    Źródło mapy
+                    <select
+                      value={selectedMapId}
+                      onChange={(event) => setSelectedMapId(event.target.value)}
+                    >
+                      <option value="">Generator map</option>
+                      {customMaps.map((customMap) => (
+                        <option key={customMap.id} value={customMap.id}>
+                          {customMap.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Link to="/maps/create">Otwórz kreator map</Link>
+                </div>
+              )}
               <div className="home-hero-actions">
                 <button
                   className="home-create-button"
@@ -220,6 +254,35 @@ export function HomePage() {
                   Twoje konto pozwala wrócić do wyprawy również na innym
                   urządzeniu.
                 </p>
+                <div className="home-custom-maps">
+                  <div>
+                    <strong>Twoje mapy</strong>
+                    <Link to="/maps/create">+ Nowa mapa</Link>
+                  </div>
+                  {customMaps.length === 0 ? (
+                    <small>Nie masz jeszcze zapisanych map.</small>
+                  ) : (
+                    customMaps.map((customMap) => (
+                      <span key={customMap.id}>
+                        {customMap.name}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await deleteCustomMap(account.token, customMap.id)
+                            setCustomMaps((maps) =>
+                              maps.filter((map) => map.id !== customMap.id),
+                            )
+                            if (selectedMapId === customMap.id) {
+                              setSelectedMapId('')
+                            }
+                          }}
+                        >
+                          Usuń
+                        </button>
+                      </span>
+                    ))
+                  )}
+                </div>
                 <button type="button" onClick={() => void logout()}>
                   Wyloguj się
                 </button>
