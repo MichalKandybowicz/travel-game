@@ -110,25 +110,6 @@ export function HomePage() {
                 )
               }}
             >
-              {account && (
-                <div className="home-map-choice">
-                  <label>
-                    Źródło mapy
-                    <select
-                      value={selectedMapId}
-                      onChange={(event) => setSelectedMapId(event.target.value)}
-                    >
-                      <option value="">Generator map</option>
-                      {customMaps.map((customMap) => (
-                        <option key={customMap.id} value={customMap.id}>
-                          {customMap.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <Link to="/maps/create">Otwórz kreator map</Link>
-                </div>
-              )}
               <div className="home-hero-actions">
                 <button
                   className="home-create-button"
@@ -181,70 +162,6 @@ export function HomePage() {
               </div>
             )}
           </div>
-          <div className="home-hero-caption" aria-hidden="true">
-            NOWA KRAINA · NOWE ZAKLĘCIA · NOWE PRZEZNACZENIE
-          </div>
-        </section>
-
-        {error?.code === 'LEAVE_FAILED' && (
-          <div className="error-banner" role="alert">
-            {errorLabels[error.code]}
-          </div>
-        )}
-
-        <section className="home-below" aria-label="O grze i koncie">
-          <div className="home-features">
-            <div className="home-section-heading">
-              <span className="home-eyebrow">JAK WYGLĄDA MAGICZNA WYPRAWA</span>
-              <h2>
-                Proste zasady.
-                <br />
-                <em>Nieoczywiste decyzje.</em>
-              </h2>
-            </div>
-            <div className="home-feature-grid">
-              <article className="home-feature">
-                <span
-                  className="home-feature-icon home-feature-icon-green"
-                  aria-hidden="true"
-                >
-                  ⬡
-                </span>
-                <h3>Odkrywaj zaklęte krainy</h3>
-                <p>
-                  Wybieraj drogę przez zaklęte gaje, kryształowe wody i
-                  starożytne ruiny. Każda kraina wymaga innej mocy.
-                </p>
-              </article>
-              <article className="home-feature">
-                <span
-                  className="home-feature-icon home-feature-icon-gold"
-                  aria-hidden="true"
-                >
-                  ▤
-                </span>
-                <h3>Buduj talię</h3>
-                <p>
-                  Zagrywaj karty, zdobywaj złoto i kupuj nowe możliwości na
-                  wspólnym rynku.
-                </p>
-              </article>
-              <article className="home-feature">
-                <span
-                  className="home-feature-icon home-feature-icon-blue"
-                  aria-hidden="true"
-                >
-                  ✦
-                </span>
-                <h3>Dotrzyj pierwszy</h3>
-                <p>
-                  Ścigaj się ze znajomymi i wykorzystaj trasę, której inni
-                  jeszcze nie dostrzegli.
-                </p>
-              </article>
-            </div>
-          </div>
-
           <section className="home-account" aria-labelledby="account-title">
             {account ? (
               <>
@@ -363,6 +280,69 @@ export function HomePage() {
               </>
             )}
           </section>
+          <div className="home-hero-caption" aria-hidden="true">
+            NOWA KRAINA · NOWE ZAKLĘCIA · NOWE PRZEZNACZENIE
+          </div>
+        </section>
+
+        {error?.code === 'LEAVE_FAILED' && (
+          <div className="error-banner" role="alert">
+            {errorLabels[error.code]}
+          </div>
+        )}
+
+        <section className="home-below" aria-label="O grze">
+          <div className="home-features">
+            <div className="home-section-heading">
+              <span className="home-eyebrow">JAK WYGLĄDA MAGICZNA WYPRAWA</span>
+              <h2>
+                Proste zasady.
+                <br />
+                <em>Nieoczywiste decyzje.</em>
+              </h2>
+            </div>
+            <div className="home-feature-grid">
+              <article className="home-feature">
+                <span
+                  className="home-feature-icon home-feature-icon-green"
+                  aria-hidden="true"
+                >
+                  ⬡
+                </span>
+                <h3>Odkrywaj zaklęte krainy</h3>
+                <p>
+                  Wybieraj drogę przez zaklęte gaje, kryształowe wody i
+                  starożytne ruiny. Każda kraina wymaga innej mocy.
+                </p>
+              </article>
+              <article className="home-feature">
+                <span
+                  className="home-feature-icon home-feature-icon-gold"
+                  aria-hidden="true"
+                >
+                  ▤
+                </span>
+                <h3>Buduj talię</h3>
+                <p>
+                  Zagrywaj karty, zdobywaj złoto i kupuj nowe możliwości na
+                  wspólnym rynku.
+                </p>
+              </article>
+              <article className="home-feature">
+                <span
+                  className="home-feature-icon home-feature-icon-blue"
+                  aria-hidden="true"
+                >
+                  ✦
+                </span>
+                <h3>Dotrzyj pierwszy</h3>
+                <p>
+                  Ścigaj się ze znajomymi i wykorzystaj trasę, której inni
+                  jeszcze nie dostrzegli.
+                </p>
+              </article>
+            </div>
+          </div>
         </section>
         <footer className="home-footer">
           TRAVEL GAME <span>·</span> Każda legenda zaczyna się od jednej runy.

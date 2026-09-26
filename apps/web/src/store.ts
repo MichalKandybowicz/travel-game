@@ -91,6 +91,7 @@ interface GameStore {
   joinRoom: (roomCode: string, playerName: string) => void
   reconnectToRoom: (roomCode: string) => void
   updateSettings: (settings: MapSettings) => void
+  updateMap: (customMapId?: string) => void
   updateAppearance: (color: PlayerColor, symbol: PlayerSymbol) => void
   updatePlayerName: (playerName: string) => void
   reorderPlayers: (orderedPlayerIds: string[]) => void
@@ -273,6 +274,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomCode: session.roomCode,
       playerId: session.playerId,
       settings,
+    })
+  },
+  updateMap: (customMapId) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.roomUpdateMap, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      ...(customMapId ? { customMapId } : {}),
     })
   },
   updateAppearance: (color, symbol) => {

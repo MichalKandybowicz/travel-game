@@ -100,6 +100,15 @@ export const roomUpdateSettingsSchema = z.object({
   settings: mapSettingsSchema,
 })
 
+export const roomUpdateMapSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  customMapId: z.string().min(1).optional(),
+})
+
 export const roomUpdateAppearanceSchema = z.object({
   roomCode: z
     .string()

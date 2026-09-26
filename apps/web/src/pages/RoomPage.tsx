@@ -5,7 +5,8 @@ import { errorLabels } from '../labels.js'
 import { MapShapePreview } from '../components/MapShapePreview.js'
 import { PlayerBadge } from '../components/PlayerBadge.js'
 import { PlayerSymbol } from '../components/PlayerSymbol.js'
-import { PLAYER_COLORS, PLAYER_SYMBOLS } from '@shared'
+import { PLAYER_COLORS, PLAYER_SYMBOLS, type CustomMap } from '@shared'
+import { loadCustomMaps } from '../customMaps.js'
 import {
   playerColor,
   playerSymbol,
@@ -26,6 +27,7 @@ export function RoomPage() {
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const startGame = useGameStore((state) => state.startGame)
   const updateSettings = useGameStore((state) => state.updateSettings)
+  const updateMap = useGameStore((state) => state.updateMap)
   const updateAppearance = useGameStore((state) => state.updateAppearance)
   const updatePlayerName = useGameStore((state) => state.updatePlayerName)
   const reorderPlayers = useGameStore((state) => state.reorderPlayers)
@@ -33,6 +35,18 @@ export function RoomPage() {
   const removeBot = useGameStore((state) => state.removeBot)
   const [leaving, setLeaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [customMapsState, setCustomMapsState] = useState<{
+    accountId: string
+    maps: CustomMap[]
+  }>({ accountId: '', maps: [] })
+
+  useEffect(() => {
+    if (!account) return
+    const accountId = account.id
+    void loadCustomMaps(account.token)
+      .then((maps) => setCustomMapsState({ accountId, maps }))
+      .catch(() => setCustomMapsState({ accountId, maps: [] }))
+  }, [account])
 
   useEffect(() => {
     if (
@@ -51,6 +65,8 @@ export function RoomPage() {
 
   const isHost = session?.playerId === room?.hostPlayerId
   const settings = room?.settings ?? defaultSettings
+  const customMaps =
+    customMapsState.accountId === account?.id ? customMapsState.maps : []
   const playerCount = room?.players.length ?? 0
   const myIndex =
     room?.players.findIndex((player) => player.id === session?.playerId) ?? -1
@@ -304,11 +320,15 @@ export function RoomPage() {
             <div className="panel-header">
               <div>
                 <small className="panel-kicker">PODGLĄD WYPRAWY</small>
-                <h2>Kształt mapy</h2>
+                <h2>{room.customMap ? 'Mapa wyprawy' : 'Kształt mapy'}</h2>
               </div>
             </div>
-            <MapShapePreview shape={room.mapShape} />
-            <p>Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.</p>
+            <MapShapePreview shape={room.mapShape} map={room.customMap} />
+            <p>
+              {room.customMap
+                ? 'Podgląd całej zapisanej mapy wraz z terenami i kosztami.'
+                : 'Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.'}
+            </p>
           </section>
         )}
         <section className="panel lobby-settings-panel">
@@ -327,103 +347,122 @@ export function RoomPage() {
           </div>
           <div className="form-grid compact-grid">
             <label>
-              Ziarno mapy
-              <input
-                value={settings.seed}
-                disabled={!isHost || Boolean(room?.customMapId)}
-                onChange={(event) =>
-                  updateSettings({ ...settings, seed: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              Rozmiar mapy
+              Źródło mapy
               <select
-                value={settings.mapSize}
-                disabled={!isHost || Boolean(room?.customMapId)}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    mapSize: event.target.value as typeof settings.mapSize,
-                  })
-                }
-              >
-                <option value="SMALL">Mała</option>
-                <option value="MEDIUM">Średnia</option>
-                <option value="LARGE">Duża</option>
-              </select>
-            </label>
-            <label>
-              Liczba połączonych płatków
-              <select
-                value={settings.petalCount}
-                disabled={!isHost || Boolean(room?.customMapId)}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    petalCount: Number(event.target.value),
-                  })
-                }
-              >
-                {Array.from({ length: 12 }, (_, index) => index + 1).map(
-                  (count) => (
-                    <option key={count} value={count}>
-                      {count}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-            <label>
-              Min. obozów na płatek
-              <select
-                value={settings.campCountMinPerPetal}
+                value={room?.customMapId ?? ''}
                 disabled={!isHost}
-                onChange={(event) => {
-                  const minimum = Number(event.target.value)
-                  updateSettings({
-                    ...settings,
-                    campCountMinPerPetal: minimum,
-                    campCountMaxPerPetal: Math.max(
-                      minimum,
-                      settings.campCountMaxPerPetal,
-                    ),
-                  })
-                }}
+                onChange={(event) => updateMap(event.target.value || undefined)}
               >
-                {Array.from({ length: 4 }, (_, count) => (
-                  <option key={count} value={count}>
-                    {count}
+                <option value="">Generator map</option>
+                {customMaps.map((customMap) => (
+                  <option key={customMap.id} value={customMap.id}>
+                    {customMap.name}
                   </option>
                 ))}
               </select>
             </label>
-            <label>
-              Maks. obozów na płatek
-              <select
-                value={settings.campCountMaxPerPetal}
-                disabled={!isHost}
-                onChange={(event) => {
-                  const maximum = Number(event.target.value)
-                  updateSettings({
-                    ...settings,
-                    campCountMinPerPetal: Math.min(
-                      settings.campCountMinPerPetal,
-                      maximum,
-                    ),
-                    campCountMaxPerPetal: maximum,
-                  })
-                }}
-              >
-                {Array.from({ length: 5 }, (_, index) => index + 1).map(
-                  (count) => (
-                    <option key={count} value={count}>
-                      {count}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
+            {!room?.customMapId && (
+              <>
+                <label>
+                  Ziarno mapy
+                  <input
+                    value={settings.seed}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({ ...settings, seed: event.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Rozmiar mapy
+                  <select
+                    value={settings.mapSize}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        mapSize: event.target.value as typeof settings.mapSize,
+                      })
+                    }
+                  >
+                    <option value="SMALL">Mała</option>
+                    <option value="MEDIUM">Średnia</option>
+                    <option value="LARGE">Duża</option>
+                  </select>
+                </label>
+                <label>
+                  Liczba połączonych płatków
+                  <select
+                    value={settings.petalCount}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        petalCount: Number(event.target.value),
+                      })
+                    }
+                  >
+                    {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                      (count) => (
+                        <option key={count} value={count}>
+                          {count}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+                <label>
+                  Min. obozów na płatek
+                  <select
+                    value={settings.campCountMinPerPetal}
+                    disabled={!isHost}
+                    onChange={(event) => {
+                      const minimum = Number(event.target.value)
+                      updateSettings({
+                        ...settings,
+                        campCountMinPerPetal: minimum,
+                        campCountMaxPerPetal: Math.max(
+                          minimum,
+                          settings.campCountMaxPerPetal,
+                        ),
+                      })
+                    }}
+                  >
+                    {Array.from({ length: 4 }, (_, count) => (
+                      <option key={count} value={count}>
+                        {count}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Maks. obozów na płatek
+                  <select
+                    value={settings.campCountMaxPerPetal}
+                    disabled={!isHost}
+                    onChange={(event) => {
+                      const maximum = Number(event.target.value)
+                      updateSettings({
+                        ...settings,
+                        campCountMinPerPetal: Math.min(
+                          settings.campCountMinPerPetal,
+                          maximum,
+                        ),
+                        campCountMaxPerPetal: maximum,
+                      })
+                    }}
+                  >
+                    {Array.from({ length: 5 }, (_, index) => index + 1).map(
+                      (count) => (
+                        <option key={count} value={count}>
+                          {count}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              </>
+            )}
             <label>
               Mgła wojny
               <select
@@ -467,15 +506,16 @@ export function RoomPage() {
           </div>
           {isHost && (
             <div className="hero-actions lobby-start-actions">
-              <button
-                type="button"
-                disabled={Boolean(room?.customMapId)}
-                onClick={() =>
-                  updateSettings({ ...settings, seed: randomSeed() })
-                }
-              >
-                Losuj ziarno
-              </button>
+              {!room?.customMapId && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    updateSettings({ ...settings, seed: randomSeed() })
+                  }
+                >
+                  Losuj ziarno
+                </button>
+              )}
               <button
                 type="button"
                 className="primary-button"

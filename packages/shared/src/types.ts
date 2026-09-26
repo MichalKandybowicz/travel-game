@@ -226,6 +226,7 @@ export interface RoomState {
   seed: string
   customMapId?: string
   customMapName?: string
+  customMap?: GameMap
   mapShape?: Array<{ q: number; r: number; petalId: number }> | undefined
 }
 

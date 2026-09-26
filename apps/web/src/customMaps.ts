@@ -29,12 +29,17 @@ export const loadCustomMaps = (token: string): Promise<CustomMap[]> =>
 
 export const saveCustomMap = (
   token: string,
-  payload: { name: string; settings: MapSettings; map: GameMap },
+  payload: { id?: string; name: string; settings: MapSettings; map: GameMap },
 ): Promise<CustomMap> =>
-  request('/custom-maps', token, {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
+  payload.id
+    ? request(`/custom-maps/${encodeURIComponent(payload.id)}`, token, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      })
+    : request('/custom-maps', token, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
 
 export const deleteCustomMap = (token: string, id: string): Promise<void> =>
   request(`/custom-maps/${encodeURIComponent(id)}`, token, {

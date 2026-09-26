@@ -5,6 +5,7 @@ export const EVENTS = {
   roomLeave: 'room:leave',
   roomUpdate: 'room:update',
   roomUpdateSettings: 'room:update-settings',
+  roomUpdateMap: 'room:update-map',
   roomUpdateAppearance: 'room:update-appearance',
   roomUpdatePlayerName: 'room:update-player-name',
   roomReorderPlayers: 'room:reorder-players',

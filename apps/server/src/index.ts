@@ -35,6 +35,7 @@ import {
   roomCreateSchema,
   roomJoinSchema,
   roomUpdateSettingsSchema,
+  roomUpdateMapSchema,
   roomUpdateAppearanceSchema,
   roomUpdatePlayerNameSchema,
   roomReorderPlayersSchema,
@@ -128,6 +129,9 @@ const serializeRoom = (room: RoomRecord): RoomState => ({
   seed: room.seed,
   ...(room.customMapId ? { customMapId: room.customMapId } : {}),
   ...(room.customMapName ? { customMapName: room.customMapName } : {}),
+  ...(room.status === 'LOBBY' && room.customMap
+    ? { customMap: room.customMap }
+    : {}),
   mapShape: getRoomMapShape(room),
 })
 
@@ -988,6 +992,69 @@ fastify.post('/custom-maps', async (request, reply) => {
   return reply.code(201).send(customMap)
 })
 
+fastify.put('/custom-maps/:id', async (request, reply) => {
+  const account = await authenticatedAccount(request.headers.authorization)
+  if (!account) {
+    return reply.code(401).send({ message: 'Sesja konta wygasła.' })
+  }
+  const id = z.object({ id: z.string().min(1) }).safeParse(request.params)
+  const parsed = customMapPayloadSchema.safeParse(request.body)
+  if (!id.success) {
+    return reply.code(400).send({ message: 'Nieprawidłowa mapa.' })
+  }
+  if (!parsed.success) {
+    return reply.code(400).send({ message: parsed.error.message })
+  }
+  const { petalCount, tiles: parsedTiles, ...mapFields } = parsed.data.map
+  const map = normalizeCustomMap({
+    ...mapFields,
+    ...(petalCount !== undefined ? { petalCount } : {}),
+    tiles: parsedTiles.map((tile) => ({
+      id: tile.id,
+      q: tile.q,
+      r: tile.r,
+      terrain: tile.terrain,
+      difficulty: tile.difficulty,
+      isBlocked: tile.isBlocked,
+      ...(tile.petalId !== undefined ? { petalId: tile.petalId } : {}),
+      ...(tile.specialType !== undefined
+        ? { specialType: tile.specialType }
+        : {}),
+    })),
+  })
+  if (!map) {
+    return reply
+      .code(400)
+      .send({ message: 'Mapa musi mieć 4 starty i drogę do portalu.' })
+  }
+  const existingMap = await storage.customMaps.findOne({
+    id: id.data.id,
+    ownerId: account.id,
+  })
+  if (!existingMap) {
+    return reply.code(404).send({ message: 'Nie znaleziono zapisanej mapy.' })
+  }
+  const updatedMap = {
+    ...existingMap,
+    name: parsed.data.name,
+    settings: parsed.data.settings,
+    map,
+    updatedAt: Date.now(),
+  }
+  await storage.customMaps.updateOne(
+    { id: id.data.id, ownerId: account.id },
+    {
+      $set: {
+        name: updatedMap.name,
+        settings: updatedMap.settings,
+        map: updatedMap.map,
+        updatedAt: updatedMap.updatedAt,
+      },
+    },
+  )
+  return updatedMap
+})
+
 fastify.delete('/custom-maps/:id', async (request, reply) => {
   const account = await authenticatedAccount(request.headers.authorization)
   if (!account) {
@@ -1296,6 +1363,83 @@ io.on('connection', (socket) => {
       routeCount: 1,
     }
     room.seed = parsed.data.settings.seed
+    await emitRoom(io, room)
+  })
+
+  socket.on(EVENTS.roomUpdateMap, async (payload: unknown) => {
+    const parsed = roomUpdateMapSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room) {
+      sendError(socket.id, io, {
+        code: 'ROOM_NOT_FOUND',
+        message: 'Room was not found.',
+      })
+      return
+    }
+    if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+      sendError(socket.id, io, {
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Socket is not authorized for this player.',
+      })
+      return
+    }
+    if (room.status !== 'LOBBY' || room.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_ALREADY_STARTED',
+        message: 'Cannot change the map after the game has started.',
+      })
+      return
+    }
+    if (room.hostPlayerId !== parsed.data.playerId) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'Only the host can select a map.',
+      })
+      return
+    }
+
+    const player = room.players.find(({ id }) => id === parsed.data.playerId)
+    const customMap = parsed.data.customMapId
+      ? await storage.customMaps.findOne({
+          id: parsed.data.customMapId,
+          ownerId: player?.accountId ?? '',
+        })
+      : undefined
+    if (parsed.data.customMapId && !customMap) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'The selected custom map was not found.',
+      })
+      return
+    }
+
+    if (customMap) {
+      room.settings = {
+        ...customMap.settings,
+        difficulty: 'NORMAL',
+        routeCount: 1,
+      }
+      room.seed = customMap.settings.seed
+      room.customMapId = customMap.id
+      room.customMapName = customMap.name
+      room.customMap = structuredClone(customMap.map)
+    } else {
+      delete room.customMapId
+      delete room.customMapName
+      delete room.customMap
+      room.settings = {
+        ...room.settings,
+        seed: `PATH-${Math.floor(Math.random() * 100000)}`,
+      }
+      room.seed = room.settings.seed
+    }
     await emitRoom(io, room)
   })
 

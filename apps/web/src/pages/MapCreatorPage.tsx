@@ -1,11 +1,11 @@
 import { analyzeMap, generateMap } from '@map-generator'
-import type { HexTile, MapSettings, TerrainType } from '@shared'
-import { useMemo, useRef, useState } from 'react'
+import type { CustomMap, HexTile, MapSettings, TerrainType } from '@shared'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { TerrainIcon } from '../components/TerrainIcon.js'
 import { terrainLabels } from '../labels.js'
 import { defaultSettings, useGameStore } from '../store.js'
-import { saveCustomMap } from '../customMaps.js'
+import { loadCustomMaps, saveCustomMap } from '../customMaps.js'
 
 const editableTerrains: TerrainType[] = [
   'JUNGLE',
@@ -49,6 +49,8 @@ export function MapCreatorPage() {
   }))
   const [map, setMap] = useState(() => generateMap(settings))
   const [name, setName] = useState('Moja magiczna mapa')
+  const [customMaps, setCustomMaps] = useState<CustomMap[]>([])
+  const [selectedMapId, setSelectedMapId] = useState('')
   const [tool, setTool] = useState<Tool>('JUNGLE')
   const [difficulty, setDifficulty] = useState(2)
   const [message, setMessage] = useState('')
@@ -67,6 +69,20 @@ export function MapCreatorPage() {
     captured: boolean
   } | null>(null)
   const suppressTileClickRef = useRef(false)
+  const accountToken = account?.token
+  useEffect(() => {
+    if (!accountToken) return
+    void loadCustomMaps(accountToken)
+      .then(setCustomMaps)
+      .catch((caught: unknown) => {
+        setMessage(
+          caught instanceof Error
+            ? caught.message
+            : 'Nie udało się wczytać zapisanych map.',
+        )
+      })
+  }, [accountToken])
+
   const bounds = useMemo(() => {
     const coordinates = map.tiles.map(pixel)
     const xs = coordinates.map(({ x }) => x)
@@ -184,6 +200,41 @@ export function MapCreatorPage() {
               onChange={(event) => setName(event.target.value)}
             />
           </label>
+          <label>
+            Edytuj zapisaną mapę
+            <select
+              value={selectedMapId}
+              onChange={(event) => {
+                const nextId = event.target.value
+                setSelectedMapId(nextId)
+                const selectedMap = customMaps.find(
+                  (customMap) => customMap.id === nextId,
+                )
+                if (selectedMap) {
+                  setName(selectedMap.name)
+                  setSettings(selectedMap.settings)
+                  setMap(selectedMap.map)
+                } else {
+                  const nextSettings = {
+                    ...defaultSettings,
+                    seed: `MAP-${Math.floor(Math.random() * 1000000)}`,
+                  }
+                  setName('Moja magiczna mapa')
+                  setSettings(nextSettings)
+                  setMap(generateMap(nextSettings))
+                }
+                updateZoom(1)
+                setMessage('')
+              }}
+            >
+              <option value="">Nowa mapa</option>
+              {customMaps.map((customMap) => (
+                <option key={customMap.id} value={customMap.id}>
+                  {customMap.name}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="map-editor-generation">
             <label>
               Rozmiar
@@ -294,12 +345,22 @@ export function MapCreatorPage() {
             onClick={async () => {
               setSaving(true)
               try {
-                await saveCustomMap(account.token, {
+                const savedMap = await saveCustomMap(account.token, {
+                  ...(selectedMapId ? { id: selectedMapId } : {}),
                   name: name.trim(),
                   settings,
                   map,
                 })
-                setMessage('Mapa została zapisana na Twoim koncie.')
+                setCustomMaps((maps) => [
+                  savedMap,
+                  ...maps.filter((customMap) => customMap.id !== savedMap.id),
+                ])
+                setSelectedMapId(savedMap.id)
+                setMessage(
+                  selectedMapId
+                    ? 'Zmiany mapy zostały zapisane.'
+                    : 'Mapa została zapisana na Twoim koncie.',
+                )
               } catch (caught) {
                 setMessage(
                   caught instanceof Error
