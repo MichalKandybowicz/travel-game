@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { defaultSettings, useGameStore } from '../store.js'
 import { errorLabels } from '../labels.js'
-import { deleteCustomMap, loadCustomMaps } from '../customMaps.js'
+import { loadCustomMaps } from '../customMaps.js'
 import type { CustomMap } from '@shared'
 
 export function HomePage() {
@@ -21,6 +21,7 @@ export function HomePage() {
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const createRoom = useGameStore((state) => state.createRoom)
   const [mode, setMode] = useState<'login' | 'register'>('login')
+  const [accountPopupOpen, setAccountPopupOpen] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -74,6 +75,165 @@ export function HomePage() {
             </span>
           </Link>
           <span className="home-nav-note">Magiczny wyścig dla 2–4 graczy</span>
+          <button
+            type="button"
+            className="home-account-trigger"
+            aria-expanded={accountPopupOpen}
+            aria-controls="home-account-popup"
+            onClick={() => setAccountPopupOpen((open) => !open)}
+          >
+            {account ? account.username : 'Zaloguj się'}
+          </button>
+          {accountPopupOpen && (
+            <section
+              className="home-account"
+              id="home-account-popup"
+              aria-labelledby="account-title"
+            >
+              {account ? (
+                <>
+                  <span className="home-eyebrow">PROFIL PODRÓŻNIKA</span>
+                  <h2 id="account-title">Witaj, {account.username}</h2>
+                  <p>
+                    Twoje konto pozwala wrócić do wyprawy również na innym
+                    urządzeniu.
+                  </p>
+                  <div className="home-custom-maps">
+                    <div>
+                      <strong>Twoje mapy</strong>
+                      <Link
+                        to="/maps/create"
+                        onClick={() => setAccountPopupOpen(false)}
+                      >
+                        + Nowa mapa
+                      </Link>
+                    </div>
+                    {customMaps.length === 0 ? (
+                      <small>Nie masz jeszcze zapisanych map.</small>
+                    ) : (
+                      customMaps.map((customMap) => (
+                        <span key={customMap.id}>
+                          {customMap.name}
+                          <span className="home-map-actions">
+                            <Link
+                              className="home-map-edit-button"
+                              to="/maps/create"
+                              state={{ customMapId: customMap.id }}
+                              aria-label={`Edytuj mapę ${customMap.name}`}
+                              onClick={() => setAccountPopupOpen(false)}
+                            >
+                              Edytuj
+                            </Link>
+                            <button
+                              type="button"
+                              disabled={
+                                !connected || (createRequested && !error)
+                              }
+                              onClick={() => {
+                                setSelectedMapId(customMap.id)
+                                setAccountPopupOpen(false)
+                                previousRoomCode.current = session?.roomCode
+                                setCreateRequested(true)
+                                createRoom(
+                                  account.username,
+                                  {
+                                    ...defaultSettings,
+                                    seed: `PATH-${Math.floor(Math.random() * 1000000)}`,
+                                  },
+                                  customMap.id,
+                                )
+                              }}
+                            >
+                              {createRequested && !error
+                                ? 'Tworzenie…'
+                                : 'Graj'}
+                            </button>
+                          </span>
+                        </span>
+                      ))
+                    )}
+                  </div>
+                  <button type="button" onClick={() => void logout()}>
+                    Wyloguj się
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="home-eyebrow">ZACHOWAJ SWOJĄ WYPRAWĘ</span>
+                  <h2 id="account-title">
+                    {mode === 'login' ? 'Wróć do gry' : 'Utwórz konto'}
+                  </h2>
+                  <p>
+                    Zaloguj się, aby móc wrócić do pokoju po zmianie urządzenia
+                    lub utracie połączenia.
+                  </p>
+                  <form
+                    className="account-form"
+                    onSubmit={async (event) => {
+                      event.preventDefault()
+                      setBusy(true)
+                      await (mode === 'login'
+                        ? login(username, password)
+                        : register(username, password))
+                      setBusy(false)
+                    }}
+                  >
+                    <label>
+                      Nazwa gracza
+                      <input
+                        value={username}
+                        minLength={3}
+                        maxLength={24}
+                        autoComplete="username"
+                        onChange={(event) => setUsername(event.target.value)}
+                        required
+                      />
+                    </label>
+                    <label>
+                      Hasło
+                      <input
+                        type="password"
+                        value={password}
+                        minLength={8}
+                        autoComplete={
+                          mode === 'login' ? 'current-password' : 'new-password'
+                        }
+                        onChange={(event) => setPassword(event.target.value)}
+                        required
+                      />
+                    </label>
+                    {authError && (
+                      <p className="auth-error" role="alert">
+                        {authError}
+                      </p>
+                    )}
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={busy}
+                    >
+                      {busy
+                        ? 'Proszę czekać…'
+                        : mode === 'login'
+                          ? 'Zaloguj się'
+                          : 'Zarejestruj się'}
+                    </button>
+                  </form>
+                  <button
+                    type="button"
+                    className="account-switch"
+                    onClick={() =>
+                      setMode(mode === 'login' ? 'register' : 'login')
+                    }
+                  >
+                    {mode === 'login'
+                      ? 'Nie masz konta? Zarejestruj się'
+                      : 'Masz konto? Zaloguj się'}
+                  </button>
+                </>
+              )}
+            </section>
+          )}
         </header>
 
         <section className="home-hero" aria-labelledby="home-title">
@@ -162,134 +322,6 @@ export function HomePage() {
               </div>
             )}
           </div>
-          <section className="home-account" aria-labelledby="account-title">
-            {account ? (
-              <>
-                <span className="home-eyebrow">PROFIL PODRÓŻNIKA</span>
-                <h2 id="account-title">Witaj, {account.username}</h2>
-                <p>
-                  Twoje konto pozwala wrócić do wyprawy również na innym
-                  urządzeniu.
-                </p>
-                <div className="home-custom-maps">
-                  <div>
-                    <strong>Twoje mapy</strong>
-                    <Link to="/maps/create">+ Nowa mapa</Link>
-                  </div>
-                  {customMaps.length === 0 ? (
-                    <small>Nie masz jeszcze zapisanych map.</small>
-                  ) : (
-                    customMaps.map((customMap) => (
-                      <span key={customMap.id}>
-                        {customMap.name}
-                        <span className="home-map-actions">
-                          <Link
-                            className="home-map-edit-button"
-                            to="/maps/create"
-                            state={{ customMapId: customMap.id }}
-                            aria-label={`Edytuj mapę ${customMap.name}`}
-                          >
-                            Edytuj
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              await deleteCustomMap(account.token, customMap.id)
-                              setCustomMaps((maps) =>
-                                maps.filter((map) => map.id !== customMap.id),
-                              )
-                              if (selectedMapId === customMap.id) {
-                                setSelectedMapId('')
-                              }
-                            }}
-                          >
-                            Usuń
-                          </button>
-                        </span>
-                      </span>
-                    ))
-                  )}
-                </div>
-                <button type="button" onClick={() => void logout()}>
-                  Wyloguj się
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="home-eyebrow">ZACHOWAJ SWOJĄ WYPRAWĘ</span>
-                <h2 id="account-title">
-                  {mode === 'login' ? 'Wróć do gry' : 'Utwórz konto'}
-                </h2>
-                <p>
-                  Zaloguj się, aby móc wrócić do pokoju po zmianie urządzenia
-                  lub utracie połączenia.
-                </p>
-                <form
-                  className="account-form"
-                  onSubmit={async (event) => {
-                    event.preventDefault()
-                    setBusy(true)
-                    await (mode === 'login'
-                      ? login(username, password)
-                      : register(username, password))
-                    setBusy(false)
-                  }}
-                >
-                  <label>
-                    Nazwa gracza
-                    <input
-                      value={username}
-                      minLength={3}
-                      maxLength={24}
-                      autoComplete="username"
-                      onChange={(event) => setUsername(event.target.value)}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Hasło
-                    <input
-                      type="password"
-                      value={password}
-                      minLength={8}
-                      autoComplete={
-                        mode === 'login' ? 'current-password' : 'new-password'
-                      }
-                      onChange={(event) => setPassword(event.target.value)}
-                      required
-                    />
-                  </label>
-                  {authError && (
-                    <p className="auth-error" role="alert">
-                      {authError}
-                    </p>
-                  )}
-                  <button
-                    type="submit"
-                    className="primary-button"
-                    disabled={busy}
-                  >
-                    {busy
-                      ? 'Proszę czekać…'
-                      : mode === 'login'
-                        ? 'Zaloguj się'
-                        : 'Zarejestruj się'}
-                  </button>
-                </form>
-                <button
-                  type="button"
-                  className="account-switch"
-                  onClick={() =>
-                    setMode(mode === 'login' ? 'register' : 'login')
-                  }
-                >
-                  {mode === 'login'
-                    ? 'Nie masz konta? Zarejestruj się'
-                    : 'Masz konto? Zaloguj się'}
-                </button>
-              </>
-            )}
-          </section>
           <div className="home-hero-caption" aria-hidden="true">
             NOWA KRAINA · NOWE ZAKLĘCIA · NOWE PRZEZNACZENIE
           </div>

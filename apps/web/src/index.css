@@ -84,11 +84,26 @@ button {
 }
 
 .home-nav {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   min-height: 82px;
+}
+
+.home-account-trigger {
+  margin-left: auto;
+  padding: 10px 16px;
+  border: 1px solid rgba(233, 182, 105, 0.55);
+  border-radius: 10px;
+  background: rgba(20, 43, 48, 0.82);
+  color: #f1cc91;
+  font-weight: 750;
+}
+
+.home-account-trigger:hover {
+  background: rgba(35, 63, 65, 0.96);
 }
 
 .home-brand {
@@ -156,7 +171,7 @@ button {
 .home-hero-content {
   position: relative;
   z-index: 1;
-  width: min(58%, 720px);
+  width: min(100%, 720px);
   padding: 70px 0 78px 6.4%;
 }
 
@@ -588,10 +603,10 @@ button {
 
 .home-account {
   position: absolute;
-  z-index: 1;
-  top: 34px;
-  right: 4.2%;
-  width: min(360px, 32%);
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(390px, calc(100vw - 32px));
   align-self: start;
   padding: 26px;
   border: 1px solid rgba(223, 190, 139, 0.24);
@@ -651,17 +666,10 @@ button {
     grid-template-columns: 1fr;
   }
   .home-hero {
-    align-items: flex-start;
     min-height: 0;
   }
   .home-hero-content {
-    width: 56%;
-  }
-  .home-account {
-    top: 28px;
-    right: 24px;
-    width: 38%;
-    padding: 20px;
+    width: min(100%, 720px);
   }
 }
 
@@ -699,10 +707,10 @@ button {
     padding: 210px 22px 30px;
   }
   .home-account {
-    position: relative;
-    inset: auto;
-    width: auto;
-    margin: 0 14px 50px;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: min(390px, calc(100vw - 28px));
     padding: 20px;
   }
   .home-hero h1 {
