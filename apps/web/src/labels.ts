@@ -103,7 +103,8 @@ export function cardDescription(card: CardDefinition): string {
       PATH_FRACTURE: 'Wybrany gracz płaci o 1 więcej za następne przejście.',
       FOG_OF_FORGETTING:
         'Wybrany gracz nie widzi rozpoznanych kosztów do końca swojej tury.',
-      POVERTY_CURSE: 'Wybrany gracz traci do 2 niewydanych sztuk złota.',
+      POVERTY_CURSE:
+        'Następny zakup wybranego gracza kosztuje o 2 złota więcej.',
       TANGLED_ROOTS: 'Wybrany gracz nie może użyć skrótu w następnej turze.',
       CLOSED_MARKET: 'Blokuje zakupy wybranego gracza w jego następnej turze.',
     } as const

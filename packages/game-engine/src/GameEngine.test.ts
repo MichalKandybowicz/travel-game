@@ -572,7 +572,8 @@ describe('GameEngine', () => {
     }
 
     expect(target.fogCostsHidden).toBe(true)
-    expect(target.availableGold).toBe(0)
+    expect(target.availableGold).toBe(1)
+    expect(target.nextPurchaseCostIncrease).toBe(2)
     expect(target.shortcutBlocked).toBe(true)
     expect(target.marketBlocked).toBe(true)
     endTurn(game, caster.id)
@@ -591,6 +592,13 @@ describe('GameEngine', () => {
     expect(target.fogCostsHidden).toBe(false)
     expect(target.shortcutBlocked).toBe(false)
     expect(target.marketBlocked).toBe(false)
+    endTurn(game, caster.id)
+    const cardId = game.market[0]!
+    const baseCost = CARD_BY_ID[cardId]!.purchaseCost
+    target.availableGold = baseCost + 2
+    buyCard(game, target.id, cardId)
+    expect(target.availableGold).toBe(0)
+    expect(target.nextPurchaseCostIncrease).toBe(0)
   })
 
   it('replaces every unsold offer after a round without purchases', () => {

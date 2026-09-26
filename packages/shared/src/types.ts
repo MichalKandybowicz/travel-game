@@ -156,6 +156,7 @@ export interface PlayerState {
   fogCostsHidden?: boolean
   shortcutBlocked?: boolean
   marketBlocked?: boolean
+  nextPurchaseCostIncrease?: number
   pendingDiscardCount?: number
   tokens?: TokenInstance[]
   claimedCampIds?: string[]

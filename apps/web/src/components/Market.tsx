@@ -16,6 +16,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const availableGold = player?.availableGold ?? 0
   const hasBoughtThisTurn = player?.hasBoughtThisTurn ?? false
+  const cursePriceIncrease = player?.nextPurchaseCostIncrease ?? 0
   const isLocked = Boolean(
     game.marketLockedUntilPlayerId || player?.marketBlocked,
   )
@@ -32,6 +33,9 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
           <strong>Magiczny bazar</strong>
           <small>Zaklęcia i artefakty: {game.market.length}</small>
           {isLocked && <small>Bazar spowity klątwą</small>}
+          {cursePriceIncrease > 0 && (
+            <small>Klątwa ubóstwa: ceny +{cursePriceIncrease}</small>
+          )}
         </span>
         <span className="market-trigger-arrow" aria-hidden="true">
           →
@@ -71,9 +75,11 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
             <p>
               {isLocked
                 ? 'Klątwa blokuje wszystkie zakupy do kolejnej tury gracza, który jej użył.'
-                : hasBoughtThisTurn
-                  ? 'Zakup w tej turze został wykorzystany.'
-                  : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
+                : cursePriceIncrease > 0
+                  ? `Klątwa ubóstwa podnosi cenę następnego zakupu o ${cursePriceIncrease} złota. Efekt zniknie po zakupie.`
+                  : hasBoughtThisTurn
+                    ? 'Zakup w tej turze został wykorzystany.'
+                    : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
             </p>
           </div>
           <div
@@ -83,7 +89,8 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
             {game.market.map((cardId) => {
               const card = CARD_BY_ID[cardId]
               if (!card) return null
-              const affordable = availableGold >= card.purchaseCost
+              const effectiveCost = card.purchaseCost + cursePriceIncrease
+              const affordable = availableGold >= effectiveCost
               const canBuy =
                 isActive && affordable && !hasBoughtThisTurn && !isLocked
               return (
@@ -101,7 +108,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                     dialogRef.current?.close()
                   }}
                 >
-                  <CardFace card={card} purchaseCost={card.purchaseCost} />
+                  <CardFace card={card} purchaseCost={effectiveCost} />
                   <span className="market-card-status">
                     {isLocked
                       ? 'Sklep zablokowany klątwą'
@@ -111,7 +118,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                           ? 'Poczekaj na swoją turę'
                           : affordable
                             ? 'Kup kartę'
-                            : `Brakuje ${card.purchaseCost - availableGold} złota`}
+                            : `Brakuje ${effectiveCost - availableGold} złota`}
                   </span>
                 </button>
               )

@@ -149,6 +149,8 @@ export async function connectStorage(url: string): Promise<Storage> {
                     fogCostsHidden: player.fogCostsHidden ?? false,
                     shortcutBlocked: player.shortcutBlocked ?? false,
                     marketBlocked: player.marketBlocked ?? false,
+                    nextPurchaseCostIncrease:
+                      player.nextPurchaseCostIncrease ?? 0,
                     sharedTileAccessAvailable:
                       player.sharedTileAccessAvailable ?? false,
                     revealedTileIds: player.revealedTileIds ?? [],

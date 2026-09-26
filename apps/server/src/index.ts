@@ -581,13 +581,26 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      if (!player.hasBoughtThisTurn && !game.marketLockedUntilPlayerId) {
+      if (
+        !player.hasBoughtThisTurn &&
+        !game.marketLockedUntilPlayerId &&
+        !player.marketBlocked
+      ) {
         const purchase = chooseBotPurchase(game, player, currentTile, target)
-        if (purchase && purchase.purchaseCost <= player.availableGold) {
+        const curseSurcharge = player.nextPurchaseCostIncrease ?? 0
+        const effectivePurchaseCost = purchase
+          ? purchase.purchaseCost + curseSurcharge
+          : undefined
+        if (
+          purchase &&
+          effectivePurchaseCost !== undefined &&
+          effectivePurchaseCost <= player.availableGold
+        ) {
           buyCard(game, bot.id, purchase.id)
           logGameAction(room, bot.id, 'buy_card', {
             cardId: purchase.id,
-            purchaseCost: purchase.purchaseCost,
+            purchaseCost: effectivePurchaseCost,
+            curseSurcharge,
           })
           await emitRoom(io, room)
           continue

@@ -450,6 +450,7 @@ export const createGameState = (
       fogCostsHidden: false,
       shortcutBlocked: false,
       marketBlocked: false,
+      nextPurchaseCostIncrease: 0,
       pendingDiscardCount: 0,
       tokens: [],
       claimedCampIds: [],
@@ -738,7 +739,7 @@ export const useActionCard = (
         curseTarget!.fogCostsHidden = true
         break
       case 'POVERTY_CURSE':
-        curseTarget!.availableGold = Math.max(0, curseTarget!.availableGold - 2)
+        curseTarget!.nextPurchaseCostIncrease = 2
         break
       case 'TANGLED_ROOTS':
         curseTarget!.shortcutBlocked = true
@@ -971,10 +972,13 @@ export const buyCard = (
     error('INVALID_ACTION', 'That card is not available in the market.')
   }
   const cardDefinition = definition!
-  if (player.availableGold < cardDefinition.purchaseCost) {
+  const purchaseCost =
+    cardDefinition.purchaseCost + (player.nextPurchaseCostIncrease ?? 0)
+  if (player.availableGold < purchaseCost) {
     error('NOT_ENOUGH_GOLD', 'Not enough gold to buy that card.')
   }
-  player.availableGold -= cardDefinition.purchaseCost
+  player.availableGold -= purchaseCost
+  player.nextPurchaseCostIncrease = 0
   const nextCard = createCardInstance(
     cardId,
     `${playerId}-buy-${gameState.turnNumber}-${player.discardPile.length}`,
