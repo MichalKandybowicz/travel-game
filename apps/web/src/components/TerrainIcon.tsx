@@ -80,11 +80,7 @@ export function TerrainIcon({
         </>
       )}
       {terrain === 'WATER' && (
-        <>
-          <path d="m0-10 4 5-4 6-4-6Z" fill={colors.fill} fillOpacity=".78" />
-          <path d="M-11 2c3-3 5 3 8 0s5 3 8 0 5 2 7 0M-11 7c3-3 5 3 8 0s5 3 8 0 5 2 7 0" />
-          <path d="M0-10V1M-4-5h8" opacity=".72" />
-        </>
+        <path d="M-11-3c3-3 5 3 8 0s5 3 8 0 5 2 7 0M-11 4c3-3 5 3 8 0s5 3 8 0 5 2 7 0" />
       )}
       {terrain === 'DESERT' && (
         <>

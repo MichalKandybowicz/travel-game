@@ -23,10 +23,8 @@ export function PlayerTokens({
 
   return (
     <section className="player-tokens" aria-label="Twoje runy">
-      <div>
-        <strong>Runy kręgów mocy</strong>
-      </div>
       <div className="player-tokens-heading">
+        <strong>Runy</strong>
         <small>
           {usedThisRound
             ? 'Runa wykorzystana w tej rundzie'

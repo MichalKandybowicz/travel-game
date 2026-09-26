@@ -828,16 +828,25 @@ select {
 }
 
 .map-edge-cost {
-  filter: drop-shadow(0 1.5px 1.5px rgba(2, 6, 23, 1));
+  filter: drop-shadow(0 1px 1px rgba(2, 6, 23, 0.72));
 }
 
 .map-edge-cost text {
   fill: #fffaf0;
-  font-size: 7.5px;
+  font-size: 6.3px;
   font-weight: 900;
   paint-order: stroke;
   stroke: rgba(15, 23, 42, 0.9);
   stroke-width: 1.35px;
+}
+
+.map-connection-path {
+  stroke-linecap: round;
+}
+
+.map-connection-border,
+.map-connection-center {
+  stroke-linecap: round;
 }
 
 .terrain-legend {
@@ -911,20 +920,20 @@ select {
   min-width: 0;
   align-items: flex-end;
   gap: 0;
-  padding: 30px 22px 12px 4px;
+  padding: 20px 22px 5px 4px;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: thin;
 }
 
 .hand-card-grid .hand-card {
-  width: clamp(145px, 16vw, 180px);
-  flex: 0 0 clamp(145px, 16vw, 180px);
+  width: clamp(132px, 14vw, 158px);
+  flex: 0 0 clamp(132px, 14vw, 158px);
   transform-origin: center bottom;
 }
 
 .hand-card-grid .hand-card + .hand-card {
-  margin-left: clamp(-58px, -4.2vw, -38px);
+  margin-left: clamp(-54px, -4vw, -36px);
 }
 
 .hand-card-grid .hand-card:hover,
@@ -1095,30 +1104,44 @@ select {
 .hand-resources {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 5px;
 }
 
 .hand-header-details {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 12px;
 }
 
 .hand-turn-actions {
-  display: grid;
-  width: min(100%, 220px);
-  gap: 8px;
+  display: flex;
+  width: auto;
+  align-items: stretch;
+  gap: 6px;
 }
 
 .hand-turn-actions .market-trigger {
-  padding: 9px 12px;
+  width: auto;
+  min-width: 150px;
+  padding: 7px 10px;
+}
+
+.hand-turn-actions .market-trigger small {
+  display: none;
+}
+
+.hand-turn-actions .market-trigger-arrow {
+  font-size: 1rem;
 }
 
 .hand-resource {
   display: inline-flex;
-  min-width: 78px;
+  min-width: 48px;
   align-items: center;
-  gap: 7px;
-  padding: 5px 9px 5px 6px;
+  justify-content: center;
+  gap: 5px;
+  padding: 3px 7px 3px 4px;
   border: 1px solid color-mix(in srgb, var(--resource-color) 62%, #dce3d4);
   border-radius: 12px;
   background: color-mix(in srgb, var(--resource-color) 22%, #081c20);
@@ -1143,8 +1166,8 @@ select {
 
 .hand-resource-icon {
   display: grid;
-  width: 29px;
-  height: 29px;
+  width: 24px;
+  height: 24px;
   flex: none;
   place-items: center;
   border-radius: 9px;
@@ -1153,26 +1176,15 @@ select {
 }
 
 .hand-resource-icon svg {
-  width: 23px;
-  height: 23px;
+  width: 19px;
+  height: 19px;
   stroke: currentColor;
   stroke-width: 3;
 }
 
-.hand-resource > span:last-child {
-  display: grid;
-  line-height: 1;
-}
-
-.hand-resource small {
-  color: #c6d3cc;
-  font-size: 0.64rem;
-  text-transform: uppercase;
-}
-
 .hand-resource strong {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #fff8dc;
 }
 
@@ -1688,20 +1700,22 @@ select {
 
 .hand-panel {
   display: grid;
-  gap: 12px;
+  gap: 7px;
 }
 
 .hand-content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
-  align-items: start;
-  gap: 14px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .player-tokens {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 7px;
   border: 1px solid rgba(233, 182, 105, 0.3);
   border-radius: 14px;
   background: rgba(8, 28, 32, 0.58);
@@ -1709,29 +1723,30 @@ select {
 
 .player-tokens-heading {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.player-tokens-heading > div {
-  display: grid;
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
 }
 
 .player-tokens-heading small,
 .token-empty {
   color: #a7beb5;
+  font-size: 0.7rem;
+}
+
+.player-tokens-heading small {
+  white-space: nowrap;
 }
 
 .token-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 5px;
 }
 
 .token-action {
-  display: grid;
-  gap: 5px;
+  display: flex;
+  gap: 4px;
 }
 
 .token-action select {
@@ -1746,25 +1761,25 @@ select {
 .token {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 11px 7px 7px;
+  gap: 5px;
+  padding: 3px 8px 3px 3px;
   border: 1px solid #6b7280;
   border-radius: 999px;
   background: #17262d;
   color: #f8fafc;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 750;
 }
 
 .token-icon {
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 25px;
+  height: 25px;
   border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 50%;
   background: #475569;
-  font-size: 0.88rem;
+  font-size: 0.74rem;
   font-weight: 900;
 }
 
@@ -2531,8 +2546,18 @@ select {
 }
 
 @media (max-width: 900px) {
-  .hand-content {
-    grid-template-columns: 1fr;
+  .hand-panel > .panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hand-turn-actions {
+    width: 100%;
+  }
+
+  .hand-turn-actions > button,
+  .hand-turn-actions .market-trigger {
+    flex: 1;
   }
 
   .join-layout {
@@ -2606,21 +2631,21 @@ select {
     grid-column: 1 / -1;
   }
   .game-shell .hand-card-grid {
-    padding-top: 24px;
+    padding-top: 17px;
   }
   .game-shell .hand-card-grid .hand-card {
-    width: 145px;
-    flex-basis: 145px;
+    width: 132px;
+    flex-basis: 132px;
   }
   .game-shell .hand-card-grid .hand-card + .hand-card {
-    margin-left: -34px;
+    margin-left: -38px;
   }
   .player-tokens-heading {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: baseline;
+    flex-direction: row;
   }
   .token {
-    flex: 1 1 145px;
+    flex: 0 0 auto;
   }
   .game-shell .hand-card-actions {
     gap: 4px;

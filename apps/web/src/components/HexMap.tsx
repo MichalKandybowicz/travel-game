@@ -28,8 +28,8 @@ const tilePalette: Record<
 }
 
 const MAX_ZOOM = 12
-const HEX_SPACING = 35
-const HEX_RADIUS = 20
+const HEX_SPACING = 39
+const HEX_RADIUS = 26
 
 type MapView = {
   centerX: number
@@ -469,10 +469,10 @@ export function HexMap({
               x2={connection.toPoint.x}
               y2={connection.toPoint.y}
             >
-              <stop stopColor={tilePalette[connection.from.terrain].dark} />
+              <stop stopColor={tilePalette[connection.from.terrain].edge} />
               <stop
                 offset="1"
-                stopColor={tilePalette[connection.to.terrain].dark}
+                stopColor={tilePalette[connection.to.terrain].edge}
               />
             </linearGradient>
           ))}
@@ -485,18 +485,31 @@ export function HexMap({
                 y1={connection.fromPoint.y}
                 x2={connection.toPoint.x}
                 y2={connection.toPoint.y}
-                stroke={`url(#connection-gradient-${index})`}
-                strokeWidth="28"
+                stroke="rgba(9, 20, 31, 0.72)"
+                strokeWidth="31"
                 strokeLinecap="round"
-                opacity="0.82"
+                className="map-connection-border"
               />
               <line
                 x1={connection.fromPoint.x}
                 y1={connection.fromPoint.y}
                 x2={connection.toPoint.x}
                 y2={connection.toPoint.y}
-                stroke="rgba(223, 235, 220, 0.2)"
-                strokeWidth="1"
+                stroke={`url(#connection-gradient-${index})`}
+                strokeWidth="27"
+                strokeLinecap="round"
+                opacity="0.92"
+                className="map-connection-path"
+              />
+              <line
+                x1={connection.fromPoint.x}
+                y1={connection.fromPoint.y}
+                x2={connection.toPoint.x}
+                y2={connection.toPoint.y}
+                stroke="rgba(20, 32, 42, 0.42)"
+                strokeWidth=".8"
+                strokeLinecap="round"
+                className="map-connection-center"
               />
             </g>
           ))}
@@ -565,7 +578,7 @@ export function HexMap({
                   strokeWidth="0.65"
                 />
                 <path
-                  d={`M${x - 13} ${y - 11}L${x} ${y - 18}L${x + 13} ${y - 11}`}
+                  d={`M${x - 16} ${y - 14}L${x} ${y - 22}L${x + 16} ${y - 14}`}
                   fill="none"
                   stroke="rgba(255, 252, 230, 0.25)"
                   strokeWidth="0.9"
@@ -635,14 +648,23 @@ export function HexMap({
           })}
         </g>
         <g className="map-edge-costs" pointerEvents="none">
-          {connections.flatMap((connection) => {
+          {connections.map((connection) => {
+            const middleX = (connection.fromPoint.x + connection.toPoint.x) / 2
+            const middleY = (connection.fromPoint.y + connection.toPoint.y) / 2
             const deltaX = connection.toPoint.x - connection.fromPoint.x
             const deltaY = connection.toPoint.y - connection.fromPoint.y
             const length = Math.hypot(deltaX, deltaY)
-            const middleX = (connection.fromPoint.x + connection.toPoint.x) / 2
-            const middleY = (connection.fromPoint.y + connection.toPoint.y) / 2
-            const perpendicularX = (-deltaY / length) * 6.8
-            const perpendicularY = (deltaX / length) * 6.8
+            const perpendicularX = (-deltaY / length) * 5.2
+            const perpendicularY = (deltaX / length) * 5.2
+
+            if (
+              connection.from.terrain === 'MOUNTAIN' ||
+              connection.to.terrain === 'MOUNTAIN' ||
+              connection.from.isBlocked ||
+              connection.to.isBlocked
+            ) {
+              return null
+            }
 
             const requirements =
               connection.from.terrain === 'UNKNOWN' ||
@@ -651,12 +673,37 @@ export function HexMap({
               connection.to.difficulty < 0
                 ? [undefined]
                 : getMoveRequirements(connection.from, connection.to)
+            if (requirements.length === 0) return null
+
+            if (requirements.length === 1) {
+              const cost = edgeCost(requirements[0])
+              return (
+                <g
+                  key={`${connection.from.id}-${connection.to.id}`}
+                  className="map-edge-cost"
+                >
+                  <circle
+                    cx={middleX}
+                    cy={middleY}
+                    r="5"
+                    fill={cost.color}
+                    fillOpacity=".72"
+                    stroke="rgba(255, 250, 230, 0.58)"
+                    strokeWidth=".65"
+                  />
+                  <text x={middleX} y={middleY + 2.25} textAnchor="middle">
+                    {cost.label}
+                  </text>
+                </g>
+              )
+            }
+
             return requirements.map((requirement, index) => {
-              const direction =
-                requirements.length === 1 ? 0 : index === 0 ? -1 : 1
+              const direction = index === 0 ? -1 : 1
               const x = middleX + perpendicularX * direction
               const y = middleY + perpendicularY * direction
               const cost = edgeCost(requirement)
+
               return (
                 <g
                   key={`${connection.from.id}-${connection.to.id}-${index}`}
@@ -665,12 +712,13 @@ export function HexMap({
                   <circle
                     cx={x}
                     cy={y}
-                    r="6.4"
+                    r="4.7"
                     fill={cost.color}
-                    stroke="#fff2c7"
-                    strokeWidth="1.15"
+                    fillOpacity=".72"
+                    stroke="rgba(255, 250, 230, 0.55)"
+                    strokeWidth=".6"
                   />
-                  <text x={x} y={y + 2.7} textAnchor="middle">
+                  <text x={x} y={y + 2.25} textAnchor="middle">
                     {cost.label}
                   </text>
                 </g>

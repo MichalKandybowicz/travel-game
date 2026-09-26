@@ -70,10 +70,7 @@ export function PlayerHand({
                   <span className="hand-resource-icon">
                     <MovementGlyph type={type} />
                   </span>
-                  <span>
-                    <small>{label}</small>
-                    <strong>{player.availableMovement[type]}</strong>
-                  </span>
+                  <strong>{player.availableMovement[type]}</strong>
                 </span>
               ))}
               <span
@@ -84,10 +81,7 @@ export function PlayerHand({
                 <span className="hand-resource-icon">
                   <GoldGlyph />
                 </span>
-                <span>
-                  <small>Złoto</small>
-                  <strong>{player.availableGold}</strong>
-                </span>
+                <strong>{player.availableGold}</strong>
               </span>
             </div>
           )}
@@ -112,6 +106,15 @@ export function PlayerHand({
       )}
 
       <div className="hand-content">
+        {player && (
+          <PlayerTokens
+            player={player}
+            opponents={opponents}
+            roundNumber={roundNumber}
+            isActive={isActive}
+            onUseToken={onUseToken}
+          />
+        )}
         <div className="card-grid hand-card-grid">
           {player?.hand.map((card) => {
             const definition = CARD_BY_ID[card.cardId]
@@ -216,35 +219,7 @@ export function PlayerHand({
               </div>
             )
           })}
-          {player?.playedCards.map((card) => {
-            const definition = CARD_BY_ID[card.cardId]
-            if (!definition) {
-              return null
-            }
-            return (
-              <div
-                key={card.instanceId}
-                className="card game-card hand-card hand-card--used"
-                data-movement={definition.movementType}
-                aria-label={`${definition.name}, karta wykorzystana w tej rundzie`}
-              >
-                <CardFace card={definition} />
-                <span className="hand-card-used-label">
-                  Wykorzystana w tej rundzie
-                </span>
-              </div>
-            )
-          })}
         </div>
-        {player && (
-          <PlayerTokens
-            player={player}
-            opponents={opponents}
-            roundNumber={roundNumber}
-            isActive={isActive}
-            onUseToken={onUseToken}
-          />
-        )}
       </div>
     </div>
   )
