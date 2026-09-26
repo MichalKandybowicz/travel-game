@@ -279,6 +279,34 @@ button {
   font-size: 0.7rem;
 }
 
+.home-map-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.home-map-edit-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border: 1px solid rgba(233, 182, 105, 0.55);
+  border-radius: 7px;
+  background: rgba(233, 182, 105, 0.12);
+  color: #f0c989;
+  font-size: 0.7rem;
+  font-weight: 750;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.home-map-edit-button:hover {
+  border-color: #edbb73;
+  background: rgba(233, 182, 105, 0.24);
+  color: #ffe0aa;
+}
+
 .map-creator-layout {
   display: grid;
   grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);

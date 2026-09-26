@@ -182,20 +182,30 @@ export function HomePage() {
                     customMaps.map((customMap) => (
                       <span key={customMap.id}>
                         {customMap.name}
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            await deleteCustomMap(account.token, customMap.id)
-                            setCustomMaps((maps) =>
-                              maps.filter((map) => map.id !== customMap.id),
-                            )
-                            if (selectedMapId === customMap.id) {
-                              setSelectedMapId('')
-                            }
-                          }}
-                        >
-                          Usuń
-                        </button>
+                        <span className="home-map-actions">
+                          <Link
+                            className="home-map-edit-button"
+                            to="/maps/create"
+                            state={{ customMapId: customMap.id }}
+                            aria-label={`Edytuj mapę ${customMap.name}`}
+                          >
+                            Edytuj
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              await deleteCustomMap(account.token, customMap.id)
+                              setCustomMaps((maps) =>
+                                maps.filter((map) => map.id !== customMap.id),
+                              )
+                              if (selectedMapId === customMap.id) {
+                                setSelectedMapId('')
+                              }
+                            }}
+                          >
+                            Usuń
+                          </button>
+                        </span>
                       </span>
                     ))
                   )}

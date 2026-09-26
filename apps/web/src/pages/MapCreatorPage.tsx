@@ -1,7 +1,7 @@
 import { analyzeMap, generateMap } from '@map-generator'
 import type { CustomMap, HexTile, MapSettings, TerrainType } from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { TerrainIcon } from '../components/TerrainIcon.js'
 import { terrainLabels } from '../labels.js'
 import { defaultSettings, useGameStore } from '../store.js'
@@ -42,6 +42,7 @@ const points = (x: number, y: number) =>
 type Tool = TerrainType | 'SET_START' | 'SET_GOAL'
 
 export function MapCreatorPage() {
+  const location = useLocation()
   const account = useGameStore((state) => state.account)
   const [settings, setSettings] = useState<MapSettings>(() => ({
     ...defaultSettings,
@@ -73,7 +74,17 @@ export function MapCreatorPage() {
   useEffect(() => {
     if (!accountToken) return
     void loadCustomMaps(accountToken)
-      .then(setCustomMaps)
+      .then((maps) => {
+        setCustomMaps(maps)
+        const mapId = (location.state as { customMapId?: string } | null)
+          ?.customMapId
+        const selectedMap = maps.find((customMap) => customMap.id === mapId)
+        if (!selectedMap) return
+        setSelectedMapId(selectedMap.id)
+        setName(selectedMap.name)
+        setSettings(selectedMap.settings)
+        setMap(selectedMap.map)
+      })
       .catch((caught: unknown) => {
         setMessage(
           caught instanceof Error
@@ -81,7 +92,7 @@ export function MapCreatorPage() {
             : 'Nie udało się wczytać zapisanych map.',
         )
       })
-  }, [accountToken])
+  }, [accountToken, location.state])
 
   const bounds = useMemo(() => {
     const coordinates = map.tiles.map(pixel)
