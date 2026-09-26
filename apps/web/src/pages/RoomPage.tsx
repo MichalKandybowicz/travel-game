@@ -28,6 +28,7 @@ export function RoomPage() {
   const updateSettings = useGameStore((state) => state.updateSettings)
   const updateAppearance = useGameStore((state) => state.updateAppearance)
   const updatePlayerName = useGameStore((state) => state.updatePlayerName)
+  const reorderPlayers = useGameStore((state) => state.reorderPlayers)
   const addBot = useGameStore((state) => state.addBot)
   const removeBot = useGameStore((state) => state.removeBot)
   const [leaving, setLeaving] = useState(false)
@@ -61,6 +62,16 @@ export function RoomPage() {
     () => Boolean(isHost && playerCount >= 2),
     [isHost, playerCount],
   )
+  const movePlayerInOrder = (index: number, offset: -1 | 1) => {
+    if (!room || !isHost) return
+    const targetIndex = index + offset
+    if (targetIndex < 0 || targetIndex >= room.players.length) return
+    const orderedPlayerIds = room.players.map((player) => player.id)
+    const [movedPlayerId] = orderedPlayerIds.splice(index, 1)
+    if (!movedPlayerId) return
+    orderedPlayerIds.splice(targetIndex, 0, movedPlayerId)
+    reorderPlayers(orderedPlayerIds)
+  }
 
   return (
     <main className="page shell journey-page lobby-page">
@@ -150,6 +161,9 @@ export function RoomPage() {
           <ul className="player-list">
             {room?.players.map((player, index) => (
               <li key={player.id}>
+                <span className="lobby-player-position" aria-hidden="true">
+                  {index + 1}
+                </span>
                 <PlayerBadge
                   index={index}
                   color={player.color}
@@ -167,6 +181,31 @@ export function RoomPage() {
                 </span>
                 {player.id === room.hostPlayerId && (
                   <span className="lobby-host-badge">Gospodarz</span>
+                )}
+                {isHost && room.status === 'LOBBY' && (
+                  <span
+                    className="lobby-order-controls"
+                    aria-label={`Zmień pozycję gracza ${player.name}`}
+                  >
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      aria-label={`Przesuń ${player.name} wyżej`}
+                      title="Przesuń wyżej"
+                      onClick={() => movePlayerInOrder(index, -1)}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === room.players.length - 1}
+                      aria-label={`Przesuń ${player.name} niżej`}
+                      title="Przesuń niżej"
+                      onClick={() => movePlayerInOrder(index, 1)}
+                    >
+                      ↓
+                    </button>
+                  </span>
                 )}
                 {isHost && player.isBot && (
                   <button

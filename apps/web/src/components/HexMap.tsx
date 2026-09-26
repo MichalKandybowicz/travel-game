@@ -264,6 +264,7 @@ export function HexMap({
                 cubeDistance(tile, currentTile) === 2)) &&
             !tile.isBlocked &&
             (game.settings.allowSharedTiles !== false ||
+              localPlayer.sharedTileAccessAvailable ||
               !game.players.some(
                 (player) =>
                   player.id !== localPlayer.id && player.position === tile.id,
@@ -485,20 +486,10 @@ export function HexMap({
                 y1={connection.fromPoint.y}
                 x2={connection.toPoint.x}
                 y2={connection.toPoint.y}
-                stroke="rgba(9, 20, 31, 0.72)"
-                strokeWidth="31"
-                strokeLinecap="round"
-                className="map-connection-border"
-              />
-              <line
-                x1={connection.fromPoint.x}
-                y1={connection.fromPoint.y}
-                x2={connection.toPoint.x}
-                y2={connection.toPoint.y}
                 stroke={`url(#connection-gradient-${index})`}
-                strokeWidth="27"
+                strokeWidth="36"
                 strokeLinecap="round"
-                opacity="0.92"
+                opacity="0.96"
                 className="map-connection-path"
               />
               <line
@@ -544,7 +535,11 @@ export function HexMap({
                   }
                 }}
               >
-                <title>{tileDescription(tile)}</title>
+                <title>
+                  {localPlayer?.fogCostsHidden
+                    ? `${terrainLabels[tile.terrain]} — koszt spowity klątwą`
+                    : tileDescription(tile)}
+                </title>
                 <polygon
                   points={polygonPoints(x, y, HEX_RADIUS)}
                   fill={tilePalette[tile.terrain].dark}
@@ -667,6 +662,7 @@ export function HexMap({
             }
 
             const requirements =
+              localPlayer?.fogCostsHidden ||
               connection.from.terrain === 'UNKNOWN' ||
               connection.to.terrain === 'UNKNOWN' ||
               connection.from.difficulty < 0 ||

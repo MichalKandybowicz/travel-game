@@ -37,35 +37,53 @@ export function MovementGlyph({ type }: { type: MovementType }) {
 export function CardFace({
   card,
   purchaseCost,
+  compact = false,
 }: {
   card: CardDefinition
   purchaseCost?: number
+  compact?: boolean
 }) {
   if (card.type === 'ACTION') {
+    const description = cardDescription(card)
+    const visibleDescription =
+      description.length > 60
+        ? `${description.slice(0, 57).trimEnd()}...`
+        : description
     const symbols = {
       MAP_SHORTCUT: '↝',
       SECOND_WIND: '↻',
       MERCHANT_CARAVAN: 'Ⅱ',
       STEAL_PLANS: '⌁',
       GUIDE: '◇',
+      PHASE_WALK: '◉',
+      RESHUFFLE_HAND: '↺',
+      ECHO_POWER: '◌',
+      PROTECTIVE_CIRCLE: '⬡',
+      PATH_FRACTURE: '⌁',
+      FOG_OF_FORGETTING: '≋',
+      POVERTY_CURSE: '−',
+      TANGLED_ROOTS: '⌇',
+      CLOSED_MARKET: '×',
     } as const
     return (
       <span className="game-card__inner">
-        <span className="game-card__topline">Jednorazowe zaklęcie</span>
+        <span className="game-card__topline">
+          {card.actionCategory === 'CURSE' ? 'Klątwa' : 'Zaklęcie'}
+        </span>
         <strong className="game-card__name">
           {cardLabels[card.id]?.name ?? card.name}
         </strong>
         <span className="game-card__art action-card-art" aria-hidden="true">
           {card.actionEffect ? symbols[card.actionEffect] : '◆'}
         </span>
-        <span className="game-card__action-effect">
-          {cardDescription(card)}
+        <span className="game-card__action-effect" title={description}>
+          {visibleDescription}
         </span>
-        <span className="game-card__footer">
-          {purchaseCost === undefined
-            ? 'Po użyciu karta znika z talii'
-            : `Koszt: ${purchaseCost} złota · Jednorazowa`}
-        </span>
+        {purchaseCost !== undefined && (
+          <span className="game-card__footer">
+            Koszt: {purchaseCost} złota · Jednorazowa
+          </span>
+        )}
       </span>
     )
   }
@@ -78,15 +96,21 @@ export function CardFace({
       <span className="game-card__art">
         <MovementGlyph type={card.movementType} />
       </span>
-      <span className="game-card__effect">
-        <strong>+{card.movementValue}</strong>
-        <span>{movementUnitLabel(card.movementType, card.movementValue)}</span>
-      </span>
-      <span className="game-card__footer">
-        {purchaseCost === undefined
-          ? `Zamiana: +${card.goldValue} złota`
-          : `Koszt: ${purchaseCost} złota · Zamiana: +${card.goldValue} złota`}
-      </span>
+      {!compact && (
+        <>
+          <span className="game-card__effect">
+            <strong>+{card.movementValue}</strong>
+            <span>
+              {movementUnitLabel(card.movementType, card.movementValue)}
+            </span>
+          </span>
+          <span className="game-card__footer">
+            {purchaseCost === undefined
+              ? `Zamiana: +${card.goldValue} złota`
+              : `Koszt: ${purchaseCost} złota · Zamiana: +${card.goldValue} złota`}
+          </span>
+        </>
+      )}
     </span>
   )
 }

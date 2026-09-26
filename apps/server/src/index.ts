@@ -36,6 +36,7 @@ import {
   roomUpdateSettingsSchema,
   roomUpdateAppearanceSchema,
   roomUpdatePlayerNameSchema,
+  roomReorderPlayersSchema,
   roomBotSchema,
   playCardSchema,
   useActionCardSchema,
@@ -512,25 +513,32 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       }
       const actionCard = !player.hasUsedActionCardThisTurn
         ? player.hand.find((card) => {
-            const effect = CARD_BY_ID[card.cardId]?.actionEffect
+            const definition = CARD_BY_ID[card.cardId]
+            const effect = definition?.actionEffect
             return (
               effect === 'GUIDE' ||
               effect === 'SECOND_WIND' ||
               effect === 'MERCHANT_CARAVAN' ||
-              effect === 'STEAL_PLANS'
+              effect === 'STEAL_PLANS' ||
+              effect === 'PHASE_WALK' ||
+              effect === 'RESHUFFLE_HAND' ||
+              effect === 'PROTECTIVE_CIRCLE' ||
+              definition?.actionCategory === 'CURSE'
             )
           })
         : undefined
       if (actionCard) {
-        const effect = CARD_BY_ID[actionCard.cardId]!.actionEffect
+        const definition = CARD_BY_ID[actionCard.cardId]!
+        const effect = definition.actionEffect
         const targetPlayerId =
-          effect === 'STEAL_PLANS'
+          definition.actionCategory === 'CURSE'
             ? game.players.find(
                 (candidate) =>
-                  candidate.id !== bot.id && candidate.hand.length > 0,
+                  candidate.id !== bot.id &&
+                  (effect !== 'STEAL_PLANS' || candidate.hand.length > 0),
               )?.id
             : undefined
-        if (effect !== 'STEAL_PLANS' || targetPlayerId) {
+        if (definition.actionCategory !== 'CURSE' || targetPlayerId) {
           activateActionCard(
             game,
             bot.id,
@@ -1196,6 +1204,52 @@ io.on('connection', (socket) => {
       (entry) => entry.id === parsed.data.playerId,
     )!
     player.name = parsed.data.playerName
+    await emitRoom(io, room)
+  })
+
+  socket.on(EVENTS.roomReorderPlayers, async (payload: unknown) => {
+    const parsed = roomReorderPlayersSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room || room.status !== 'LOBBY' || room.gameState) {
+      sendError(socket.id, io, {
+        code: 'ROOM_NOT_FOUND',
+        message: 'The waiting room is no longer available.',
+      })
+      return
+    }
+    if (
+      !authorizeRoomPlayer(room, socket.id, parsed.data.playerId) ||
+      room.hostPlayerId !== parsed.data.playerId
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'Only the host can change the player order.',
+      })
+      return
+    }
+    const orderedIds = parsed.data.orderedPlayerIds
+    if (
+      new Set(orderedIds).size !== room.players.length ||
+      orderedIds.length !== room.players.length ||
+      room.players.some((player) => !orderedIds.includes(player.id))
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'The player order must contain every player exactly once.',
+      })
+      return
+    }
+    const playersById = new Map(
+      room.players.map((player) => [player.id, player]),
+    )
+    room.players = orderedIds.map((id) => playersById.get(id)!)
     await emitRoom(io, room)
   })
 

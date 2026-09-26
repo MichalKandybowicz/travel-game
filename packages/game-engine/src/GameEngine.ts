@@ -218,12 +218,12 @@ export const getEffectiveMoveRequirements = (
   to: HexTile,
   tiles?: HexTile[],
 ): MoveRequirement[] => {
+  let requirements: MoveRequirement[] = []
   if (axialDistance(from, to) === 1) {
-    return player.guidedMoveAvailable
+    requirements = player.guidedMoveAvailable
       ? [{ type: 'ANY', amount: 1 }]
       : getMoveRequirements(from, to)
-  }
-  if (
+  } else if (
     player.shortcutMoveAvailable &&
     tiles &&
     isShortcutMove(tiles, from, to) &&
@@ -231,11 +231,12 @@ export const getEffectiveMoveRequirements = (
     to.terrain !== 'MOUNTAIN'
   ) {
     const type = getTerrainCost(to.terrain, to.difficulty)
-    return type === 'BLOCKED'
-      ? []
-      : [{ type, amount: Math.max(1, to.difficulty) }]
+    requirements =
+      type === 'BLOCKED' ? [] : [{ type, amount: Math.max(1, to.difficulty) }]
   }
-  return []
+  return player.extraMoveCostPending && requirements.length > 0
+    ? [...requirements, { type: 'ANY', amount: 1 }]
+    : requirements
 }
 
 export const canAffordMove = (
@@ -438,10 +439,17 @@ export const createGameState = (
       hasBoughtThisTurn: false,
       purchasesThisTurn: 0,
       hasSacrificedCardThisTurn: false,
+      sacrificeCooldownTurns: 0,
       hasUsedActionCardThisTurn: false,
       extraPurchaseAvailable: false,
       shortcutMoveAvailable: false,
       guidedMoveAvailable: false,
+      sharedTileAccessAvailable: false,
+      curseShieldAvailable: false,
+      extraMoveCostPending: false,
+      fogCostsHidden: false,
+      shortcutBlocked: false,
+      marketBlocked: false,
       pendingDiscardCount: 0,
       tokens: [],
       claimedCampIds: [],
@@ -562,13 +570,21 @@ export const playCard = (
   if (mode !== 'MOVEMENT' && mode !== 'GOLD') {
     error('INVALID_ACTION', 'Invalid card play mode.')
   }
-  if (sacrifice && player.hasSacrificedCardThisTurn) {
-    error('INVALID_ACTION', 'A card can be sacrificed only once per turn.')
+  if (
+    sacrifice &&
+    (player.hasSacrificedCardThisTurn ||
+      (player.sacrificeCooldownTurns ?? 0) > 0)
+  ) {
+    error(
+      'INVALID_ACTION',
+      'A card cannot be sacrificed while the five-turn cooldown is active.',
+    )
   }
   player.hand.splice(cardIndex, 1)
   if (sacrifice) {
     player.removedCards.push(card!)
     player.hasSacrificedCardThisTurn = true
+    player.sacrificeCooldownTurns = 5
   } else {
     player.playedCards.push(card!)
   }
@@ -614,50 +630,126 @@ export const useActionCard = (
   }
   const actionCard = card!
   const actionDefinition = definition!
-
-  switch (actionDefinition.actionEffect) {
-    case 'MAP_SHORTCUT':
-      player.shortcutMoveAvailable = true
-      break
-    case 'SECOND_WIND':
-      player.hand.splice(cardIndex, 1)
-      player.removedCards.push(actionCard)
-      drawCards(
-        player,
-        2,
-        `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
-      )
-      player.pendingDiscardCount = 1
-      break
-    case 'MERCHANT_CARAVAN':
-      player.extraPurchaseAvailable = true
-      break
-    case 'STEAL_PLANS': {
-      if (!targetPlayerId || targetPlayerId === playerId) {
-        error('INVALID_ACTION', 'Choose an opponent for this action.')
-      }
-      const target = findPlayer(gameState, targetPlayerId!)
-      if (target.hand.length === 0) {
-        error('INVALID_ACTION', 'The chosen opponent has no cards in hand.')
-      }
-      const stolen = new SeededRandom(
-        `${gameState.seed}:${playerId}:action:${actionCard.instanceId}:${targetPlayerId}`,
-      ).pick(target.hand)
-      target.hand.splice(
-        target.hand.findIndex(
-          (candidate) => candidate.instanceId === stolen.instanceId,
-        ),
-        1,
-      )
-      target.discardPile.push(stolen)
-      break
-    }
-    case 'GUIDE':
-      player.guidedMoveAvailable = true
-      break
+  if (
+    actionDefinition.actionEffect === 'MAP_SHORTCUT' &&
+    player.shortcutBlocked
+  ) {
+    error('INVALID_ACTION', 'A curse blocks shortcuts during this turn.')
   }
+  const curseTarget =
+    actionDefinition.actionCategory === 'CURSE'
+      ? !targetPlayerId || targetPlayerId === playerId
+        ? error('INVALID_ACTION', 'Choose an opponent for this curse.')
+        : findPlayer(gameState, targetPlayerId)
+      : undefined
+  const curseBlocked = curseTarget?.curseShieldAvailable === true
+  if (curseBlocked) {
+    curseTarget.curseShieldAvailable = false
+  }
+  let actionCardRemoved = false
 
-  if (actionDefinition.actionEffect !== 'SECOND_WIND') {
+  if (!curseBlocked)
+    switch (actionDefinition.actionEffect) {
+      case 'MAP_SHORTCUT':
+        player.shortcutMoveAvailable = true
+        break
+      case 'SECOND_WIND':
+        player.hand.splice(cardIndex, 1)
+        player.removedCards.push(actionCard)
+        drawCards(
+          player,
+          2,
+          `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
+        )
+        player.pendingDiscardCount = 1
+        actionCardRemoved = true
+        break
+      case 'MERCHANT_CARAVAN':
+        player.extraPurchaseAvailable = true
+        break
+      case 'STEAL_PLANS': {
+        const target = curseTarget!
+        if (target.hand.length === 0) {
+          error('INVALID_ACTION', 'The chosen opponent has no cards in hand.')
+        }
+        const stolen = new SeededRandom(
+          `${gameState.seed}:${playerId}:action:${actionCard.instanceId}:${targetPlayerId}`,
+        ).pick(target.hand)
+        target.hand.splice(
+          target.hand.findIndex(
+            (candidate) => candidate.instanceId === stolen.instanceId,
+          ),
+          1,
+        )
+        target.discardPile.push(stolen)
+        break
+      }
+      case 'GUIDE':
+        player.guidedMoveAvailable = true
+        break
+      case 'PHASE_WALK':
+        player.sharedTileAccessAvailable = true
+        break
+      case 'RESHUFFLE_HAND': {
+        player.hand.splice(cardIndex, 1)
+        player.removedCards.push(actionCard)
+        const handSize = player.hand.length
+        player.discardPile.push(...player.hand)
+        player.hand = []
+        drawCards(
+          player,
+          handSize,
+          `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
+        )
+        actionCardRemoved = true
+        break
+      }
+      case 'ECHO_POWER': {
+        const previousPlay = [...gameState.roundPlayedCards]
+          .reverse()
+          .find(
+            (play) =>
+              play.playerId === playerId &&
+              (play.mode === 'MOVEMENT' || play.mode === 'GOLD'),
+          )
+        if (!previousPlay) {
+          return error('INVALID_ACTION', 'No movement card can be echoed.')
+        }
+        const echoedCard = CARD_BY_ID[previousPlay.cardId]
+        if (!echoedCard || echoedCard.type !== 'MOVEMENT') {
+          return error('INVALID_ACTION', 'No movement card can be echoed.')
+        }
+        const multiplier = previousPlay.sacrificed ? 2 : 1
+        if (previousPlay.mode === 'GOLD') {
+          player.availableGold += echoedCard.goldValue * multiplier
+        } else {
+          player.availableMovement[echoedCard.movementType] +=
+            echoedCard.movementValue * multiplier
+        }
+        break
+      }
+      case 'PROTECTIVE_CIRCLE':
+        player.curseShieldAvailable = true
+        break
+      case 'PATH_FRACTURE':
+        curseTarget!.extraMoveCostPending = true
+        break
+      case 'FOG_OF_FORGETTING':
+        curseTarget!.fogCostsHidden = true
+        break
+      case 'POVERTY_CURSE':
+        curseTarget!.availableGold = Math.max(0, curseTarget!.availableGold - 2)
+        break
+      case 'TANGLED_ROOTS':
+        curseTarget!.shortcutBlocked = true
+        curseTarget!.shortcutMoveAvailable = false
+        break
+      case 'CLOSED_MARKET':
+        curseTarget!.marketBlocked = true
+        break
+    }
+
+  if (!actionCardRemoved) {
     player.hand.splice(cardIndex, 1)
     player.removedCards.push(actionCard)
   }
@@ -716,6 +808,7 @@ export const movePlayer = (
   }
   if (
     gameState.settings.allowSharedTiles === false &&
+    !player.sharedTileAccessAvailable &&
     gameState.players.some(
       (other) => other.id !== playerId && other.position === targetHexId,
     )
@@ -726,6 +819,7 @@ export const movePlayer = (
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement for the selected hex.')
   }
   spendMove(player, currentTile, targetTile, gameState.map.tiles)
+  player.extraMoveCostPending = false
   if (shortcut) player.shortcutMoveAvailable = false
   if (adjacent && player.guidedMoveAvailable) {
     player.guidedMoveAvailable = false
@@ -862,7 +956,7 @@ export const buyCard = (
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
-  if (gameState.marketLockedUntilPlayerId) {
+  if (gameState.marketLockedUntilPlayerId || player.marketBlocked) {
     error('MARKET_LOCKED', 'The market is blocked by a curse.')
   }
   const purchaseLimit = player.extraPurchaseAvailable ? 2 : 1
@@ -910,11 +1004,21 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.availableGold = 0
   player.hasBoughtThisTurn = false
   player.purchasesThisTurn = 0
+  if (
+    !player.hasSacrificedCardThisTurn &&
+    (player.sacrificeCooldownTurns ?? 0) > 0
+  ) {
+    player.sacrificeCooldownTurns = (player.sacrificeCooldownTurns ?? 0) - 1
+  }
   player.hasSacrificedCardThisTurn = false
   player.hasUsedActionCardThisTurn = false
   player.extraPurchaseAvailable = false
   player.shortcutMoveAvailable = false
   player.guidedMoveAvailable = false
+  player.sharedTileAccessAvailable = false
+  player.fogCostsHidden = false
+  player.shortcutBlocked = false
+  player.marketBlocked = false
   let shouldSkipPlayer: boolean
   do {
     gameState.turnNumber += 1

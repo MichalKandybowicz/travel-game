@@ -72,6 +72,15 @@ export const cardLabels: Record<string, { name: string }> = {
   merchant_caravan: { name: 'Widmowy bazar' },
   steal_plans: { name: 'Kradzież wspomnień' },
   guide: { name: 'Duch przewodnik' },
+  phase_walk: { name: 'Widmowy krok' },
+  reshuffle_hand: { name: 'Zamiana losu' },
+  echo_power: { name: 'Echo mocy' },
+  protective_circle: { name: 'Ochronny krąg' },
+  path_fracture: { name: 'Pęknięcie szlaku' },
+  fog_of_forgetting: { name: 'Mgła zapomnienia' },
+  poverty_curse: { name: 'Klątwa ubóstwa' },
+  tangled_roots: { name: 'Splątane korzenie' },
+  closed_market: { name: 'Zamknięty bazar' },
 }
 
 export function cardDescription(card: CardDefinition): string {
@@ -86,6 +95,17 @@ export function cardDescription(card: CardDefinition): string {
       MERCHANT_CARAVAN: 'Możesz kupić w tej turze drugą kartę.',
       STEAL_PLANS: 'Wybrany przeciwnik odrzuca losową kartę z ręki.',
       GUIDE: 'Następne sąsiednie przejście kosztuje 1 dowolnego ruchu.',
+      PHASE_WALK:
+        'Do końca tury możesz wchodzić na pola zajęte przez innych graczy.',
+      RESHUFFLE_HAND: 'Odrzuć całą rękę i dobierz tyle samo kart.',
+      ECHO_POWER: 'Skopiuj ostatnią zagraną kartę ruchu lub złota.',
+      PROTECTIVE_CIRCLE: 'Ignoruj następną klątwę wymierzoną w ciebie.',
+      PATH_FRACTURE: 'Wybrany gracz płaci o 1 więcej za następne przejście.',
+      FOG_OF_FORGETTING:
+        'Wybrany gracz nie widzi rozpoznanych kosztów do końca swojej tury.',
+      POVERTY_CURSE: 'Wybrany gracz traci do 2 niewydanych sztuk złota.',
+      TANGLED_ROOTS: 'Wybrany gracz nie może użyć skrótu w następnej turze.',
+      CLOSED_MARKET: 'Blokuje zakupy wybranego gracza w jego następnej turze.',
     } as const
     return card.actionEffect
       ? descriptions[card.actionEffect]

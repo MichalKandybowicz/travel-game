@@ -13,7 +13,7 @@ import {
   playCard,
   removePlayer,
   serializePublicGameState,
-  useActionCard,
+  useActionCard as activateActionCard,
   useToken,
 } from './GameEngine.js'
 import { buildStartingDeck } from './Deck.js'
@@ -251,7 +251,7 @@ describe('GameEngine', () => {
     goal.r = start.r
 
     expect(() => movePlayer(game, 'p1', goal.id)).toThrow()
-    player.availableMovement.GREEN = 1
+    player.availableMovement.WILD = 10
     movePlayer(game, 'p1', goal.id)
     expect(player.availableMovement.GREEN).toBe(0)
     expect(game.status).toBe('FINISHED')
@@ -291,7 +291,7 @@ describe('GameEngine', () => {
       game.market.every((cardId) => MARKET_CARD_IDS.includes(cardId)),
     ).toBe(true)
 
-    for (let index = 0; index < 20; index += 1) {
+    for (let index = 0; index < 50; index += 1) {
       const cardId = game.market[0]!
       const cost = CARD_BY_ID[cardId]!.purchaseCost
       player.availableGold = cost
@@ -352,7 +352,7 @@ describe('GameEngine', () => {
       instanceId: 'second-wind-test',
     })
 
-    useActionCard(game, player.id, 'second-wind-test')
+    activateActionCard(game, player.id, 'second-wind-test')
 
     expect(player.removedCards.at(-1)?.cardId).toBe('second_wind')
     expect(player.hand).toHaveLength(handSize + 2)
@@ -372,7 +372,7 @@ describe('GameEngine', () => {
       cardId: 'merchant_caravan',
       instanceId: 'merchant-caravan-test',
     })
-    useActionCard(game, player.id, 'merchant-caravan-test')
+    activateActionCard(game, player.id, 'merchant-caravan-test')
     player.availableGold = 30
 
     buyCard(game, player.id, game.market[0]!)
@@ -395,7 +395,7 @@ describe('GameEngine', () => {
     })
     const opponentHandSize = opponent.hand.length
 
-    useActionCard(game, player.id, 'steal-plans-test', opponent.id)
+    activateActionCard(game, player.id, 'steal-plans-test', opponent.id)
 
     expect(opponent.hand).toHaveLength(opponentHandSize - 1)
     expect(opponent.discardPile).toHaveLength(1)
@@ -406,11 +406,12 @@ describe('GameEngine', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const target = findReachableTile(game, 'JUNGLE')
+    game.settings.allowSharedTiles = true
     target.difficulty = 4
     player.hand.push({ cardId: 'guide', instanceId: 'guide-test' })
     player.availableMovement.WILD = 1
 
-    useActionCard(game, player.id, 'guide-test')
+    activateActionCard(game, player.id, 'guide-test')
     movePlayer(game, player.id, target.id)
 
     expect(player.availableMovement.WILD).toBe(0)
@@ -438,11 +439,158 @@ describe('GameEngine', () => {
     })
     player.availableMovement.GREEN = 1
 
-    useActionCard(game, player.id, 'shortcut-map-test')
+    activateActionCard(game, player.id, 'shortcut-map-test')
     movePlayer(game, player.id, target.id)
 
     expect(player.position).toBe(target.id)
     expect(player.shortcutMoveAvailable).toBe(false)
+  })
+
+  it('allows entering occupied tiles until the turn ends after phase walk', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const opponent = game.players[1]!
+    const target = findReachableTile(game, 'JUNGLE')
+    game.settings.allowSharedTiles = false
+    target.difficulty = 1
+    opponent.position = target.id
+    player.hand.push({
+      cardId: 'phase_walk',
+      instanceId: 'phase-walk-test',
+    })
+    player.availableMovement.WILD = 10
+
+    expect(() => movePlayer(game, player.id, target.id)).toThrow(
+      expect.objectContaining({ code: 'HEX_OCCUPIED' }),
+    )
+    activateActionCard(game, player.id, 'phase-walk-test')
+    movePlayer(game, player.id, target.id)
+
+    expect(player.position).toBe(target.id)
+    expect(player.sharedTileAccessAvailable).toBe(true)
+    endTurn(game, player.id)
+    expect(player.sharedTileAccessAvailable).toBe(false)
+  })
+
+  it('replaces the remaining hand after using reshuffle hand', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const previousHand = [...player.hand]
+    player.hand.push({
+      cardId: 'reshuffle_hand',
+      instanceId: 'reshuffle-hand-test',
+    })
+
+    activateActionCard(game, player.id, 'reshuffle-hand-test')
+
+    expect(player.hand).toHaveLength(previousHand.length)
+    expect(player.discardPile).toEqual(expect.arrayContaining(previousHand))
+    expect(player.removedCards.at(-1)?.cardId).toBe('reshuffle_hand')
+  })
+
+  it('copies the last movement card effect with echo power', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const coin = player.hand.find((card) => card.cardId === 'coin')!
+    player.hand.push({ cardId: 'echo_power', instanceId: 'echo-power-test' })
+
+    playCard(game, player.id, coin.instanceId, 'GOLD')
+    activateActionCard(game, player.id, 'echo-power-test')
+
+    expect(player.availableGold).toBe(CARD_BY_ID.coin!.goldValue * 2)
+  })
+
+  it('protective circle consumes and ignores the next curse', () => {
+    const game = buildTestGame()
+    const target = game.players[0]!
+    const caster = game.players[1]!
+    target.hand.push({
+      cardId: 'protective_circle',
+      instanceId: 'protective-circle-test',
+    })
+    caster.hand.push(
+      { cardId: 'path_fracture', instanceId: 'blocked-curse' },
+      { cardId: 'path_fracture', instanceId: 'active-curse' },
+    )
+
+    activateActionCard(game, target.id, 'protective-circle-test')
+    expect(target.curseShieldAvailable).toBe(true)
+    endTurn(game, target.id)
+    activateActionCard(game, caster.id, 'blocked-curse', target.id)
+
+    expect(target.curseShieldAvailable).toBe(false)
+    expect(target.extraMoveCostPending).toBe(false)
+    caster.hasUsedActionCardThisTurn = false
+    activateActionCard(game, caster.id, 'active-curse', target.id)
+    expect(target.extraMoveCostPending).toBe(true)
+  })
+
+  it('adds one point to the cursed player next move', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const target = findReachableTile(game, 'JUNGLE')
+    game.settings.allowSharedTiles = true
+    target.difficulty = 1
+    player.extraMoveCostPending = true
+    player.availableMovement.WILD = 10
+    const before = Object.values(player.availableMovement).reduce(
+      (sum, value) => sum + value,
+      0,
+    )
+
+    movePlayer(game, player.id, target.id)
+
+    expect(
+      Object.values(player.availableMovement).reduce(
+        (sum, value) => sum + value,
+        0,
+      ),
+    ).toBeLessThanOrEqual(before - 2)
+    expect(player.extraMoveCostPending).toBe(false)
+  })
+
+  it('applies fog, poverty, roots and market curses to an opponent', () => {
+    const game = buildTestGame()
+    const caster = game.players[0]!
+    const target = game.players[1]!
+    target.availableGold = 1
+    const curseCards = [
+      ['fog_of_forgetting', 'fog-test'],
+      ['poverty_curse', 'poverty-test'],
+      ['tangled_roots', 'roots-test'],
+      ['closed_market', 'market-test'],
+    ] as const
+    caster.hand.push(
+      ...curseCards.map(([cardId, instanceId]) => ({ cardId, instanceId })),
+    )
+    const activateCurse = (instanceId: string) =>
+      activateActionCard(game, caster.id, instanceId, target.id)
+
+    for (const [, instanceId] of curseCards) {
+      activateCurse(instanceId)
+      caster.hasUsedActionCardThisTurn = false
+    }
+
+    expect(target.fogCostsHidden).toBe(true)
+    expect(target.availableGold).toBe(0)
+    expect(target.shortcutBlocked).toBe(true)
+    expect(target.marketBlocked).toBe(true)
+    endTurn(game, caster.id)
+    target.availableGold = 20
+    expect(() => buyCard(game, target.id, game.market[0]!)).toThrow(
+      expect.objectContaining({ code: 'MARKET_LOCKED' }),
+    )
+    target.hand.push({
+      cardId: 'shortcut_map',
+      instanceId: 'blocked-shortcut',
+    })
+    expect(() =>
+      activateActionCard(game, target.id, 'blocked-shortcut'),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    endTurn(game, target.id)
+    expect(target.fogCostsHidden).toBe(false)
+    expect(target.shortcutBlocked).toBe(false)
+    expect(target.marketBlocked).toBe(false)
   })
 
   it('replaces every unsold offer after a round without purchases', () => {
@@ -618,7 +766,7 @@ describe('GameEngine', () => {
     ])
   })
 
-  it('doubles one sacrificed card per turn and permanently removes it', () => {
+  it('doubles a sacrificed card and blocks another sacrifice for five own turns', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     player.hand.push(
@@ -635,6 +783,7 @@ describe('GameEngine', () => {
       cardId: 'coin',
       instanceId: 'sacrificed-coin',
     })
+    expect(player.sacrificeCooldownTurns).toBe(5)
     expect(player.playedCards).not.toContainEqual(
       expect.objectContaining({ instanceId: 'sacrificed-coin' }),
     )
@@ -644,7 +793,19 @@ describe('GameEngine', () => {
 
     endTurn(game, player.id)
     endTurn(game, 'p2')
-    expect(player.hasSacrificedCardThisTurn).toBe(false)
+
+    for (let blockedTurn = 5; blockedTurn >= 1; blockedTurn -= 1) {
+      expect(player.sacrificeCooldownTurns).toBe(blockedTurn)
+      expect(() =>
+        playCard(game, player.id, 'second-sacrifice', 'GOLD', true),
+      ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+      endTurn(game, player.id)
+      endTurn(game, 'p2')
+    }
+
+    expect(player.sacrificeCooldownTurns).toBe(0)
+    playCard(game, player.id, 'second-sacrifice', 'GOLD', true)
+    expect(player.availableGold).toBe(CARD_BY_ID.explorer!.goldValue * 2)
   })
 
   it('keeps unplayed cards and draws back up to four next round', () => {

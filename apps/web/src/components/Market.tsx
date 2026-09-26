@@ -16,7 +16,9 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
   const triggerRef = useRef<HTMLButtonElement>(null)
   const availableGold = player?.availableGold ?? 0
   const hasBoughtThisTurn = player?.hasBoughtThisTurn ?? false
-  const isLocked = Boolean(game.marketLockedUntilPlayerId)
+  const isLocked = Boolean(
+    game.marketLockedUntilPlayerId || player?.marketBlocked,
+  )
 
   return (
     <>
@@ -27,7 +29,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
         onClick={() => dialogRef.current?.showModal()}
       >
         <span>
-          <strong>Otwórz magiczny bazar</strong>
+          <strong>Magiczny bazar</strong>
           <small>Zaklęcia i artefakty: {game.market.length}</small>
           {isLocked && <small>Bazar spowity klątwą</small>}
         </span>
@@ -91,6 +93,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                   className="card game-card market-card"
                   data-movement={card.movementType}
                   data-card-type={card.type.toLowerCase()}
+                  data-action-category={card.actionCategory?.toLowerCase()}
                   disabled={!canBuy}
                   title={cardDescription(card)}
                   onClick={() => {

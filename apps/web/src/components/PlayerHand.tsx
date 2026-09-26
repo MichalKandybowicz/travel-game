@@ -1,6 +1,7 @@
 import { CARD_BY_ID } from '@shared'
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import type { CardPlayMode, PlayerState } from '@shared'
+import { cardDescription, cardLabels } from '../labels.js'
 import { CardFace, MovementGlyph } from './CardFace.js'
 import { PlayerTokens } from './PlayerTokens.js'
 
@@ -50,8 +51,21 @@ export function PlayerHand({
   roundNumber,
   market,
 }: PlayerHandProps) {
-  const [actionTargetId, setActionTargetId] = useState(opponents[0]?.id ?? '')
+  const [pendingCurseCardId, setPendingCurseCardId] = useState<string>()
+  const sacrificeDialogRef = useRef<HTMLDialogElement>(null)
+  const curseTargetDialogRef = useRef<HTMLDialogElement>(null)
   const mustDiscard = (player?.pendingDiscardCount ?? 0) > 0
+  const sacrificeCooldown = player?.sacrificeCooldownTurns ?? 0
+  const sacrificeCards =
+    player?.hand.filter(
+      (card) => CARD_BY_ID[card.cardId]?.type === 'MOVEMENT',
+    ) ?? []
+  const pendingCurse = pendingCurseCardId
+    ? player?.hand.find((card) => card.instanceId === pendingCurseCardId)
+    : undefined
+  const pendingCurseDefinition = pendingCurse
+    ? CARD_BY_ID[pendingCurse.cardId]
+    : undefined
 
   return (
     <div className="panel hand-panel">
@@ -95,6 +109,26 @@ export function PlayerHand({
           >
             Zakończ turę
           </button>
+          <button
+            type="button"
+            className="sacrifice-trigger"
+            disabled={
+              !isActive ||
+              mustDiscard ||
+              sacrificeCooldown > 0 ||
+              sacrificeCards.length === 0
+            }
+            title={
+              sacrificeCooldown > 0
+                ? `Spalanie będzie dostępne za ${sacrificeCooldown} własnych tur`
+                : 'Trwale usuń kartę i podwój jej wartość'
+            }
+            onClick={() => sacrificeDialogRef.current?.showModal()}
+          >
+            {sacrificeCooldown > 0
+              ? `Spalanie: ${sacrificeCooldown}`
+              : 'Spal kartę'}
+          </button>
           {market}
         </div>
       </div>
@@ -121,48 +155,34 @@ export function PlayerHand({
             if (!definition) {
               return null
             }
+            const needsTarget = definition.actionCategory === 'CURSE'
             return (
               <div
                 key={card.instanceId}
                 className="card game-card hand-card"
                 data-movement={definition.movementType}
+                data-card-type={definition.type.toLowerCase()}
+                data-action-category={definition.actionCategory?.toLowerCase()}
               >
-                <CardFace card={definition} />
+                <CardFace card={definition} compact />
                 {definition.type === 'ACTION' ? (
                   <div className="hand-card-actions hand-card-actions--action">
-                    {definition.actionEffect === 'STEAL_PLANS' && (
-                      <select
-                        aria-label="Cel kradzieży planów"
-                        value={actionTargetId}
-                        disabled={!isActive || mustDiscard}
-                        onChange={(event) =>
-                          setActionTargetId(event.target.value)
-                        }
-                      >
-                        {opponents.map((opponent) => (
-                          <option key={opponent.id} value={opponent.id}>
-                            {opponent.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
                     <button
                       type="button"
                       disabled={
                         !isActive ||
                         mustDiscard ||
                         player.hasUsedActionCardThisTurn ||
-                        (definition.actionEffect === 'STEAL_PLANS' &&
-                          !actionTargetId)
+                        (needsTarget && opponents.length === 0)
                       }
-                      onClick={() =>
-                        onUseActionCard(
-                          card.instanceId,
-                          definition.actionEffect === 'STEAL_PLANS'
-                            ? actionTargetId
-                            : undefined,
-                        )
-                      }
+                      onClick={() => {
+                        if (needsTarget) {
+                          setPendingCurseCardId(card.instanceId)
+                          curseTargetDialogRef.current?.showModal()
+                          return
+                        }
+                        onUseActionCard(card.instanceId)
+                      }}
                     >
                       Użyj i usuń
                     </button>
@@ -194,26 +214,6 @@ export function PlayerHand({
                     >
                       Złoto +{definition.goldValue}
                     </button>
-                    <button
-                      type="button"
-                      className="sacrifice-card-action"
-                      disabled={!isActive || player.hasSacrificedCardThisTurn}
-                      title="Trwale usuwa kartę z talii i podwaja jej wartość ruchu"
-                      onClick={() =>
-                        onPlayCard(card.instanceId, 'MOVEMENT', true)
-                      }
-                    >
-                      Spal: ruch +{definition.movementValue * 2}
-                    </button>
-                    <button
-                      type="button"
-                      className="sacrifice-card-action"
-                      disabled={!isActive || player.hasSacrificedCardThisTurn}
-                      title="Trwale usuwa kartę z talii i podwaja jej wartość złota"
-                      onClick={() => onPlayCard(card.instanceId, 'GOLD', true)}
-                    >
-                      Spal: złoto +{definition.goldValue * 2}
-                    </button>
                   </div>
                 )}
               </div>
@@ -221,6 +221,115 @@ export function PlayerHand({
           })}
         </div>
       </div>
+      <dialog
+        ref={curseTargetDialogRef}
+        className="market-dialog curse-target-dialog"
+        aria-labelledby="curse-target-title"
+        onClose={() => setPendingCurseCardId(undefined)}
+      >
+        <div className="market-dialog-content">
+          <header className="market-dialog-header">
+            <div>
+              <small>Wybór celu</small>
+              <h2 id="curse-target-title">Na kogo rzucić klątwę?</h2>
+            </div>
+            <button
+              type="button"
+              className="market-dialog-close"
+              aria-label="Zamknij"
+              onClick={() => curseTargetDialogRef.current?.close()}
+            >
+              ×
+            </button>
+          </header>
+          {pendingCurseDefinition && (
+            <div className="curse-target-summary">
+              <strong>
+                {cardLabels[pendingCurseDefinition.id]?.name ??
+                  pendingCurseDefinition.name}
+              </strong>
+              <p>{cardDescription(pendingCurseDefinition)}</p>
+            </div>
+          )}
+          <div className="curse-target-list">
+            {opponents.map((opponent) => (
+              <button
+                key={opponent.id}
+                type="button"
+                onClick={() => {
+                  if (!pendingCurseCardId) return
+                  onUseActionCard(pendingCurseCardId, opponent.id)
+                  curseTargetDialogRef.current?.close()
+                }}
+              >
+                <strong>{opponent.name}</strong>
+                <small>Nałóż klątwę</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      </dialog>
+      <dialog
+        ref={sacrificeDialogRef}
+        className="market-dialog sacrifice-dialog"
+        aria-labelledby="sacrifice-dialog-title"
+      >
+        <div className="market-dialog-content">
+          <header className="market-dialog-header">
+            <div>
+              <small>Rytuał ognia</small>
+              <h2 id="sacrifice-dialog-title">Spal kartę</h2>
+            </div>
+            <button
+              type="button"
+              className="market-dialog-close"
+              aria-label="Zamknij"
+              onClick={() => sacrificeDialogRef.current?.close()}
+            >
+              ×
+            </button>
+          </header>
+          <p className="sacrifice-dialog-warning">
+            Karta zniknie z talii na stałe. Po rytuale nie można palić kart
+            przez 5 kolejnych własnych tur.
+          </p>
+          <div className="sacrifice-card-list">
+            {sacrificeCards.map((card) => {
+              const definition = CARD_BY_ID[card.cardId]
+              if (!definition || definition.type !== 'MOVEMENT') return null
+              return (
+                <article
+                  key={card.instanceId}
+                  className="card game-card sacrifice-card-option"
+                  data-movement={definition.movementType}
+                >
+                  <CardFace card={definition} compact />
+                  <div className="sacrifice-card-buttons">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onPlayCard(card.instanceId, 'MOVEMENT', true)
+                        sacrificeDialogRef.current?.close()
+                      }}
+                    >
+                      Podwój ruch: +{definition.movementValue * 2}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onPlayCard(card.instanceId, 'GOLD', true)
+                        sacrificeDialogRef.current?.close()
+                      }}
+                    >
+                      Podwój złoto: +{definition.goldValue * 2}
+                    </button>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </div>
+      </dialog>
     </div>
   )
 }

@@ -89,6 +89,7 @@ interface GameStore {
   updateSettings: (settings: MapSettings) => void
   updateAppearance: (color: PlayerColor, symbol: PlayerSymbol) => void
   updatePlayerName: (playerName: string) => void
+  reorderPlayers: (orderedPlayerIds: string[]) => void
   addBot: () => void
   removeBot: (botId: string) => void
   startGame: () => void
@@ -286,6 +287,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       roomCode: session.roomCode,
       playerId: session.playerId,
       playerName,
+    })
+  },
+  reorderPlayers: (orderedPlayerIds) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.roomReorderPlayers, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      orderedPlayerIds,
     })
   },
   addBot: () => {

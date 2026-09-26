@@ -32,6 +32,8 @@ function CardList({ cards }: { cards: CardInstance[] }) {
             key={instance.instanceId}
             className="card game-card deck-card"
             data-movement={card.movementType}
+            data-card-type={card.type.toLowerCase()}
+            data-action-category={card.actionCategory?.toLowerCase()}
           >
             <CardFace card={card} />
           </div>

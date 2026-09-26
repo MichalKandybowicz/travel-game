@@ -143,6 +143,14 @@ export async function connectStorage(url: string): Promise<Storage> {
                     purchasesThisTurn:
                       player.purchasesThisTurn ??
                       (player.hasBoughtThisTurn ? 1 : 0),
+                    sacrificeCooldownTurns: player.sacrificeCooldownTurns ?? 0,
+                    curseShieldAvailable: player.curseShieldAvailable ?? false,
+                    extraMoveCostPending: player.extraMoveCostPending ?? false,
+                    fogCostsHidden: player.fogCostsHidden ?? false,
+                    shortcutBlocked: player.shortcutBlocked ?? false,
+                    marketBlocked: player.marketBlocked ?? false,
+                    sharedTileAccessAvailable:
+                      player.sharedTileAccessAvailable ?? false,
                     revealedTileIds: player.revealedTileIds ?? [],
                     scoutedTileIds: player.scoutedTileIds ?? [],
                     connected: player.isBot === true,

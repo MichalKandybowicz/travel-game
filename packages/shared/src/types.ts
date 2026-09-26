@@ -29,8 +29,22 @@ export type TokenType =
   | 'CURSE_MARKET'
 export type CardPlayMode = 'MOVEMENT' | 'GOLD' | 'ACTION'
 export type CardType = 'MOVEMENT' | 'ACTION'
+export type ActionCardCategory = 'SPELL' | 'CURSE'
 export type ActionCardEffect =
-  'MAP_SHORTCUT' | 'SECOND_WIND' | 'MERCHANT_CARAVAN' | 'STEAL_PLANS' | 'GUIDE'
+  | 'MAP_SHORTCUT'
+  | 'SECOND_WIND'
+  | 'MERCHANT_CARAVAN'
+  | 'STEAL_PLANS'
+  | 'GUIDE'
+  | 'PHASE_WALK'
+  | 'RESHUFFLE_HAND'
+  | 'ECHO_POWER'
+  | 'PROTECTIVE_CIRCLE'
+  | 'PATH_FRACTURE'
+  | 'FOG_OF_FORGETTING'
+  | 'POVERTY_CURSE'
+  | 'TANGLED_ROOTS'
+  | 'CLOSED_MARKET'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
@@ -94,6 +108,7 @@ export interface CardDefinition {
   goldValue: number
   purchaseCost: number
   actionEffect?: ActionCardEffect
+  actionCategory?: ActionCardCategory
 }
 
 export interface CardInstance {
@@ -130,10 +145,17 @@ export interface PlayerState {
   hasBoughtThisTurn?: boolean
   purchasesThisTurn?: number
   hasSacrificedCardThisTurn?: boolean
+  sacrificeCooldownTurns?: number
   hasUsedActionCardThisTurn?: boolean
   extraPurchaseAvailable?: boolean
   shortcutMoveAvailable?: boolean
   guidedMoveAvailable?: boolean
+  sharedTileAccessAvailable?: boolean
+  curseShieldAvailable?: boolean
+  extraMoveCostPending?: boolean
+  fogCostsHidden?: boolean
+  shortcutBlocked?: boolean
+  marketBlocked?: boolean
   pendingDiscardCount?: number
   tokens?: TokenInstance[]
   claimedCampIds?: string[]

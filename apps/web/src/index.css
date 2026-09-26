@@ -844,7 +844,6 @@ select {
   stroke-linecap: round;
 }
 
-.map-connection-border,
 .map-connection-center {
   stroke-linecap: round;
 }
@@ -928,7 +927,10 @@ select {
 
 .hand-card-grid .hand-card {
   width: clamp(132px, 14vw, 158px);
+  height: 240px;
   flex: 0 0 clamp(132px, 14vw, 158px);
+  display: flex;
+  flex-direction: column;
   transform-origin: center bottom;
 }
 
@@ -1133,6 +1135,61 @@ select {
 
 .hand-turn-actions .market-trigger-arrow {
   font-size: 1rem;
+}
+
+.sacrifice-trigger {
+  border-color: #ef8b72;
+  background: linear-gradient(145deg, #6f231c, #32151b);
+  color: #ffd4c7;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sacrifice-dialog {
+  width: min(720px, calc(100vw - 32px));
+  border-color: rgba(239, 139, 114, 0.72);
+}
+
+.sacrifice-dialog-warning {
+  margin: 0;
+  color: #ffd4c7;
+  font-size: 0.86rem;
+}
+
+.sacrifice-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.sacrifice-card-option {
+  overflow: hidden;
+  min-height: 190px;
+}
+
+.sacrifice-card-option .game-card__art {
+  min-height: 52px;
+}
+
+.sacrifice-card-option .game-card__inner {
+  height: auto;
+}
+
+.sacrifice-card-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  padding: 7px;
+}
+
+.sacrifice-card-buttons button {
+  min-width: 0;
+  padding: 6px 3px;
+  border-color: #ef8b72;
+  background: rgba(111, 35, 28, 0.68);
+  color: #fff0e9;
+  font-size: 0.7rem;
+  font-weight: 800;
 }
 
 .hand-resource {
@@ -1402,25 +1459,55 @@ select {
 
 .game-card[data-card-type='action'],
 .hand-card:has(.action-card-art) {
-  --card-accent: #f0abfc;
-  --card-glow: rgba(192, 38, 211, 0.2);
+  --card-accent: #c084fc;
+  --card-glow: rgba(126, 34, 206, 0.3);
+  background: linear-gradient(
+    155deg,
+    rgba(107, 33, 168, 0.34),
+    #271333 45%,
+    #110917
+  );
+}
+
+.game-card[data-action-category='curse'] {
+  --card-accent: #fb7185;
+  --card-glow: rgba(190, 18, 60, 0.32);
+  background: linear-gradient(
+    155deg,
+    rgba(136, 19, 55, 0.42),
+    #35131d 45%,
+    #17090d
+  );
+}
+
+.game-card[data-action-category='curse'] .action-card-art {
+  color: #fecdd3;
+  text-shadow: 0 0 12px rgba(251, 113, 133, 0.52);
 }
 
 .action-card-art {
   display: grid;
   place-items: center;
-  color: #f5d0fe;
+  color: #e9d5ff;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 3.6rem;
-  text-shadow: 0 0 12px rgba(232, 121, 249, 0.45);
+  text-shadow: 0 0 12px rgba(192, 132, 252, 0.55);
 }
 
 .game-card__action-effect {
-  min-height: 58px;
-  color: #e8ddeb;
+  display: -webkit-box;
+  min-height: 3.9em;
+  overflow: hidden;
+  color: #f3e8ff;
   font-size: 0.74rem;
-  line-height: 1.35;
+  line-height: 1.3;
   text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.game-card[data-action-category='curse'] .game-card__action-effect {
+  color: #ffe4e6;
 }
 
 .hand-card-actions--action,
@@ -1428,14 +1515,64 @@ select {
   grid-template-columns: 1fr;
 }
 
-.hand-card-actions--action select {
-  min-width: 0;
+.hand-card-actions--action button,
+.hand-card-actions--discard button {
   width: 100%;
-  padding: 6px;
-  border: 1px solid var(--card-accent);
-  border-radius: 7px;
-  background: #142b32;
-  color: #f8fafc;
+  grid-column: 1 / -1;
+}
+
+.curse-target-dialog {
+  width: min(520px, calc(100vw - 32px));
+  border-color: rgba(251, 113, 133, 0.66);
+}
+
+.curse-target-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 9px;
+}
+
+.curse-target-summary {
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 113, 133, 0.42);
+  border-radius: 12px;
+  background: linear-gradient(
+    145deg,
+    rgba(107, 28, 48, 0.52),
+    rgba(36, 16, 24, 0.72)
+  );
+}
+
+.curse-target-summary strong {
+  color: #fecdd3;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.05rem;
+}
+
+.curse-target-summary p {
+  margin: 4px 0 0;
+  color: #ffe4e6;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.curse-target-list button {
+  display: grid;
+  gap: 3px;
+  padding: 13px;
+  border-color: rgba(251, 113, 133, 0.55);
+  background: linear-gradient(145deg, #4a1623, #241018);
+  color: #ffe4e6;
+  text-align: left;
+}
+
+.curse-target-list button:hover {
+  border-color: #fb7185;
+  background: linear-gradient(145deg, #6b1c30, #32121d);
+}
+
+.curse-target-list small {
+  color: #fda4af;
 }
 
 .pending-card-discard {
@@ -1500,7 +1637,8 @@ select {
 }
 
 .hand-card .game-card__inner {
-  height: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .hand-card-actions {
@@ -1508,6 +1646,7 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
   padding: 0 8px 8px;
+  flex: none;
 }
 
 .hand-card-actions button {
@@ -2187,6 +2326,34 @@ select {
   display: grid;
   min-width: 0;
   margin-right: auto;
+}
+
+.lobby-player-position {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  flex: none;
+  place-items: center;
+  border: 1px solid rgba(233, 182, 105, 0.45);
+  border-radius: 50%;
+  background: rgba(83, 48, 110, 0.48);
+  color: #f5d89c;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.lobby-order-controls {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.lobby-order-controls button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-color: rgba(192, 132, 252, 0.52);
+  color: #e9d5ff;
+  font-size: 0.9rem;
 }
 
 .lobby-player-copy strong {
