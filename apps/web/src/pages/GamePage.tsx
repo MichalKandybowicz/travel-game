@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { CARD_BY_ID, type CurseEvent } from '@shared'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HexMap } from '../components/HexMap.js'
 import { DeckPreview } from '../components/DeckPreview.js'
@@ -6,8 +7,11 @@ import { Market } from '../components/Market.js'
 import { PlayedCards } from '../components/PlayedCards.js'
 import { PlayerHand } from '../components/PlayerHand.js'
 import { useGameStore } from '../store.js'
-import { errorLabels } from '../labels.js'
+import { cardDescription, errorLabels } from '../labels.js'
 import { PlayerBadge } from '../components/PlayerBadge.js'
+import { PlayerEffects } from '../components/PlayerEffects.js'
+import { cardLabels } from '../labels.js'
+import { tokenDescription, tokenPresentation } from '../tokenPresentation.js'
 
 export function GamePage() {
   const navigate = useNavigate()
@@ -31,6 +35,17 @@ export function GamePage() {
   const leaveFinishedGame = useGameStore((state) => state.leaveFinishedGame)
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const [leaving, setLeaving] = useState(false)
+  const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
+  const seenCurseId = useRef(game?.latestCurse?.instanceId)
+
+  useEffect(() => {
+    const curse = game?.latestCurse
+    if (!curse || curse.instanceId === seenCurseId.current) return
+    seenCurseId.current = curse.instanceId
+    setVisibleCurse(curse)
+    const timeout = window.setTimeout(() => setVisibleCurse(undefined), 10000)
+    return () => window.clearTimeout(timeout)
+  }, [game?.latestCurse])
 
   useEffect(() => {
     if (!session && !account) {
@@ -65,9 +80,84 @@ export function GamePage() {
   const isMyStartChoice =
     connected && isChoosingStart && game.currentPlayerId === session?.playerId
   const startIds = game.map.startHexIds ?? [game.map.startHexId]
+  const curseName = visibleCurse?.cardId
+    ? (cardLabels[visibleCurse.cardId]?.name ??
+      CARD_BY_ID[visibleCurse.cardId]?.name)
+    : visibleCurse?.tokenType
+      ? tokenPresentation(visibleCurse.tokenType).label
+      : ''
+  const curseCard = visibleCurse?.cardId
+    ? CARD_BY_ID[visibleCurse.cardId]
+    : undefined
+  const curseDescription = curseCard
+    ? cardDescription(curseCard)
+    : visibleCurse?.tokenType
+      ? tokenDescription(visibleCurse.tokenType)
+      : undefined
+  const curseCaster = game.players.find(
+    (player) => player.id === visibleCurse?.playerId,
+  )
+  const curseTarget = game.players.find(
+    (player) => player.id === visibleCurse?.targetPlayerId,
+  )
 
   return (
     <main className="page shell journey-page game-shell">
+      {visibleCurse && (
+        <div className="curse-popup" role="alert" aria-live="assertive">
+          <div className="curse-popup-body">
+            <small>Rzucono klątwę</small>
+            <strong>{curseName}</strong>
+            <div
+              className="curse-popup-cast"
+              data-blocked={visibleCurse.blocked ? 'true' : undefined}
+            >
+              <div className="curse-popup-person">
+                {curseCaster && (
+                  <PlayerBadge
+                    index={game.players.indexOf(curseCaster)}
+                    color={curseCaster.color}
+                    symbol={curseCaster.symbol}
+                  />
+                )}
+                <span>{curseCaster?.name ?? 'Gracz'}</span>
+              </div>
+              <div className="curse-popup-magic" aria-hidden="true">
+                <span>✦</span>
+              </div>
+              <div className="curse-popup-person">
+                {curseTarget ? (
+                  <PlayerBadge
+                    index={game.players.indexOf(curseTarget)}
+                    color={curseTarget.color}
+                    symbol={curseTarget.symbol}
+                  />
+                ) : (
+                  <span className="curse-popup-market-icon" aria-hidden="true">
+                    ◈
+                  </span>
+                )}
+                <span>{curseTarget?.name ?? 'Sklep'}</span>
+              </div>
+            </div>
+            {curseDescription && (
+              <p className="curse-popup-description">{curseDescription}</p>
+            )}
+            {visibleCurse.blocked && (
+              <p className="curse-popup-blocked">
+                Ochronny krąg zablokował klątwę
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label="Zamknij powiadomienie o klątwie"
+            onClick={() => setVisibleCurse(undefined)}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {game.status === 'FINISHED' && (
         <section className="game-result" role="status" aria-live="polite">
           <div className="game-result-icon" aria-hidden="true">
@@ -173,29 +263,27 @@ export function GamePage() {
               </div>
             </div>
             <ul className="player-list">
-              {game.players.map((player, index) => (
-                <li key={player.id}>
-                  <div className="sidebar-player-heading">
-                    <PlayerBadge
-                      index={index}
-                      color={player.color}
-                      symbol={player.symbol}
-                    />
-                    <strong>{player.name}</strong>
-                    {player.id === session?.playerId && <small>Ty</small>}
-                  </div>
-                  <div className="sidebar-player-status">
-                    <small>
-                      {player.connected ? 'połączony' : 'rozłączony'}
-                    </small>
-                    <span title="Najniższa suma punktów ruchu potrzebna do celu">
-                      Do celu:{' '}
-                      <strong>{player.remainingRouteCost ?? '—'}</strong>
-                    </span>
-                  </div>
-                  <PlayedCards game={game} player={player} />
-                </li>
-              ))}
+              {game.players.map((player, index) =>
+                player.id === session?.playerId ? null : (
+                  <li key={player.id}>
+                    <div className="sidebar-player-heading">
+                      <PlayerBadge
+                        index={index}
+                        color={player.color}
+                        symbol={player.symbol}
+                      />
+                      <strong>{player.name}</strong>
+                    </div>
+                    <div className="sidebar-player-status">
+                      <small>
+                        {player.connected ? 'połączony' : 'rozłączony'}
+                      </small>
+                    </div>
+                    <PlayerEffects player={player} />
+                    <PlayedCards player={player} />
+                  </li>
+                ),
+              )}
             </ul>
           </aside>
         </div>

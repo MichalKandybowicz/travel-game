@@ -4,6 +4,7 @@ import { defaultSettings, useGameStore } from '../store.js'
 import { errorLabels } from '../labels.js'
 import { loadCustomMaps } from '../customMaps.js'
 import type { CustomMap } from '@shared'
+import { CardCatalog } from '../components/CardCatalog.js'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -286,6 +287,7 @@ export function HomePage() {
                 </Link>
               </div>
             </form>
+            <CardCatalog />
             {!connected && (
               <small className="home-connection">Łączenie z serwerem…</small>
             )}

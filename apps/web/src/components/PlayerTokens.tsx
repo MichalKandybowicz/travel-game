@@ -22,17 +22,22 @@ export function PlayerTokens({
   const [targetPlayerId, setTargetPlayerId] = useState(opponents[0]?.id ?? '')
 
   return (
-    <section className="player-tokens" aria-label="Twoje runy">
-      <div className="player-tokens-heading">
+    <details className="player-tokens" aria-label="Twoje runy">
+      <summary className="player-tokens-heading">
         <strong>Runy</strong>
         <small>
-          {usedThisRound
-            ? 'Runa wykorzystana w tej rundzie'
-            : 'Możesz użyć 1 runy w tej rundzie'}
+          {tokens.length}{' '}
+          {tokens.length === 1
+            ? 'runa'
+            : tokens.length >= 2 && tokens.length <= 4
+              ? 'runy'
+              : 'run'}
+          {usedThisRound ? ' · użyto w tej rundzie' : ''}
         </small>
-      </div>
+      </summary>
+      <small className="token-limit">Możesz użyć 1 runy w rundzie.</small>
       {tokens.length > 0 ? (
-        <div className="token-list">
+        <div className="token-list" aria-label="Dostępne runy">
           {tokens.map((token) => {
             const presentation = tokenPresentation(token.type)
             const needsTarget = token.type === 'CURSE_REMOVE_CARD'
@@ -83,6 +88,6 @@ export function PlayerTokens({
           Wejdź do kręgu mocy, aby zdobyć losową runę.
         </small>
       )}
-    </section>
+    </details>
   )
 }

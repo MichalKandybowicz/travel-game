@@ -4,6 +4,7 @@ import type { CardPlayMode, PlayerState } from '@shared'
 import { cardDescription, cardLabels } from '../labels.js'
 import { CardFace, MovementGlyph } from './CardFace.js'
 import { PlayerTokens } from './PlayerTokens.js'
+import { PlayerEffects } from './PlayerEffects.js'
 
 const movementResources = [
   { type: 'GREEN', label: 'Zielony' },
@@ -97,6 +98,7 @@ export function PlayerHand({
                 </span>
                 <strong>{player.availableGold}</strong>
               </span>
+              <PlayerEffects player={player} />
             </div>
           )}
         </div>

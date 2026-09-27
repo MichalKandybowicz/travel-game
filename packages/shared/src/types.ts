@@ -138,6 +138,24 @@ export interface MovementPool {
   WILD: number
 }
 
+export interface PlayedCardRecord {
+  instanceId: string
+  playerId: string
+  cardId: string
+  mode: CardPlayMode
+  sacrificed?: boolean
+}
+
+export interface CurseEvent {
+  instanceId: string
+  playerId: string
+  source: 'CARD' | 'TOKEN'
+  cardId?: string
+  tokenType?: TokenType
+  targetPlayerId?: string
+  blocked?: boolean
+}
+
 export interface PlayerState {
   id: string
   name: string
@@ -150,6 +168,7 @@ export interface PlayerState {
   discardPile: CardInstance[]
   removedCards: CardInstance[]
   playedCards: CardInstance[]
+  lastTurnPlayedCards?: PlayedCardRecord[]
   availableMovement: MovementPool
   availableGold: number
   hasBoughtThisTurn?: boolean
@@ -196,13 +215,8 @@ export interface GameState {
   marketCycle: number
   marketPurchasedThisRound?: boolean
   marketLockedUntilPlayerId?: string
-  roundPlayedCards: Array<{
-    instanceId: string
-    playerId: string
-    cardId: string
-    mode: CardPlayMode
-    sacrificed?: boolean
-  }>
+  roundPlayedCards: PlayedCardRecord[]
+  latestCurse?: CurseEvent
   winnerId?: string
 }
 

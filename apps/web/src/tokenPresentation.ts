@@ -46,3 +46,25 @@ export const tokenPresentation = (
       return { icon: '×', label: 'Przeklnij sklep', tone: 'curse' }
   }
 }
+
+export const tokenDescription = (type: TokenType): string => {
+  const effect = TOKEN_BY_TYPE[type].effect
+  switch (effect.kind) {
+    case 'MOVEMENT':
+      return `Dodaje ${effect.value} punkt${effect.value === 1 ? '' : 'y'} ${movementLabels[effect.movementType]}.`
+    case 'GOLD':
+      return `Dodaje ${effect.value} złota do wydania w tej turze.`
+    case 'SWAP_HAND':
+      return 'Odrzuca wszystkie karty z ręki i dobiera tyle samo nowych.'
+    case 'DRAW_CARD':
+      return 'Dobiera jedną dodatkową kartę do ręki.'
+    case 'REFRESH_MARKET':
+      return 'Wymienia wszystkie dostępne karty w sklepie na nowe.'
+    case 'CURSE_REMOVE_CARD':
+      return 'Trwale usuwa losową kartę z talii dobierania lub stosu kart odrzuconych wskazanego rywala.'
+    case 'CURSE_SKIP_LEADER':
+      return 'Gracz najbliżej celu spośród rywali traci swoją następną turę.'
+    case 'CURSE_MARKET':
+      return 'Blokuje zakupy wszystkim graczom do początku następnej tury rzucającego klątwę.'
+  }
+}

@@ -736,24 +736,24 @@ export function HexMap({
           </span>
         ))}
       </div>
-      <div className="terrain-legend" aria-label="Legenda terenów">
-        {terrainOrder.map((terrain) => (
-          <span key={terrain} className="terrain-legend-item">
-            <svg viewBox="-14 -14 28 28" aria-hidden="true">
-              <polygon
-                points={polygonPoints(0, 0, 13)}
-                fill={tilePalette[terrain].light}
-                stroke={tilePalette[terrain].edge}
-                strokeWidth="1.2"
-              />
-              <TerrainIcon terrain={terrain} scale={1.08} />
-            </svg>
-            {terrainLabels[terrain]}
-          </span>
-        ))}
-      </div>
       <details className="terrain-rules">
         <summary>Zasady terenów</summary>
+        <div className="terrain-legend" aria-label="Legenda terenów">
+          {terrainOrder.map((terrain) => (
+            <span key={terrain} className="terrain-legend-item">
+              <svg viewBox="-14 -14 28 28" aria-hidden="true">
+                <polygon
+                  points={polygonPoints(0, 0, 13)}
+                  fill={tilePalette[terrain].light}
+                  stroke={tilePalette[terrain].edge}
+                  strokeWidth="1.2"
+                />
+                <TerrainIcon terrain={terrain} scale={1.08} />
+              </svg>
+              {terrainLabels[terrain]}
+            </span>
+          ))}
+        </div>
         <p>
           Liczba na łączniku przy danym polu oznacza koszt wejścia na to pole.
           Można przejść tylko na sąsiednie pole. Uniwersalne punkty ruchu

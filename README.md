@@ -52,6 +52,8 @@ npm run lint
 
 Na stronie głównej wpisz nazwę gracza i kliknij **Utwórz pokój**. Pokój powstanie od razu z domyślnymi ustawieniami, a mapa i zasady można zmienić w poczekalni przed rozpoczęciem gry.
 
+Przycisk **Zobacz wszystkie karty i runy** na stronie głównej otwiera katalog z opisami wszystkich dostępnych kart i run. Karty można filtrować według rodzaju ruchu, zaklęć i klątw, a runy według ruchu, złota, efektów specjalnych i klątw.
+
 The server listens on `http://localhost:3000`. By default it connects to `mongodb://127.0.0.1:27017/travel_game`; set `MONGO_URL` to use another MongoDB instance.
 
 ## Test z osobą przez internet
@@ -118,6 +120,10 @@ Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte) i **1
 Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Wśród mocniejszych kart są **Przewodnik**, **Kapitan**, **Karawana** i **Pionier**. Ich ruch, wartość w złocie i cena są pokazywane na podstawie aktualnych definicji kart.
 
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
+
+## Klątwy i ochrona
+
+Po zagraniu klątwy pojawia się powiadomienie z jej nazwą, dokładnym opisem działania i krótkim efektem wizualnym między graczem rzucającym a celem. Klątwa sklepu wskazuje sklep; zablokowana klątwa pokazuje efekt ochrony. Krąg wędrowców pokazuje pozostałych graczy oraz ich aktywne efekty klątw i ochronę. Własne efekty widać obok punktów ruchu i złota nad ręką. Etykiety znikają, gdy odpowiadający im efekt zostanie wykorzystany lub wygaśnie.
 
 ## Docker
 

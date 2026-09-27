@@ -551,9 +551,17 @@ describe('GameEngine', () => {
 
     expect(target.curseShieldAvailable).toBe(false)
     expect(target.extraMoveCostPending).toBe(false)
+    expect(game.latestCurse).toMatchObject({
+      instanceId: 'blocked-curse',
+      playerId: caster.id,
+      cardId: 'path_fracture',
+      targetPlayerId: target.id,
+      blocked: true,
+    })
     caster.hasUsedActionCardThisTurn = false
     activateActionCard(game, caster.id, 'active-curse', target.id)
     expect(target.extraMoveCostPending).toBe(true)
+    expect(game.latestCurse?.blocked).toBe(false)
   })
 
   it('adds one point to the cursed player next move', () => {
@@ -673,6 +681,12 @@ describe('GameEngine', () => {
     useToken(game, caster.id, 'market-curse')
 
     expect(game.marketLockedUntilPlayerId).toBe(caster.id)
+    expect(game.latestCurse).toMatchObject({
+      instanceId: 'market-curse',
+      playerId: caster.id,
+      tokenType: 'CURSE_MARKET',
+    })
+    expect(game.latestCurse?.targetPlayerId).toBeUndefined()
     expect(() => buyCard(game, caster.id, game.market[0]!)).toThrow(
       expect.objectContaining({ code: 'MARKET_LOCKED' }),
     )
@@ -705,6 +719,7 @@ describe('GameEngine', () => {
 
     useToken(game, caster.id, 'skip-curse')
     expect(leader.skipNextTurn).toBe(true)
+    expect(game.latestCurse?.targetPlayerId).toBe(leader.id)
 
     endTurn(game, caster.id)
     expect(game.currentPlayerId).toBe('p3')
@@ -870,6 +885,9 @@ describe('GameEngine', () => {
     const firstCard = game.players[0]!.hand[0]!
     playCard(game, 'p1', firstCard.instanceId, 'GOLD')
     endTurn(game, 'p1')
+    expect(game.players[0]!.lastTurnPlayedCards).toMatchObject([
+      { instanceId: firstCard.instanceId, mode: 'GOLD' },
+    ])
     const secondCard = game.players[1]!.hand[0]!
     playCard(game, 'p2', secondCard.instanceId, 'MOVEMENT')
 
@@ -879,6 +897,10 @@ describe('GameEngine', () => {
     ])
     endTurn(game, 'p2')
     expect(game.roundPlayedCards).toEqual([])
+    expect(game.players[0]!.lastTurnPlayedCards).toHaveLength(1)
+    expect(game.players[1]!.lastTurnPlayedCards).toMatchObject([
+      { instanceId: secondCard.instanceId, mode: 'MOVEMENT' },
+    ])
   })
 
   it('rotates the turn order to the next player', () => {

@@ -762,6 +762,16 @@ export const useActionCard = (
     cardId: actionDefinition.id,
     mode: 'ACTION',
   })
+  if (actionDefinition.actionCategory === 'CURSE') {
+    gameState.latestCurse = {
+      instanceId: actionCard.instanceId,
+      playerId,
+      source: 'CARD',
+      cardId: actionDefinition.id,
+      ...(targetPlayerId ? { targetPlayerId } : {}),
+      blocked: curseBlocked,
+    }
+  }
   return gameState
 }
 
@@ -881,6 +891,7 @@ export const useToken = (
     error('INVALID_ACTION', 'Token definition was not found.')
   }
 
+  let curseTargetPlayerId = targetPlayerId
   switch (definition.effect.kind) {
     case 'MOVEMENT':
       player.availableMovement[definition.effect.movementType] +=
@@ -939,7 +950,8 @@ export const useToken = (
       break
     }
     case 'CURSE_SKIP_LEADER':
-      closestOpponentToGoal(gameState, playerId).skipNextTurn = true
+      curseTargetPlayerId = closestOpponentToGoal(gameState, playerId).id
+      findPlayer(gameState, curseTargetPlayerId).skipNextTurn = true
       break
     case 'CURSE_MARKET':
       gameState.marketLockedUntilPlayerId = playerId
@@ -948,6 +960,15 @@ export const useToken = (
 
   player.tokens.splice(tokenIndex, 1)
   player.tokenUsedInRound = roundNumber
+  if (token.type.startsWith('CURSE_')) {
+    gameState.latestCurse = {
+      instanceId: token.instanceId,
+      playerId,
+      source: 'TOKEN',
+      tokenType: token.type,
+      ...(curseTargetPlayerId ? { targetPlayerId: curseTargetPlayerId } : {}),
+    }
+  }
   return gameState
 }
 
@@ -1003,6 +1024,9 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   if ((player.pendingDiscardCount ?? 0) > 0) {
     error('INVALID_ACTION', 'Discard a card before ending the turn.')
   }
+  player.lastTurnPlayedCards = gameState.roundPlayedCards.filter(
+    (play) => play.playerId === playerId,
+  )
   player.discardPile.push(...player.playedCards)
   player.playedCards = []
   player.availableMovement = createMovementPool()
