@@ -103,6 +103,8 @@ export async function connectStorage(url: string): Promise<Storage> {
             campCountMinPerPetal: room.settings.campCountMinPerPetal ?? 1,
             campCountMaxPerPetal: room.settings.campCountMaxPerPetal ?? 1,
             fogMode: room.settings.fogMode ?? 'NONE',
+            terrainVisibilityRange: room.settings.terrainVisibilityRange ?? 4,
+            costVisibilityRange: room.settings.costVisibilityRange ?? 2,
           },
           players: room.players.map(({ socketId, ...player }) => {
             void socketId
@@ -145,6 +147,10 @@ export async function connectStorage(url: string): Promise<Storage> {
                     campCountMaxPerPetal:
                       room.gameState.settings.campCountMaxPerPetal ?? 1,
                     fogMode: room.gameState.settings.fogMode ?? 'NONE',
+                    terrainVisibilityRange:
+                      room.gameState.settings.terrainVisibilityRange ?? 4,
+                    costVisibilityRange:
+                      room.gameState.settings.costVisibilityRange ?? 2,
                   },
                   roundPlayedCards: room.gameState.roundPlayedCards ?? [],
                   players: room.gameState.players.map((player) => ({

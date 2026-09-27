@@ -61,12 +61,9 @@ const getEndpointTiles = (
         ).index
   const oppositeSide = contactSide % 2 === 0 ? contactSide + 1 : contactSide - 1
   const sideTiles = sides[oppositeSide]!.sort((a, b) => a.q - b.q || a.r - b.r)
-  const starts = sideTiles.slice(
-    Math.floor((sideTiles.length - 4) / 2),
-    Math.floor((sideTiles.length - 4) / 2) + 4,
-  )
-  if (starts.length !== 4)
-    throw new Error('Unable to determine four START tiles.')
+  const starts = sideTiles
+  if (starts.length !== radius + 1)
+    throw new Error('Unable to determine the full START edge.')
   if (centers.length === 1) {
     const goal = grid.find((tile) => tile.q === radius && tile.r === 0)
     if (!goal) throw new Error('Unable to determine GOAL tile.')
@@ -149,7 +146,9 @@ const createConnectedPetals = (
 }
 
 export const generateMap = (settings: MapSettings): GameMap => {
-  const radius = mapRadiusBySize[settings.mapSize]
+  const radius = settings.segmentEdgeLength
+    ? settings.segmentEdgeLength - 1
+    : mapRadiusBySize[settings.mapSize]
 
   for (let attempt = 0; attempt < 40; attempt += 1) {
     const random = new SeededRandom(`${settings.seed}:${attempt}`)

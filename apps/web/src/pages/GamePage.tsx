@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { CARD_BY_ID, type CurseEvent } from '@shared'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HexMap } from '../components/HexMap.js'
+import { CardFace } from '../components/CardFace.js'
 import { DeckPreview } from '../components/DeckPreview.js'
 import { Market } from '../components/Market.js'
 import { PlayedCards } from '../components/PlayedCards.js'
@@ -321,6 +322,29 @@ export function GamePage() {
                   )
                 })}
               </div>
+              {localPlayer && (
+                <div className="starting-hand-preview">
+                  <strong>Twoja ręka na start</strong>
+                  <div className="card-grid hand-card-grid">
+                    {localPlayer.hand.map((card) => {
+                      const definition = CARD_BY_ID[card.cardId]
+                      return definition ? (
+                        <div
+                          key={card.instanceId}
+                          className="card game-card hand-card"
+                          data-movement={definition.movementType}
+                          data-secondary-movement={
+                            definition.secondaryMovementType
+                          }
+                          data-card-type={definition.type.toLowerCase()}
+                        >
+                          <CardFace card={definition} compact />
+                        </div>
+                      ) : null
+                    })}
+                  </div>
+                </div>
+              )}
             </section>
           )}
           {!isChoosingStart && (

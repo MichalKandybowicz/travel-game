@@ -16,6 +16,7 @@ import {
 const defaultSettings: MapSettings = {
   seed: 'JUNGLE-92841',
   mapSize: 'MEDIUM',
+  segmentEdgeLength: 7,
   difficulty: 'NORMAL',
   routeCount: 1,
   jungleDensity: 0.4,
@@ -28,6 +29,8 @@ const defaultSettings: MapSettings = {
   campCountMinPerPetal: 1,
   campCountMaxPerPetal: 1,
   fogMode: 'NONE',
+  terrainVisibilityRange: 4,
+  costVisibilityRange: 2,
 }
 
 const sessionStorageKey = 'travel-game-session'

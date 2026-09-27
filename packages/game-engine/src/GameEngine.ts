@@ -71,8 +71,9 @@ const findTile = (map: GameMap, hexId: string): HexTile => {
 const getFogVisibility = (
   map: GameMap,
   position: string,
-  fogMode: MapSettings['fogMode'],
+  settings: MapSettings,
 ): { revealed: Set<string>; scouted: Set<string> } => {
+  const fogMode = settings.fogMode ?? 'NONE'
   const currentTile = map.tiles.find((tile) => tile.id === position)
   const revealed = new Set<string>()
   const scouted = new Set<string>()
@@ -100,11 +101,25 @@ const getFogVisibility = (
     return { revealed, scouted }
   }
 
-  const fullRange = fogMode === 'MEDIUM' ? 2 : 1
-  const terrainRange = fogMode === 'MEDIUM' ? 4 : 2
+  const fullRange =
+    fogMode === 'RANGE'
+      ? settings.costVisibilityRange === 'ALL'
+        ? Infinity
+        : (settings.costVisibilityRange ?? 2)
+      : fogMode === 'MEDIUM'
+        ? 2
+        : 1
+  const terrainRange =
+    fogMode === 'RANGE'
+      ? settings.terrainVisibilityRange === 'ALL'
+        ? Infinity
+        : (settings.terrainVisibilityRange ?? 4)
+      : fogMode === 'MEDIUM'
+        ? 4
+        : 2
   for (const tile of map.tiles) {
     const distance = axialDistance(currentTile, tile)
-    if (distance <= terrainRange) scouted.add(tile.id)
+    if (distance <= terrainRange || distance <= fullRange) scouted.add(tile.id)
     if (distance <= fullRange) revealed.add(tile.id)
   }
   return { revealed, scouted }
@@ -117,7 +132,7 @@ const rememberVisibleTiles = (
   const visibility = getFogVisibility(
     gameState.map,
     player.position,
-    gameState.settings.fogMode ?? 'NONE',
+    gameState.settings,
   )
   player.revealedTileIds = [
     ...new Set([...(player.revealedTileIds ?? []), ...visibility.revealed]),
@@ -1211,11 +1226,25 @@ export const serializePublicGameState = (
     viewer.position || gameState.map.startHexId,
   )
   const fogMode = gameState.settings.fogMode ?? 'NONE'
-  const currentVisibility = getFogVisibility(
-    gameState.map,
-    currentTile.id,
-    fogMode,
-  )
+  const visibilityOrigins =
+    gameState.status === 'CHOOSING_START'
+      ? (gameState.map.startHexIds ?? [gameState.map.startHexId])
+      : [currentTile.id]
+  const currentVisibility = {
+    revealed: new Set<string>(),
+    scouted: new Set<string>(),
+  }
+  for (const origin of visibilityOrigins) {
+    const visibleFromOrigin = getFogVisibility(
+      gameState.map,
+      origin,
+      gameState.settings,
+    )
+    for (const id of visibleFromOrigin.revealed)
+      currentVisibility.revealed.add(id)
+    for (const id of visibleFromOrigin.scouted)
+      currentVisibility.scouted.add(id)
+  }
   const revealedIds = new Set([
     ...(viewer.revealedTileIds ?? []),
     ...currentVisibility.revealed,
@@ -1225,8 +1254,6 @@ export const serializePublicGameState = (
     ...currentVisibility.scouted,
   ])
   const visibleTiles = gameState.map.tiles.flatMap((tile) => {
-    if (gameState.status === 'CHOOSING_START' && tile.petalId === 0)
-      return [tile]
     if (fogMode === 'NONE') return [tile]
     if (fogMode === 'PETAL') {
       return revealedIds.has(tile.id)
@@ -1239,6 +1266,20 @@ export const serializePublicGameState = (
               isBlocked: true,
             },
           ]
+    }
+    if (fogMode === 'RANGE') {
+      if (currentVisibility.revealed.has(tile.id)) return [tile]
+      if (currentVisibility.scouted.has(tile.id)) {
+        return [{ ...hideSpecialType(tile), difficulty: -1 }]
+      }
+      return [
+        {
+          ...hideSpecialType(tile),
+          terrain: 'UNKNOWN' as const,
+          difficulty: -1,
+          isBlocked: true,
+        },
+      ]
     }
     if (revealedIds.has(tile.id)) return [tile]
     if (scoutedIds.has(tile.id)) {

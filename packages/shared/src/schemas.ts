@@ -5,6 +5,7 @@ export const mapSettingsSchema = z
   .object({
     seed: z.string().min(1),
     mapSize: z.enum(['SMALL', 'MEDIUM', 'LARGE']),
+    segmentEdgeLength: z.number().int().min(5).max(9).optional(),
     difficulty: z.enum(['EASY', 'NORMAL', 'HARD']),
     routeCount: z.number().int().min(1).max(4),
     jungleDensity: z.number().min(0).max(0.8),
@@ -16,7 +17,15 @@ export const mapSettingsSchema = z
     petalCount: z.number().int().min(1).max(12).default(3),
     campCountMinPerPetal: z.number().int().min(0).max(3).default(1),
     campCountMaxPerPetal: z.number().int().min(1).max(5).default(1),
-    fogMode: z.enum(['NONE', 'PETAL', 'MEDIUM', 'FULL']).default('NONE'),
+    fogMode: z
+      .enum(['NONE', 'PETAL', 'MEDIUM', 'FULL', 'RANGE'])
+      .default('NONE'),
+    terrainVisibilityRange: z
+      .union([z.number().int().min(2).max(6), z.literal('ALL')])
+      .default(4),
+    costVisibilityRange: z
+      .union([z.number().int().min(1).max(4), z.literal('ALL')])
+      .default(2),
   })
   .refine(
     ({ campCountMinPerPetal, campCountMaxPerPetal }) =>
@@ -74,7 +83,7 @@ export const customMapPayloadSchema = z.object({
     tiles: z.array(hexTileSchema).min(1).max(1500),
     petalCount: z.number().int().min(1).max(12).optional(),
     startHexId: z.string().min(1),
-    startHexIds: z.array(z.string()).length(4),
+    startHexIds: z.array(z.string()).min(4).max(9),
     goalHexId: z.string().min(1),
     stats: mapAnalysisSchema,
   }),

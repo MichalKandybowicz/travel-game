@@ -801,7 +801,8 @@ const normalizeCustomMap = (
   if (
     tileIds.size !== map.tiles.length ||
     coordinates.size !== map.tiles.length ||
-    startIds.length !== 4 ||
+    startIds.length < 4 ||
+    startIds.length > 9 ||
     new Set(startIds).size !== 4 ||
     startIds.some((id) => !tileIds.has(id)) ||
     !tileIds.has(map.goalHexId) ||
@@ -1039,6 +1040,10 @@ io.on('connection', (socket) => {
       ],
       settings: {
         ...(customMap?.settings ?? parsed.data.settings),
+        allowSharedTiles: parsed.data.settings.allowSharedTiles,
+        fogMode: parsed.data.settings.fogMode,
+        terrainVisibilityRange: parsed.data.settings.terrainVisibilityRange,
+        costVisibilityRange: parsed.data.settings.costVisibilityRange,
         difficulty: 'NORMAL',
         routeCount: 1,
       },
@@ -1332,6 +1337,10 @@ io.on('connection', (socket) => {
     if (customMap) {
       room.settings = {
         ...customMap.settings,
+        allowSharedTiles: room.settings.allowSharedTiles,
+        fogMode: room.settings.fogMode,
+        terrainVisibilityRange: room.settings.terrainVisibilityRange ?? 4,
+        costVisibilityRange: room.settings.costVisibilityRange ?? 2,
         difficulty: 'NORMAL',
         routeCount: 1,
       }

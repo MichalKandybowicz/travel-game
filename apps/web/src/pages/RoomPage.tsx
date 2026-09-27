@@ -374,20 +374,22 @@ export function RoomPage() {
                   />
                 </label>
                 <label>
-                  Rozmiar mapy
+                  Rozmiar krawędzi segmentu
                   <select
-                    value={settings.mapSize}
+                    value={settings.segmentEdgeLength ?? 7}
                     disabled={!isHost}
                     onChange={(event) =>
                       updateSettings({
                         ...settings,
-                        mapSize: event.target.value as typeof settings.mapSize,
+                        segmentEdgeLength: Number(event.target.value),
                       })
                     }
                   >
-                    <option value="SMALL">Mała</option>
-                    <option value="MEDIUM">Średnia</option>
-                    <option value="LARGE">Duża</option>
+                    {[5, 6, 7, 8, 9].map((length) => (
+                      <option key={length} value={length}>
+                        {length} heksów
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label>
@@ -463,32 +465,29 @@ export function RoomPage() {
                 </label>
               </>
             )}
-            <label>
-              Mgła wojny
-              <select
-                value={settings.fogMode}
-                disabled={!isHost}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    fogMode: event.target.value as typeof settings.fogMode,
-                  })
+          </div>
+          {isHost && !room?.customMapId && (
+            <div className="hero-actions lobby-start-actions">
+              <button
+                type="button"
+                onClick={() =>
+                  updateSettings({ ...settings, seed: randomSeed() })
                 }
               >
-                <option value="NONE">
-                  Brak — cała mapa z typami i kosztami
-                </option>
-                <option value="PETAL">
-                  Płatek — bieżący i sąsiedni po dojściu do granicy
-                </option>
-                <option value="MEDIUM">
-                  Średnia — szczegóły do 2 pól, typy do 4
-                </option>
-                <option value="FULL">
-                  Pełna — szczegóły sąsiadów, typy do 2 pól
-                </option>
-              </select>
-            </label>
+                Losuj ziarno
+              </button>
+            </div>
+          )}
+        </section>
+        <section className="panel lobby-settings-panel">
+          <div className="panel-header">
+            <div>
+              <small className="panel-kicker">ZASADY WYPRAWY</small>
+              <h2>Ustawienia gry</h2>
+              <p>Wspólne zasady ruchu i widoczności dla wszystkich graczy.</p>
+            </div>
+          </div>
+          <div className="form-grid compact-grid">
             <label className="checkbox-field">
               <input
                 type="checkbox"
@@ -503,19 +502,83 @@ export function RoomPage() {
               />
               Gracze mogą stać na tym samym polu
             </label>
+            <label>
+              Mgła wojny
+              <select
+                value={settings.fogMode}
+                disabled={!isHost}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    fogMode: event.target.value as typeof settings.fogMode,
+                  })
+                }
+              >
+                <option value="NONE">Wyłączona — cała mapa odkryta</option>
+                <option value="RANGE">Własny zasięg widoczności</option>
+                <option value="PETAL">Płatki mapy</option>
+                <option value="MEDIUM">Średnia — typy do 4, koszty do 2</option>
+                <option value="FULL">Pełna — typy do 2, koszty do 1</option>
+              </select>
+            </label>
+            {settings.fogMode === 'RANGE' && (
+              <>
+                <label>
+                  Widoczność typu pola
+                  <select
+                    value={settings.terrainVisibilityRange ?? 4}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        terrainVisibilityRange:
+                          event.target.value === 'ALL'
+                            ? 'ALL'
+                            : Number(event.target.value),
+                      })
+                    }
+                  >
+                    {[2, 3, 4, 5, 6].map((distance) => (
+                      <option key={distance} value={distance}>
+                        {distance} heksy
+                      </option>
+                    ))}
+                    <option value="ALL">Cała plansza</option>
+                  </select>
+                </label>
+                <label>
+                  Widoczność kosztu wejścia
+                  <select
+                    value={settings.costVisibilityRange ?? 2}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        costVisibilityRange:
+                          event.target.value === 'ALL'
+                            ? 'ALL'
+                            : Number(event.target.value),
+                      })
+                    }
+                  >
+                    {[1, 2, 3, 4].map((distance) => (
+                      <option key={distance} value={distance}>
+                        {distance} {distance === 1 ? 'heks' : 'heksy'}
+                      </option>
+                    ))}
+                    <option value="ALL">Cała plansza</option>
+                  </select>
+                </label>
+                <p className="visibility-hint">
+                  Nieznane pola są szare i oznaczone „?”. Znany typ pola z
+                  ukrytym kosztem pokazuje „?” zamiast liczby. Widoczność kosztu
+                  odkrywa też typ pola.
+                </p>
+              </>
+            )}
           </div>
           {isHost && (
             <div className="hero-actions lobby-start-actions">
-              {!room?.customMapId && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    updateSettings({ ...settings, seed: randomSeed() })
-                  }
-                >
-                  Losuj ziarno
-                </button>
-              )}
               <button
                 type="button"
                 className="primary-button"

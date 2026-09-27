@@ -58,7 +58,7 @@ export type ActionCardEffect =
   | 'HEX_SEAL'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
-export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
+export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL' | 'RANGE'
 export type RoomStatus = 'LOBBY' | 'IN_GAME' | 'FINISHED'
 export type GameStatus = 'LOBBY' | 'CHOOSING_START' | 'ACTIVE' | 'FINISHED'
 import type { PlayerColor, PlayerSymbol } from './playerAppearance.js'
@@ -66,6 +66,7 @@ import type { PlayerColor, PlayerSymbol } from './playerAppearance.js'
 export interface MapSettings {
   seed: string
   mapSize: MapSize
+  segmentEdgeLength?: number | undefined
   difficulty: GameDifficulty
   routeCount: number
   jungleDensity: number
@@ -78,6 +79,8 @@ export interface MapSettings {
   campCountMinPerPetal: number
   campCountMaxPerPetal: number
   fogMode: FogMode
+  terrainVisibilityRange?: number | 'ALL'
+  costVisibilityRange?: number | 'ALL'
 }
 
 export interface MapAnalysis {

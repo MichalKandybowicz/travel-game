@@ -75,20 +75,13 @@ Przycisk **Opuść pokój** w poczekalni lub **Opuść grę** podczas rozgrywki 
 
 ## Zasady ruchu i terenów
 
-Rozmiar mapy określa rozmiar pojedynczego heksagonalnego **płatka**. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 1 do 12. Generator łączy je długimi bokami w nieregularny łańcuch: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
+Rozmiar krawędzi segmentu określa długość każdej strony heksagonalnego **płatka**: od 5 do 9 pól, domyślnie 7. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 1 do 12. Generator łączy je długimi bokami w nieregularny łańcuch: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
 
 W poczekalni wszyscy gracze widzą podgląd kształtu wygenerowanej mapy. Podgląd rozróżnia płatki, ale nie pokazuje typów terenów, kosztów ani położenia celu. Zmienia się po aktualizacji ustawień mapy.
 
-W poczekalni można wybrać mgłę wojny:
+W poczekalni **Ustawienia mapy** zawierają generator, długość krawędzi segmentu, płatki i obozy, a **Ustawienia gry** określają, czy gracze mogą stać na jednym polu, oraz zasady mgły wojny. Mgłę można wyłączyć, wybrać jeden z dotychczasowych trybów albo ustawić własny zasięg. Własny zasięg widoczności **typu pola** wynosi 2–6 heksów lub całą planszę, a zasięg widoczności **kosztu wejścia** 1–4 heksy lub całą planszę. Widoczność kosztu odkrywa również typ pola, jeśli jej zasięg jest większy.
 
-| Tryb               | Widoczność                                                                                                     |
-| ------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Brak               | Cała mapa, typy pól i koszty.                                                                                  |
-| Płatek             | Zarys całej mapy; typy i koszty na bieżącym płatku oraz na sąsiednim płatku, gdy gracz stoi przy jego granicy. |
-| Średnia dynamiczna | Typy i koszty do 2 pól od gracza; na odległości 3–4 tylko typy. Reszta mapy jest niewidoczna.                  |
-| Pełna dynamiczna   | Typy i koszty pól sąsiednich; na odległości 2 tylko typy. Reszta mapy jest niewidoczna.                        |
-
-Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z nim. W trybach dynamicznych wcześniej widziane, ale obecnie odległe pola są ponownie zakrywane.
+W trybie własnego zasięgu nieznane pola pozostają na mapie jako szare heksy ze znakiem **?**. Znany typ pola z ukrytym kosztem pokazuje **?** zamiast kosztu. Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z pionkiem; odległe pola ponownie się zasłaniają.
 
 W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Liczba punktów ruchu i złota wynika z wartości zapisanych na danej karcie; interfejs tworzy opisy z tych samych danych. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
 
@@ -96,7 +89,7 @@ Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wej
 
 Mapę można przesuwać przeciąganiem myszą, a przybliżać i oddalać kółkiem myszy. Przyciski kierunkowe i skali pozostają dostępne.
 
-Pierwszy płatek ma **cztery pola startowe** na krawędzi przeciwnej do sąsiedniego płatka. Po uruchomieniu gry gracze wybierają wolne pola kolejno, w kolejności z poczekalni. Można kliknąć pole na mapie lub przycisk nad nią. Ostatni wybierający wykonuje pierwszą turę; dalsza kolejność tur jest odwrotna do kolejności wyboru pól.
+Cała krawędź pierwszego płatka przeciwna do sąsiedniego płatka stanowi **pola startowe** — dostępnych jest od 5 do 9 miejsc, zależnie od wybranego rozmiaru. Po uruchomieniu gry gracze widzą swoją początkową rękę i wybierają wolne pola kolejno, w kolejności z poczekalni. Przed wyborem widoczność typów i kosztów jest liczona od każdego dostępnego pola startowego według ustawionych zasięgów; pozostałe pola nie odsłaniają się automatycznie. Można kliknąć pole na mapie lub przycisk nad nią. Ostatni wybierający wykonuje pierwszą turę; dalsza kolejność tur jest odwrotna do kolejności wyboru pól.
 
 Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
 

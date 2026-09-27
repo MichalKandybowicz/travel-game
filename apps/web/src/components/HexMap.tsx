@@ -16,7 +16,7 @@ const tilePalette: Record<
   HexTile['terrain'],
   { light: string; dark: string; edge: string }
 > = {
-  UNKNOWN: { light: '#40515a', dark: '#1a2d35', edge: '#68808a' },
+  UNKNOWN: { light: '#737b80', dark: '#444d52', edge: '#8c979a' },
   START: { light: '#e3b76e', dark: '#8a6036', edge: '#f5d89c' },
   GOAL: { light: '#efae6a', dark: '#a55234', edge: '#ffd29b' },
   JUNGLE: { light: '#4e9973', dark: '#205645', edge: '#81bf91' },
@@ -162,12 +162,18 @@ export function HexMap({
     (tile) => tile.id === localPlayer?.position,
   )
   const startTile = game.map.tiles.find(
-    (tile) => tile.id === game.map.startHexId,
+    (tile) =>
+      tile.id ===
+      (game.map.startHexIds?.[Math.floor(game.map.startHexIds.length / 2)] ??
+        game.map.startHexId),
   )
   const mapView = useMemo(() => {
     if (
       game.settings.fogMode === 'MEDIUM' ||
-      game.settings.fogMode === 'FULL'
+      game.settings.fogMode === 'FULL' ||
+      (game.settings.fogMode === 'RANGE' &&
+        game.settings.terrainVisibilityRange !== 'ALL' &&
+        game.settings.costVisibilityRange !== 'ALL')
     ) {
       const point = currentTile ?? startTile
       const center = point
@@ -190,7 +196,14 @@ export function HexMap({
       width: Math.max(480, maxX - minX + 90),
       height: Math.max(440, maxY - minY + 90),
     }
-  }, [currentTile, startTile, game.map.tiles, game.settings.fogMode])
+  }, [
+    currentTile,
+    startTile,
+    game.map.tiles,
+    game.settings.fogMode,
+    game.settings.terrainVisibilityRange,
+    game.settings.costVisibilityRange,
+  ])
   const [view, setView] = useState(() =>
     focusedView(currentTile ?? startTile, mapView),
   )
@@ -284,21 +297,31 @@ export function HexMap({
     game.settings.allowSharedTiles,
     localPlayer,
   ])
-  const connections = useMemo(
-    () =>
-      game.map.tiles.flatMap((tile, tileIndex) =>
-        game.map.tiles
-          .slice(tileIndex + 1)
-          .filter((neighbor) => cubeDistance(tile, neighbor) === 1)
-          .map((neighbor) => ({
-            from: tile,
-            to: neighbor,
-            fromPoint: hexToPixel(tile.q, tile.r, HEX_SPACING),
-            toPoint: hexToPixel(neighbor.q, neighbor.r, HEX_SPACING),
-          })),
-      ),
-    [game.map.tiles],
-  )
+  const connections = useMemo(() => {
+    const byCoordinates = new Map(
+      game.map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile]),
+    )
+    const directions = [
+      [1, 0],
+      [1, -1],
+      [0, -1],
+    ] as const
+    return game.map.tiles.flatMap((tile) =>
+      directions.flatMap(([dq, dr]) => {
+        const neighbor = byCoordinates.get(`${tile.q + dq},${tile.r + dr}`)
+        return neighbor
+          ? [
+              {
+                from: tile,
+                to: neighbor,
+                fromPoint: hexToPixel(tile.q, tile.r, HEX_SPACING),
+                toPoint: hexToPixel(neighbor.q, neighbor.r, HEX_SPACING),
+              },
+            ]
+          : []
+      }),
+    )
+  }, [game.map.tiles])
 
   return (
     <div className="panel map-panel">

@@ -23,6 +23,12 @@ export const validateMap = (
     MEDIUM: 40,
     LARGE: 60,
   } as const
+  const minimumPathLength = settings.segmentEdgeLength
+    ? 5 + (settings.segmentEdgeLength - 5) * 2
+    : minPathLengthBySize[settings.mapSize]
+  const maximumPathLength = settings.segmentEdgeLength
+    ? 24 + (settings.segmentEdgeLength - 5) * 9
+    : maxPathLengthBySize[settings.mapSize]
 
   if (!Number.isFinite(analysis.shortestPathLength)) {
     reasons.push('START cannot reach GOAL.')
@@ -38,12 +44,12 @@ export const validateMap = (
   if (Math.abs(analysis.waterPercent - expectedWater) > 20) {
     reasons.push('Water density is outside the expected range.')
   }
-  if (analysis.shortestPathLength < minPathLengthBySize[settings.mapSize]) {
+  if (analysis.shortestPathLength < minimumPathLength) {
     reasons.push('Map is too short.')
   }
   if (
     analysis.shortestPathLength >
-    maxPathLengthBySize[settings.mapSize] * (settings.petalCount ?? 1)
+    maximumPathLength * (settings.petalCount ?? 1)
   ) {
     reasons.push('Map is too long.')
   }

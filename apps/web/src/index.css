@@ -1004,6 +1004,12 @@ select {
   cursor: default;
 }
 
+.starting-hand-preview {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .game-sidebar {
   grid-area: sidebar;
   display: grid;
@@ -2705,10 +2711,7 @@ select {
 
 .lobby-layout {
   display: grid;
-  grid-template-columns:
-    minmax(260px, 0.8fr)
-    minmax(320px, 1.15fr)
-    minmax(300px, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   align-items: start;
 }
@@ -2962,6 +2965,14 @@ select {
   border: 1px solid rgba(215, 224, 193, 0.17);
   border-radius: 12px;
   background: rgba(8, 25, 30, 0.6);
+}
+
+.lobby-settings-panel .visibility-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #a9c0b7;
+  font-size: 0.82rem;
+  line-height: 1.5;
 }
 
 .lobby-start-actions {

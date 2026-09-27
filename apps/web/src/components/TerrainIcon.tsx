@@ -36,10 +36,17 @@ export function TerrainIcon({
       shapeRendering="geometricPrecision"
     >
       {terrain === 'UNKNOWN' && (
-        <>
-          <path d="M-9 2C-5-4-1-4 3 1c3 4 6 2 8-1M-8 7c3-3 6-3 9 0 3 2 6 1 8-1" />
-          <path d="M-6-6c2-3 5-3 7 0M5-5l1-3m3 5 2-2" />
-        </>
+        <text
+          x="0"
+          y="7"
+          textAnchor="middle"
+          fill="#dce1e4"
+          stroke="none"
+          fontSize="23"
+          fontWeight="bold"
+        >
+          ?
+        </text>
       )}
       {terrain === 'START' && (
         <>

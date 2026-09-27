@@ -23,6 +23,18 @@ const settings: MapSettings = {
 }
 
 describe('generateMap', () => {
+  it('accepts edge lengths from five to nine hexes', () => {
+    for (const segmentEdgeLength of [5, 6, 7, 8, 9]) {
+      expect(
+        mapSettingsSchema.safeParse({ ...settings, segmentEdgeLength }).success,
+      ).toBe(true)
+    }
+    for (const segmentEdgeLength of [4, 10]) {
+      expect(
+        mapSettingsSchema.safeParse({ ...settings, segmentEdgeLength }).success,
+      ).toBe(false)
+    }
+  })
   it('defaults to three petals and allows at most twelve', () => {
     expect(
       mapSettingsSchema.parse({ ...settings, petalCount: undefined })
@@ -67,14 +79,16 @@ describe('generateMap', () => {
     expect(second.tiles).not.toEqual(first.tiles)
   })
 
-  it('places four start fields on the edge opposite the neighboring petal', () => {
-    for (const mapSize of ['SMALL', 'MEDIUM', 'LARGE'] as const) {
-      const map = generateMap({ ...settings, mapSize, petalCount: 3 })
+  it('makes every tile on the opposite segment edge a start slot', () => {
+    for (const segmentEdgeLength of [5, 6, 7, 8, 9]) {
+      const map = generateMap({ ...settings, segmentEdgeLength, petalCount: 3 })
       const starts = map.startHexIds!.map((id) =>
         map.tiles.find((tile) => tile.id === id)!,
       )
-      expect(starts).toHaveLength(4)
-      expect(new Set(starts.map((tile) => tile.id)).size).toBe(4)
+      expect(starts).toHaveLength(segmentEdgeLength)
+      expect(new Set(starts.map((tile) => tile.id)).size).toBe(
+        segmentEdgeLength,
+      )
       expect(
         starts.every(
           (tile) =>
@@ -104,8 +118,8 @@ describe('generateMap', () => {
         })
       const count = map.tiles.filter((tile) => tile.petalId === 0).length
       const startCenter = {
-        q: starts.reduce((sum, tile) => sum + tile.q, 0) / 4,
-        r: starts.reduce((sum, tile) => sum + tile.r, 0) / 4,
+        q: starts.reduce((sum, tile) => sum + tile.q, 0) / starts.length,
+        r: starts.reduce((sum, tile) => sum + tile.r, 0) / starts.length,
       }
       const contactCenter = {
         q: contacts.reduce((sum, tile) => sum + tile.q, 0) / contacts.length,

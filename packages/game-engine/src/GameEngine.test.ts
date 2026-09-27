@@ -150,6 +150,47 @@ describe('GameEngine', () => {
     expect(game.currentPlayerId).toBe('p1')
   })
 
+  it('shows starting visibility from every slot and keeps the opening hand visible', () => {
+    const game = createGameState(
+      'ABCDE',
+      {
+        ...settings,
+        segmentEdgeLength: 9,
+        petalCount: 3,
+        fogMode: 'RANGE',
+        terrainVisibilityRange: 6,
+        costVisibilityRange: 4,
+      },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+    )
+    const starts = game.map.startHexIds!.map((id) =>
+      game.map.tiles.find((tile) => tile.id === id)!,
+    )
+    const view = serializePublicGameState(game, 'p1')
+    expect(starts).toHaveLength(9)
+    expect(view.map.startHexIds).toHaveLength(9)
+    expect(view.players[0]!.hand).toEqual(game.players[0]!.hand)
+    for (const tile of view.map.tiles) {
+      const distance = Math.min(
+        ...starts.map((start) => axialDistance(start, tile)),
+      )
+      if (distance <= 4) {
+        expect(tile.difficulty).toBeGreaterThanOrEqual(0)
+      } else if (distance <= 6) {
+        expect(tile.terrain).not.toBe('UNKNOWN')
+        expect(tile.difficulty).toBe(-1)
+      } else {
+        expect(tile.terrain).toBe('UNKNOWN')
+      }
+    }
+    const lastStart = starts[8]!.id
+    chooseStart(game, 'p1', lastStart)
+    expect(game.players[0]!.position).toBe(lastStart)
+  })
+
   it('continues start selection when the next chooser leaves', () => {
     const game = createGameState('ABCDE', settings, [
       { id: 'p1', name: 'Player 1' },
@@ -1252,6 +1293,96 @@ describe('GameEngine', () => {
       expect(view.map.goalHexId).toBe('')
     },
   )
+
+  it('shows terrain and entry costs at separate custom ranges', () => {
+    const game = createGameState(
+      'ABCDE',
+      {
+        ...settings,
+        fogMode: 'RANGE',
+        terrainVisibilityRange: 2,
+        costVisibilityRange: 1,
+      },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+    )
+    game.status = 'ACTIVE'
+    const player = game.players[0]!
+    player.position = game.map.startHexId
+    const center = game.map.tiles.find((tile) => tile.id === player.position)!
+    const view = serializePublicGameState(game, player.id)
+    expect(view.map.tiles).toHaveLength(game.map.tiles.length)
+    for (const tile of view.map.tiles) {
+      const distance = axialDistance(center, tile)
+      if (distance <= 1) {
+        expect(tile.terrain).toBe(
+          game.map.tiles.find((original) => original.id === tile.id)!.terrain,
+        )
+        expect(tile.difficulty).toBeGreaterThanOrEqual(0)
+      } else if (distance <= 2) {
+        expect(tile.terrain).not.toBe('UNKNOWN')
+        expect(tile.difficulty).toBe(-1)
+      } else {
+        expect(tile.terrain).toBe('UNKNOWN')
+        expect(tile.difficulty).toBe(-1)
+      }
+    }
+
+    const previouslyKnown = game.map.tiles.find(
+      (tile) => axialDistance(center, tile) === 1,
+    )!
+    const remote = game.map.tiles.find(
+      (tile) => axialDistance(previouslyKnown, tile) > 2,
+    )!
+    player.position = remote.id
+    expect(
+      serializePublicGameState(game, player.id).map.tiles.find(
+        (tile) => tile.id === previouslyKnown.id,
+      )?.terrain,
+    ).toBe('UNKNOWN')
+  })
+
+  it('supports whole-board terrain or cost visibility independently', () => {
+    const game = createGameState(
+      'ABCDE',
+      {
+        ...settings,
+        fogMode: 'RANGE',
+        terrainVisibilityRange: 'ALL',
+        costVisibilityRange: 1,
+      },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+    )
+    game.status = 'ACTIVE'
+    game.players[0]!.position = game.map.startHexId
+    const center = game.map.tiles.find(
+      (tile) => tile.id === game.map.startHexId,
+    )!
+    const distant = game.map.tiles.find(
+      (tile) => axialDistance(center, tile) > 2,
+    )!
+    expect(
+      serializePublicGameState(game, 'p1').map.tiles.find(
+        (tile) => tile.id === distant.id,
+      ),
+    ).toMatchObject({ terrain: distant.terrain, difficulty: -1 })
+
+    game.settings.terrainVisibilityRange = 2
+    game.settings.costVisibilityRange = 'ALL'
+    expect(
+      serializePublicGameState(game, 'p1').map.tiles.find(
+        (tile) => tile.id === distant.id,
+      ),
+    ).toMatchObject({
+      terrain: distant.terrain,
+      difficulty: distant.difficulty,
+    })
+  })
 
   it('keeps previously revealed and scouted tiles visible through fog', () => {
     const game = createGameState(

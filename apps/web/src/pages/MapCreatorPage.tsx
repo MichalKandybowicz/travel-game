@@ -49,6 +49,8 @@ export function MapCreatorPage() {
     seed: `MAP-${Math.floor(Math.random() * 1000000)}`,
   }))
   const [map, setMap] = useState(() => generateMap(settings))
+  const requiredStartCount =
+    settings.segmentEdgeLength ?? Math.max(4, map.startHexIds?.length ?? 4)
   const [name, setName] = useState('Moja magiczna mapa')
   const [customMaps, setCustomMaps] = useState<CustomMap[]>([])
   const [selectedMapId, setSelectedMapId] = useState('')
@@ -133,7 +135,10 @@ export function MapCreatorPage() {
       if (tool === 'SET_START') {
         if (startHexIds.includes(tileId) && startHexIds.length > 1) {
           startHexIds = startHexIds.filter((id) => id !== tileId)
-        } else if (startHexIds.length < 4 && tileId !== goalHexId) {
+        } else if (
+          startHexIds.length < requiredStartCount &&
+          tileId !== goalHexId
+        ) {
           startHexIds.push(tileId)
         }
       } else if (tool === 'SET_GOAL' && !startHexIds.includes(tileId)) {
@@ -248,19 +253,21 @@ export function MapCreatorPage() {
           </label>
           <div className="map-editor-generation">
             <label>
-              Rozmiar
+              Rozmiar krawędzi segmentu
               <select
-                value={settings.mapSize}
+                value={settings.segmentEdgeLength ?? 7}
                 onChange={(event) =>
                   setSettings({
                     ...settings,
-                    mapSize: event.target.value as MapSettings['mapSize'],
+                    segmentEdgeLength: Number(event.target.value),
                   })
                 }
               >
-                <option value="SMALL">Mała</option>
-                <option value="MEDIUM">Średnia</option>
-                <option value="LARGE">Duża</option>
+                {[5, 6, 7, 8, 9].map((length) => (
+                  <option key={length} value={length}>
+                    {length} heksów
+                  </option>
+                ))}
               </select>
             </label>
             <label>
@@ -314,7 +321,7 @@ export function MapCreatorPage() {
               aria-pressed={tool === 'SET_START'}
               onClick={() => setTool('SET_START')}
             >
-              Starty ({map.startHexIds?.length ?? 0}/4)
+              Starty ({map.startHexIds?.length ?? 0}/{requiredStartCount})
             </button>
             <button
               type="button"
@@ -350,7 +357,7 @@ export function MapCreatorPage() {
             disabled={
               saving ||
               !name.trim() ||
-              map.startHexIds?.length !== 4 ||
+              map.startHexIds?.length !== requiredStartCount ||
               !Number.isFinite(map.stats.shortestPathLength)
             }
             onClick={async () => {
