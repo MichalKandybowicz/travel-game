@@ -279,6 +279,14 @@ const planBotRoute = (
 export const findBotRoute = (game: GameState, player: PlayerState): HexTile[] =>
   planBotRoute(game, player)?.route ?? []
 
+export const nextPlannedBotStep = (
+  route: readonly HexTile[],
+  currentHexId: string,
+): HexTile | undefined => {
+  const currentIndex = route.findIndex((tile) => tile.id === currentHexId)
+  return currentIndex >= 0 ? route[currentIndex + 1] : undefined
+}
+
 export const chooseBotStart = (
   game: GameState,
   player: PlayerState,

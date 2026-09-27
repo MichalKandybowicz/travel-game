@@ -358,7 +358,6 @@ describe('GameEngine', () => {
     const seenOffers = new Set(game.market)
 
     expect(game.market).toHaveLength(4)
-    expect(game.market).toHaveLength(4)
     expect(
       game.market.some(
         (cardId) =>
@@ -385,7 +384,6 @@ describe('GameEngine', () => {
       game.market.forEach((offer) => seenOffers.add(offer))
 
       expect(game.market).toHaveLength(4)
-      expect(game.market).toHaveLength(4)
       expect(
         game.market.every(
           (offer, _, market) =>
@@ -394,6 +392,9 @@ describe('GameEngine', () => {
             MARKET_CARD_COPY_LIMIT,
         ),
       ).toBe(true)
+      expect(
+        game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION'),
+      ).toHaveLength(1)
       expect(
         game.market.some(
           (offer) =>
@@ -405,12 +406,11 @@ describe('GameEngine', () => {
       endTurn(game, 'p2')
     }
     expect(game.marketCycle).toBeGreaterThan(0)
-    expect(seenOffers.has('seasoned_sailor')).toBe(true)
-    expect(seenOffers.has('master_trader')).toBe(true)
-    expect(seenOffers.has('pathfinder')).toBe(true)
-    expect(seenOffers.has('captain')).toBe(true)
-    expect(seenOffers.has('caravan')).toBe(true)
-    expect(seenOffers.has('trailblazer')).toBe(true)
+    expect(
+      [...seenOffers].some(
+        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) >= 3,
+      ),
+    ).toBe(true)
     expect(serializePublicGameState(game, 'p1').marketDrawPile).toEqual([])
   })
 
@@ -488,6 +488,50 @@ describe('GameEngine', () => {
     }
 
     expect(game.market).not.toContain('herbalist')
+  })
+
+  it('unlocks higher shop tiers while keeping tier one and two offers', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const tier1And2 = MARKET_CARD_IDS.filter(
+      (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) <= 2,
+    )
+    const tier3 = MARKET_CARD_IDS.filter(
+      (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 3,
+    )
+    const addPurchases = (cardIds: string[], amount: number) => {
+      let added = 0
+      while (added < amount) {
+        for (const cardId of cardIds) {
+          if (added === amount) break
+          const current = game.cardPurchaseCounts?.[cardId] ?? 0
+          if (current >= MARKET_CARD_COPY_LIMIT) continue
+          game.cardPurchaseCounts![cardId] = current + 1
+          added += 1
+        }
+      }
+    }
+    const giveRefreshToken = (instanceId: string) => {
+      player.tokens!.push({ instanceId, type: 'REFRESH_MARKET' })
+      useToken(game, player.id, instanceId)
+    }
+
+    game.cardPurchaseCounts = {}
+    addPurchases(
+      tier1And2,
+      Math.ceil((tier1And2.length * MARKET_CARD_COPY_LIMIT) / 2),
+    )
+    giveRefreshToken('refresh-tier-3')
+    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 3)).toBe(true)
+    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1)).toBe(true)
+    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2)).toBe(true)
+
+    addPurchases(tier3, Math.ceil((tier3.length * MARKET_CARD_COPY_LIMIT) / 2))
+    game.roundNumber = (game.roundNumber ?? 1) + 1
+    giveRefreshToken('refresh-tier-4')
+    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 4)).toBe(true)
+    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1)).toBe(true)
+    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2)).toBe(true)
   })
 
   it('starts a game from an unchanged custom map snapshot', () => {

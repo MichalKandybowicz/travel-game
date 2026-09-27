@@ -16,6 +16,7 @@ import {
   cardMovementFor,
   chooseBotStart,
   findBotRoute,
+  nextPlannedBotStep,
 } from './botMovement.js'
 
 const tile = (id: string, q: number, terrain: HexTile['terrain']): HexTile => ({
@@ -177,5 +178,23 @@ describe('bot movement planning', () => {
     expect(canReachWithHand(player, start, jungle)).toBe(false)
     expect(canReachWithHand(player, start, water)).toBe(true)
     expect(findBotRoute(game, player)[0]?.id).toBe(water.id)
+  })
+
+  it('continues along the turn-start route after the bot spends movement cards', () => {
+    const start = tile('start', 0, 'START')
+    const plannedFirst = tile('planned-first', 1, 'JUNGLE')
+    const plannedSecond = { ...tile('planned-second', 2, 'WATER'), r: 0 }
+    const alternative = { ...tile('alternative', 1, 'WATER'), r: 1 }
+    const goal = { ...tile('goal', 2, 'GOAL'), r: 1 }
+    const route = [plannedFirst, plannedSecond, goal]
+
+    expect(nextPlannedBotStep(route, start.id)).toBeUndefined()
+    expect(nextPlannedBotStep([start, ...route], start.id)).toBe(plannedFirst)
+    expect(nextPlannedBotStep([start, ...route], plannedFirst.id)).toBe(
+      plannedSecond,
+    )
+    expect(nextPlannedBotStep([start, alternative, goal], plannedFirst.id)).toBe(
+      undefined,
+    )
   })
 })

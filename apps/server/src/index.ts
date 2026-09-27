@@ -67,6 +67,7 @@ import {
   chooseBotSealHex,
   chooseBotStart,
   findBotRoute,
+  nextPlannedBotStep,
 } from './botMovement.js'
 import {
   connectStorage,
@@ -375,6 +376,13 @@ const chooseBotToken = (
 const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
   if (botRooms.has(room.roomCode)) return
   botRooms.add(room.roomCode)
+  let plannedTurn:
+    | {
+        playerId: string
+        turnNumber: number
+        route: HexTile[]
+      }
+    | undefined
   try {
     for (let action = 0; action < 60; action += 1) {
       const game = room.gameState
@@ -419,7 +427,18 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       const botKnowledge = knowledge.players.find(
         (entry) => entry.id === bot.id,
       )!
-      const target = findBotRoute(knowledge, botKnowledge)[0]
+      if (
+        plannedTurn?.playerId !== bot.id ||
+        plannedTurn.turnNumber !== game.turnNumber ||
+        !plannedTurn.route.some((tile) => tile.id === player.position)
+      ) {
+        plannedTurn = {
+          playerId: bot.id,
+          turnNumber: game.turnNumber,
+          route: findBotRoute(knowledge, botKnowledge),
+        }
+      }
+      const target = nextPlannedBotStep(plannedTurn.route, player.position)
       if (!target) {
         endTurn(game, bot.id)
         logGameAction(room, bot.id, 'end_turn', {

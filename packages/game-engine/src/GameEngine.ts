@@ -598,7 +598,7 @@ const createMarketOffers = (
   )
   const protectedTiers = new Set<number>()
 
-  for (const tier of [1, 2]) {
+  for (const tier of [...new Set([1, 2, unlockedTier])]) {
     if (
       offers.some(
         (cardId) =>
@@ -650,8 +650,12 @@ const createMarketOffers = (
   }
 
   while (offers.length < amount && available.length > 0) {
-    const nextCardId = available.shift()!
-    offers.push(nextCardId)
+    const nextIndex = available.findIndex((cardId) => {
+      if (CARD_BY_ID[cardId]?.type !== 'ACTION') return true
+      return !offers.some((offer) => CARD_BY_ID[offer]?.type === 'ACTION')
+    })
+    if (nextIndex < 0) break
+    offers.push(available.splice(nextIndex, 1)[0]!)
   }
   gameState.marketDrawPile = []
   return offers
