@@ -1475,6 +1475,16 @@ select {
   gap: 0;
 }
 
+.market-card-tier {
+  align-self: flex-start;
+  padding: 5px 8px 0;
+  color: var(--card-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .market-card .game-card__inner {
   height: auto;
   flex: 1;

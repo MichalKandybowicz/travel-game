@@ -1,5 +1,9 @@
 import { useRef } from 'react'
-import { CARD_BY_ID } from '@shared'
+import {
+  CARD_BY_ID,
+  getMarketTier,
+  MARKET_CARD_COPY_LIMIT,
+} from '@shared'
 import type { GameState, PlayerState } from '@shared'
 import { cardDescription } from '../labels.js'
 import { CardFace } from './CardFace.js'
@@ -86,22 +90,25 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
             className="market-card-grid"
             aria-label="Karty dostępne w sklepie"
           >
-            {game.market.map((cardId) => {
+            {game.market.map((cardId, index) => {
               const card = CARD_BY_ID[cardId]
               if (!card) return null
               const effectiveCost = card.purchaseCost + cursePriceIncrease
+              const tier = getMarketTier(card.purchaseCost)
+              const copiesPurchased = game.cardPurchaseCounts?.[cardId] ?? 0
               const affordable = availableGold >= effectiveCost
               const canBuy =
                 isActive && affordable && !hasBoughtThisTurn && !isLocked
               return (
                 <button
-                  key={card.id}
+                  key={`${card.id}-${index}`}
                   type="button"
                   className="card game-card market-card"
                   data-movement={card.movementType}
                   data-secondary-movement={card.secondaryMovementType}
                   data-card-type={card.type.toLowerCase()}
                   data-action-category={card.actionCategory?.toLowerCase()}
+                  data-tier={tier}
                   disabled={!canBuy}
                   title={cardDescription(card)}
                   onClick={() => {
@@ -109,6 +116,9 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                     dialogRef.current?.close()
                   }}
                 >
+                  <span className="market-card-tier">
+                    Tier {tier} · kupiono {copiesPurchased}/{MARKET_CARD_COPY_LIMIT}
+                  </span>
                   <CardFace card={card} purchaseCost={effectiveCost} />
                   <span className="market-card-status">
                     {isLocked

@@ -40,6 +40,7 @@ export type TokenType =
 export type CardPlayMode = 'MOVEMENT' | 'GOLD' | 'ACTION'
 export type CardType = 'MOVEMENT' | 'ACTION'
 export type ActionCardCategory = 'SPELL' | 'CURSE'
+export type MarketTier = 1 | 2 | 3 | 4
 export type ActionCardEffect =
   | 'MAP_SHORTCUT'
   | 'SECOND_WIND'
@@ -230,6 +231,7 @@ export interface GameState {
   market: string[]
   marketDrawPile: string[]
   marketCycle: number
+  cardPurchaseCounts?: Record<string, number>
   marketPurchasedThisRound?: boolean
   marketLockedUntilPlayerId?: string
   roundPlayedCards: PlayedCardRecord[]

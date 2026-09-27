@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { GameState, HexTile, MapSettings } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
+  getMarketTier,
+  MARKET_CARD_COPY_LIMIT,
   MARKET_CARD_IDS,
   TOKEN_DEFINITIONS,
 } from '../../shared/src/index.js'
@@ -356,7 +358,19 @@ describe('GameEngine', () => {
     const seenOffers = new Set(game.market)
 
     expect(game.market).toHaveLength(4)
-    expect(new Set(game.market).size).toBe(4)
+    expect(game.market).toHaveLength(4)
+    expect(
+      game.market.some(
+        (cardId) =>
+          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 1,
+      ),
+    ).toBe(true)
+    expect(
+      game.market.some(
+        (cardId) =>
+          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 2,
+      ),
+    ).toBe(true)
     expect(game.market).toEqual(sameSeedGame.market)
     expect(
       game.market.every((cardId) => MARKET_CARD_IDS.includes(cardId)),
@@ -371,16 +385,20 @@ describe('GameEngine', () => {
       game.market.forEach((offer) => seenOffers.add(offer))
 
       expect(game.market).toHaveLength(4)
-      expect(new Set(game.market).size).toBe(4)
+      expect(game.market).toHaveLength(4)
       expect(
-        game.market.filter((offer) => CARD_BY_ID[offer]?.type === 'ACTION')
-          .length,
-      ).toBeLessThanOrEqual(1)
+        game.market.every(
+          (offer, _, market) =>
+            market.filter((entry) => entry === offer).length +
+              (game.cardPurchaseCounts?.[offer] ?? 0) <=
+            MARKET_CARD_COPY_LIMIT,
+        ),
+      ).toBe(true)
       expect(
         game.market.some(
           (offer) =>
             CARD_BY_ID[offer]?.type === 'MOVEMENT' &&
-            CARD_BY_ID[offer]!.purchaseCost <= 5,
+            getMarketTier(CARD_BY_ID[offer]!.purchaseCost) <= 2,
         ),
       ).toBe(true)
       endTurn(game, 'p1')
@@ -405,21 +423,17 @@ describe('GameEngine', () => {
       game.market.some(
         (cardId) =>
           CARD_BY_ID[cardId]?.type === 'MOVEMENT' &&
-          CARD_BY_ID[cardId]!.purchaseCost <= 5,
+          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) <= 2,
       ),
     ).toBe(true)
-    expect(
-      game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
-        .length,
-    ).toBeLessThanOrEqual(1)
   })
 
-  it('offers affordable yellow upgrades while pricing protection and curses higher', () => {
+  it('prices movement by value and caps every card at twelve gold', () => {
     expect(CARD_BY_ID.dune_runner).toMatchObject({
       movementType: 'YELLOW',
       movementValue: 3,
       goldValue: 2,
-      purchaseCost: 4,
+      purchaseCost: 5,
     })
     expect(CARD_BY_ID.sand_merchant).toMatchObject({
       movementType: 'YELLOW',
@@ -430,11 +444,18 @@ describe('GameEngine', () => {
     expect(MARKET_CARD_IDS).toEqual(
       expect.arrayContaining(['dune_runner', 'sand_merchant']),
     )
-    expect(CARD_BY_ID.protective_circle!.purchaseCost).toBe(8)
+    expect(CARD_BY_ID.pathfinder!.purchaseCost).toBe(10)
+    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(11)
+    expect(CARD_BY_ID.echo_power!.purchaseCost).toBe(12)
+    expect(getMarketTier(5)).toBe(1)
+    expect(getMarketTier(6)).toBe(2)
+    expect(getMarketTier(8)).toBe(3)
+    expect(getMarketTier(10)).toBe(3)
+    expect(getMarketTier(11)).toBe(4)
     expect(
-      MARKET_CARD_IDS.filter(
-        (cardId) => CARD_BY_ID[cardId]?.actionCategory === 'CURSE',
-      ).every((cardId) => CARD_BY_ID[cardId]!.purchaseCost >= 7),
+      Object.values(CARD_BY_ID).every(
+        (card) => card.purchaseCost > 0 && card.purchaseCost <= 12,
+      ),
     ).toBe(true)
 
     const game = buildTestGame()
@@ -442,9 +463,31 @@ describe('GameEngine', () => {
       'dune_runner',
       ...game.market.filter((cardId) => cardId !== 'dune_runner').slice(0, 3),
     ]
-    game.players[0]!.availableGold = 4
+    game.players[0]!.availableGold = 5
     buyCard(game, 'p1', 'dune_runner')
     expect(game.players[0]!.discardPile.at(-1)?.cardId).toBe('dune_runner')
+  })
+
+  it('stops replenishing a card after three purchases in one game', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    game.cardPurchaseCounts = {}
+
+    for (let copy = 0; copy < MARKET_CARD_COPY_LIMIT; copy += 1) {
+      game.market = [
+        'herbalist',
+        ...game.market.filter((cardId) => cardId !== 'herbalist').slice(0, 3),
+      ]
+      player.availableGold = CARD_BY_ID.herbalist!.purchaseCost
+      buyCard(game, player.id, 'herbalist')
+      expect(game.cardPurchaseCounts?.herbalist).toBe(copy + 1)
+      if (copy < MARKET_CARD_COPY_LIMIT - 1) {
+        endTurn(game, 'p1')
+        endTurn(game, 'p2')
+      }
+    }
+
+    expect(game.market).not.toContain('herbalist')
   })
 
   it('starts a game from an unchanged custom map snapshot', () => {

@@ -16,6 +16,8 @@ import type {
 } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
+  getMarketTier,
+  MARKET_CARD_COPY_LIMIT,
   MARKET_CARD_IDS,
   TOKEN_BY_TYPE,
   TOKEN_DEFINITIONS,
@@ -373,39 +375,6 @@ export const routeCostToGoal = (
   return Number.POSITIVE_INFINITY
 }
 
-const isActionCard = (cardId: string): boolean =>
-  CARD_BY_ID[cardId]?.type === 'ACTION'
-
-const hasAffordableMovementCard = (cardIds: string[]): boolean =>
-  cardIds.some((cardId) => {
-    const card = CARD_BY_ID[cardId]
-    return card?.type === 'MOVEMENT' && card.purchaseCost <= 5
-  })
-
-const takeMarketCards = (
-  drawPile: string[],
-  amount: number,
-  currentMarket: string[] = [],
-): string[] => {
-  const selected: string[] = []
-  while (selected.length < amount) {
-    const offers = [...currentMarket, ...selected]
-    const actionCount = offers.filter(isActionCard).length
-    const mustPickAffordable =
-      !hasAffordableMovementCard(offers) && selected.length === amount - 1
-    const index = drawPile.findIndex((cardId) => {
-      if (offers.includes(cardId)) return false
-      if (isActionCard(cardId) && actionCount >= 1) return false
-      if (!mustPickAffordable) return true
-      const card = CARD_BY_ID[cardId]
-      return card?.type === 'MOVEMENT' && card.purchaseCost <= 5
-    })
-    if (index < 0) break
-    selected.push(drawPile.splice(index, 1)[0]!)
-  }
-  return selected
-}
-
 const closestOpponentToGoal = (
   gameState: GameState,
   playerId: string,
@@ -442,10 +411,6 @@ export const createGameState = (
   customMap?: GameMap,
 ): GameState => {
   const map = customMap ? structuredClone(customMap) : generateMap(settings)
-  const marketDrawPile = new SeededRandom(
-    `${settings.seed}:${roomCode}:market:0`,
-  ).shuffle(MARKET_CARD_IDS)
-  const market = takeMarketCards(marketDrawPile, 4)
   const gamePlayers: PlayerState[] = players.map((player, index) => {
     const drawPile = buildStartingDeck(
       player.id,
@@ -492,7 +457,7 @@ export const createGameState = (
     return state
   })
 
-  return {
+  const gameState: GameState = {
     id: `${roomCode}-${settings.seed}`,
     roomCode,
     status: 'CHOOSING_START',
@@ -504,13 +469,16 @@ export const createGameState = (
     startSelectionOrder: gamePlayers.map((player) => player.id),
     turnNumber: 1,
     roundNumber: 1,
-    market,
-    marketDrawPile,
+    market: [],
+    marketDrawPile: [],
     marketCycle: 0,
+    cardPurchaseCounts: {},
     marketPurchasedThisRound: false,
     roundPlayedCards: [],
     temporaryBlockedHexes: [],
   }
+  gameState.market = createMarketOffers(gameState, 4, 'initial')
+  return gameState
 }
 
 export const chooseStart = (
@@ -548,30 +516,156 @@ export const chooseStart = (
   return gameState
 }
 
-const replenishMarket = (gameState: GameState): void => {
-  let nextCards = takeMarketCards(gameState.marketDrawPile, 1, gameState.market)
-  if (nextCards.length === 0) {
-    gameState.marketCycle += 1
-    gameState.marketDrawPile = new SeededRandom(
-      `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}`,
-    ).shuffle(
-      MARKET_CARD_IDS.filter((cardId) => !gameState.market.includes(cardId)),
+const cardCopiesInPlayerPiles = (gameState: GameState): Record<string, number> =>
+  Object.fromEntries(
+    MARKET_CARD_IDS.map((cardId) => [
+      cardId,
+      gameState.players.reduce(
+        (total, player) =>
+          total +
+          [
+            ...player.drawPile,
+            ...player.hand,
+            ...player.discardPile,
+            ...player.playedCards,
+            ...player.removedCards,
+          ].filter((card) => card.cardId === cardId).length,
+        0,
+      ),
+    ]),
+  )
+
+const getPurchaseCounts = (gameState: GameState): Record<string, number> => {
+  gameState.cardPurchaseCounts ??= cardCopiesInPlayerPiles(gameState)
+  return gameState.cardPurchaseCounts
+}
+
+const getUnlockedMarketTier = (
+  purchaseCounts: Record<string, number>,
+): number => {
+  const purchasedByTier = [0, 0, 0, 0, 0]
+  const stockByTier = [0, 0, 0, 0, 0]
+  for (const cardId of MARKET_CARD_IDS) {
+    const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
+    purchasedByTier[tier]! += purchaseCounts[cardId] ?? 0
+    stockByTier[tier]! += MARKET_CARD_COPY_LIMIT
+  }
+  if (
+    purchasedByTier[1]! + purchasedByTier[2]! <
+    Math.ceil((stockByTier[1]! + stockByTier[2]!) / 2)
+  ) {
+    return 2
+  }
+  if (purchasedByTier[3]! < Math.ceil(stockByTier[3]! / 2)) return 3
+  return 4
+}
+
+const createMarketOffers = (
+  gameState: GameState,
+  amount: number,
+  reason: string,
+): string[] => {
+  const purchaseCounts = getPurchaseCounts(gameState)
+  const unlockedTier = getUnlockedMarketTier(purchaseCounts)
+  const random = new SeededRandom(
+    `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
+  )
+  const retainedCounts = new Map<string, number>()
+  const offers = gameState.market.filter((cardId) => {
+    const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
+    const retainedCount = (retainedCounts.get(cardId) ?? 0) + 1
+    retainedCounts.set(cardId, retainedCount)
+    return (
+      tier <= unlockedTier &&
+      (purchaseCounts[cardId] ?? 0) + retainedCount <= MARKET_CARD_COPY_LIMIT
     )
-    nextCards = takeMarketCards(gameState.marketDrawPile, 1, gameState.market)
+  })
+  const marketCounts = new Map<string, number>()
+  for (const cardId of offers) {
+    marketCounts.set(cardId, (marketCounts.get(cardId) ?? 0) + 1)
   }
-  const nextCardId = nextCards[0]
-  if (nextCardId) {
-    gameState.market.push(nextCardId)
+  const available = random.shuffle(
+    MARKET_CARD_IDS.flatMap((cardId) => {
+      const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
+      const remaining =
+        MARKET_CARD_COPY_LIMIT -
+        (purchaseCounts[cardId] ?? 0) -
+        (marketCounts.get(cardId) ?? 0)
+      return tier <= unlockedTier
+        ? Array.from({ length: Math.max(0, remaining) }, () => cardId)
+        : []
+    }),
+  )
+  const protectedTiers = new Set<number>()
+
+  for (const tier of [1, 2]) {
+    if (
+      offers.some(
+        (cardId) =>
+          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier,
+      )
+    ) {
+      protectedTiers.add(tier)
+      continue
+    }
+    const availableIndex = available.findIndex((cardId) => {
+      return getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier
+    })
+    if (availableIndex >= 0) {
+      if (offers.length >= amount) {
+        let removableIndex = -1
+        for (let index = offers.length - 1; index >= 0; index -= 1) {
+          if (
+            !protectedTiers.has(
+              getMarketTier(CARD_BY_ID[offers[index]!]!.purchaseCost),
+            )
+          ) {
+            removableIndex = index
+            break
+          }
+        }
+        if (removableIndex >= 0) offers.splice(removableIndex, 1)
+      }
+    }
+    if (availableIndex >= 0 && offers.length < amount) {
+      offers.push(available.splice(availableIndex, 1)[0]!)
+      protectedTiers.add(tier)
+    }
   }
+
+  while (offers.length > amount) {
+    let removableIndex = -1
+    for (let index = offers.length - 1; index >= 0; index -= 1) {
+      if (
+        !protectedTiers.has(
+          getMarketTier(CARD_BY_ID[offers[index]!]!.purchaseCost),
+        )
+      ) {
+        removableIndex = index
+        break
+      }
+    }
+    if (removableIndex < 0) break
+    offers.splice(removableIndex, 1)
+  }
+
+  while (offers.length < amount && available.length > 0) {
+    const nextCardId = available.shift()!
+    offers.push(nextCardId)
+  }
+  gameState.marketDrawPile = []
+  return offers
+}
+
+const replenishMarket = (gameState: GameState): void => {
+  gameState.marketCycle += 1
+  gameState.market = createMarketOffers(gameState, 4, 'purchase')
 }
 
 const refreshMarket = (gameState: GameState, reason: string): void => {
-  const previousMarket = new Set(gameState.market)
   gameState.marketCycle += 1
-  gameState.marketDrawPile = new SeededRandom(
-    `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
-  ).shuffle(MARKET_CARD_IDS.filter((cardId) => !previousMarket.has(cardId)))
-  gameState.market = takeMarketCards(gameState.marketDrawPile, 4)
+  gameState.market = []
+  gameState.market = createMarketOffers(gameState, 4, reason)
 }
 
 export const playCard = (
@@ -1046,6 +1140,10 @@ export const buyCard = (
     error('INVALID_ACTION', 'That card is not available in the market.')
   }
   const cardDefinition = definition!
+  const purchaseCounts = getPurchaseCounts(gameState)
+  if ((purchaseCounts[cardId] ?? 0) >= MARKET_CARD_COPY_LIMIT) {
+    error('INVALID_ACTION', 'No copies of that card remain in the market.')
+  }
   const purchaseCost =
     cardDefinition.purchaseCost + (player.nextPurchaseCostIncrease ?? 0)
   if (player.availableGold < purchaseCost) {
@@ -1053,6 +1151,7 @@ export const buyCard = (
   }
   player.availableGold -= purchaseCost
   player.nextPurchaseCostIncrease = 0
+  purchaseCounts[cardId] = (purchaseCounts[cardId] ?? 0) + 1
   const nextCard = createCardInstance(
     cardId,
     `${playerId}-buy-${gameState.turnNumber}-${player.discardPile.length}`,
@@ -1065,7 +1164,8 @@ export const buyCard = (
     player.extraPurchaseAvailable = false
   }
   gameState.marketPurchasedThisRound = true
-  gameState.market = gameState.market.filter((entry) => entry !== cardId)
+  const marketCardIndex = gameState.market.indexOf(cardId)
+  gameState.market.splice(marketCardIndex, 1)
   replenishMarket(gameState)
   return gameState
 }
