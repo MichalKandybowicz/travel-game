@@ -106,7 +106,7 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 
 Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego obozu na płatek mapy. Obozy dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 
-Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku gry i każdej kolejnej tury gracz dobiera karty do stanu **5 na ręce**. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
+Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Gracz od razu dobiera karty do stanu **5 na ręce**, więc ma nową rękę także podczas tur przeciwników i może stracić kartę wskutek klątwy. Na początku gry również dobiera 5 kart. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
 Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte), **2 Żeglarzy** (niebieskie) i **1 Iskrę wędrowca** (uniwersalna: 1 ruchu albo 1 złoto), łącznie 10 kart. Na początku gracz dobiera 5 kart.
 

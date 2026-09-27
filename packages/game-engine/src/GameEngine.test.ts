@@ -230,16 +230,36 @@ describe('GameEngine', () => {
     ).toBe(true)
   })
 
-  it('draws a fresh hand for the next player when their draw pile must reshuffle', () => {
+  it('draws a fresh hand immediately after the player ends their turn', () => {
     const game = buildTestGame()
-    const nextPlayer = game.players[1]!
-    nextPlayer.drawPile = []
-    nextPlayer.discardPile = [...nextPlayer.hand]
-    nextPlayer.hand = []
+    const player = game.players[0]!
+    const previousHand = [...player.hand]
+    for (const card of previousHand) {
+      playCard(game, player.id, card.instanceId, 'GOLD')
+    }
 
-    endTurn(game, 'p1')
+    expect(player.hand).toHaveLength(0)
+    endTurn(game, player.id)
 
-    expect(nextPlayer.hand).toHaveLength(5)
+    expect(game.currentPlayerId).toBe('p2')
+    expect(player.hand).toHaveLength(5)
+    expect(player.hand).not.toEqual(previousHand)
+  })
+
+  it('reshuffles the ending player discard pile before refilling their hand', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const previousHand = [...player.hand]
+    player.drawPile = []
+    for (const card of previousHand) {
+      playCard(game, player.id, card.instanceId, 'GOLD')
+    }
+
+    endTurn(game, player.id)
+
+    expect(player.hand).toHaveLength(5)
+    expect(player.drawPile).toHaveLength(0)
+    expect(player.discardPile).toHaveLength(0)
   })
 
   it('moves only when the correct movement is available', () => {
@@ -515,6 +535,23 @@ describe('GameEngine', () => {
     expect(opponent.hand).toHaveLength(opponentHandSize - 1)
     expect(opponent.discardPile).toHaveLength(1)
     expect(player.removedCards.at(-1)?.cardId).toBe('steal_plans')
+  })
+
+  it('lets a curse discard from the hand drawn after the target spent every card', () => {
+    const game = buildTestGame()
+    const target = game.players[0]!
+    const caster = game.players[1]!
+    for (const card of [...target.hand]) {
+      playCard(game, target.id, card.instanceId, 'GOLD')
+    }
+    endTurn(game, target.id)
+    expect(target.hand).toHaveLength(5)
+
+    caster.hand.push({ cardId: 'steal_plans', instanceId: 'curse-after-draw' })
+    activateActionCard(game, caster.id, 'curse-after-draw', target.id)
+    expect(target.hand).toHaveLength(4)
+    endTurn(game, caster.id)
+    expect(target.hand).toHaveLength(4)
   })
 
   it('makes the next adjacent move cost one after using guide', () => {
@@ -1062,7 +1099,7 @@ describe('GameEngine', () => {
     expect(player.availableGold).toBe(CARD_BY_ID.explorer!.goldValue * 2)
   })
 
-  it('keeps unplayed cards and draws back up to five next round', () => {
+  it('keeps unplayed cards and draws back up to five at the end of the turn', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const playedCard = player.hand[0]!
@@ -1071,7 +1108,10 @@ describe('GameEngine', () => {
     playCard(game, 'p1', playedCard.instanceId, 'GOLD')
     endTurn(game, 'p1')
 
-    expect(player.hand.map((card) => card.instanceId)).toEqual(retainedIds)
+    expect(player.hand).toHaveLength(5)
+    expect(player.hand.slice(0, 4).map((card) => card.instanceId)).toEqual(
+      retainedIds,
+    )
     expect(player.discardPile).toContainEqual(playedCard)
     endTurn(game, 'p2')
     expect(player.hand).toHaveLength(5)

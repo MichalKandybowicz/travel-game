@@ -1081,6 +1081,13 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   )
   player.discardPile.push(...player.playedCards)
   player.playedCards = []
+  if (player.hand.length < 5) {
+    drawCards(
+      player,
+      5 - player.hand.length,
+      `${gameState.seed}:${player.id}:turn:${gameState.turnNumber}`,
+    )
+  }
   player.availableMovement = createMovementPool()
   player.availableGold = 0
   player.hasBoughtThisTurn = false
@@ -1131,14 +1138,6 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
     skippedPlayer.skipNextTurn = false
   } while (shouldSkipPlayer)
 
-  const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
-  if (nextPlayer.hand.length < 5) {
-    drawCards(
-      nextPlayer,
-      5 - nextPlayer.hand.length,
-      `${gameState.seed}:${nextPlayer.id}:turn:${gameState.turnNumber}`,
-    )
-  }
   return gameState
 }
 
