@@ -74,6 +74,7 @@ import {
   type RoomPlayerRecord,
   type RoomRecord,
 } from './storage.js'
+import { normalizeLobbyFogSettings } from './fogSettings.js'
 
 const storage = await connectStorage(
   process.env.MONGO_URL ?? 'mongodb://127.0.0.1:27017/travel_game',
@@ -1026,7 +1027,7 @@ io.on('connection', (socket) => {
           socketId: socket.id,
         },
       ],
-      settings: {
+      settings: normalizeLobbyFogSettings({
         ...(customMap?.settings ?? parsed.data.settings),
         allowSharedTiles: parsed.data.settings.allowSharedTiles,
         fogMode: parsed.data.settings.fogMode,
@@ -1034,7 +1035,7 @@ io.on('connection', (socket) => {
         costVisibilityRange: parsed.data.settings.costVisibilityRange,
         difficulty: 'NORMAL',
         routeCount: 1,
-      },
+      }),
       ...(customMap
         ? {
             customMapId: customMap.id,
@@ -1259,11 +1260,11 @@ io.on('connection', (socket) => {
       })
       return
     }
-    room.settings = {
+    room.settings = normalizeLobbyFogSettings({
       ...parsed.data.settings,
       difficulty: 'NORMAL',
       routeCount: 1,
-    }
+    })
     room.seed = parsed.data.settings.seed
     await emitRoom(io, room)
   })
@@ -1323,7 +1324,7 @@ io.on('connection', (socket) => {
     }
 
     if (customMap) {
-      room.settings = {
+      room.settings = normalizeLobbyFogSettings({
         ...customMap.settings,
         allowSharedTiles: room.settings.allowSharedTiles,
         fogMode: room.settings.fogMode,
@@ -1331,7 +1332,7 @@ io.on('connection', (socket) => {
         costVisibilityRange: room.settings.costVisibilityRange ?? 2,
         difficulty: 'NORMAL',
         routeCount: 1,
-      }
+      })
       room.seed = customMap.settings.seed
       room.customMapId = customMap.id
       room.customMapName = customMap.name

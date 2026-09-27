@@ -8,6 +8,7 @@ import type {
   PlayerColor,
   PlayerSymbol,
 } from '../../../packages/shared/src/index.js'
+import { normalizeLobbyFogSettings } from './fogSettings.js'
 
 export interface RoomPlayerRecord {
   id: string
@@ -91,10 +92,14 @@ export async function connectStorage(url: string): Promise<Storage> {
       const documents = await rooms.find().toArray()
       return documents.map(({ _id, ...room }) => {
         void _id
+        const lobbySettings =
+          room.status === 'LOBBY'
+            ? normalizeLobbyFogSettings(room.settings)
+            : room.settings
         return {
           ...room,
           settings: {
-            ...room.settings,
+            ...lobbySettings,
             difficulty:
               room.status === 'LOBBY' ? 'NORMAL' : room.settings.difficulty,
             routeCount: room.status === 'LOBBY' ? 1 : room.settings.routeCount,
@@ -102,9 +107,9 @@ export async function connectStorage(url: string): Promise<Storage> {
             petalCount: room.settings.petalCount ?? 1,
             campCountMinPerPetal: room.settings.campCountMinPerPetal ?? 1,
             campCountMaxPerPetal: room.settings.campCountMaxPerPetal ?? 1,
-            fogMode: room.settings.fogMode ?? 'NONE',
-            terrainVisibilityRange: room.settings.terrainVisibilityRange ?? 4,
-            costVisibilityRange: room.settings.costVisibilityRange ?? 2,
+            fogMode: lobbySettings.fogMode ?? 'NONE',
+            terrainVisibilityRange: lobbySettings.terrainVisibilityRange ?? 4,
+            costVisibilityRange: lobbySettings.costVisibilityRange ?? 2,
           },
           players: room.players.map(({ socketId, ...player }) => {
             void socketId

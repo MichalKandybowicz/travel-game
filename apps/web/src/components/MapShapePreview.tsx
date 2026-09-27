@@ -41,11 +41,12 @@ export function MapShapePreview({
   shape: RoomState['mapShape']
   map?: GameMap | undefined
 }) {
-  if (!shape?.length) {
+  const tiles = map?.tiles ?? shape
+  if (!tiles?.length) {
     return <p>Podgląd kształtu mapy jest chwilowo niedostępny.</p>
   }
 
-  const points = (map?.tiles ?? shape).map((tile) => ({
+  const points = tiles.map((tile) => ({
     ...tile,
     ...hexCenter(tile.q, tile.r),
   }))

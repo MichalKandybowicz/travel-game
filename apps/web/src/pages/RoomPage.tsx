@@ -132,6 +132,16 @@ export function RoomPage() {
           >
             {copied ? 'Skopiowano' : 'Kopiuj link'}
           </button>
+          {isHost && (
+            <button
+              type="button"
+              className="primary-button lobby-header-start"
+              disabled={!canStart}
+              onClick={startGame}
+            >
+              Rozpocznij grę
+            </button>
+          )}
           <button
             type="button"
             className="lobby-leave-button"
@@ -155,6 +165,102 @@ export function RoomPage() {
         </div>
       )}
       <div className="layout lobby-layout">
+        <section className="panel lobby-settings-panel lobby-game-settings-panel">
+          <div className="panel-header">
+            <div>
+              <small className="panel-kicker">ZASADY WYPRAWY</small>
+              <h2>Ustawienia gry</h2>
+              <p>Wspólne zasady ruchu i widoczności dla wszystkich graczy.</p>
+            </div>
+          </div>
+          <div className="form-grid compact-grid">
+            <label className="checkbox-field">
+              Przenikanie graczy
+              <input
+                type="checkbox"
+                checked={settings.allowSharedTiles}
+                disabled={!isHost}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    allowSharedTiles: event.target.checked,
+                  })
+                }
+              />
+              Włącz
+            </label>
+            <label className="checkbox-field">
+              Mgła wojny
+              <input
+                type="checkbox"
+                checked={settings.fogMode !== 'NONE'}
+                disabled={!isHost}
+                onChange={(event) =>
+                  updateSettings({
+                    ...settings,
+                    fogMode: event.target.checked ? 'RANGE' : 'NONE',
+                  })
+                }
+              />
+              Włącz
+            </label>
+            {settings.fogMode !== 'NONE' && (
+              <>
+                <label>
+                  Widoczność typu pola
+                  <select
+                    value={settings.terrainVisibilityRange ?? 4}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        terrainVisibilityRange:
+                          event.target.value === 'ALL'
+                            ? 'ALL'
+                            : Number(event.target.value),
+                      })
+                    }
+                  >
+                    {[2, 3, 4, 5, 6].map((distance) => (
+                      <option key={distance} value={distance}>
+                        {distance} heksy
+                      </option>
+                    ))}
+                    <option value="ALL">Cała plansza</option>
+                  </select>
+                </label>
+                <label>
+                  Widoczność kosztu wejścia
+                  <select
+                    value={settings.costVisibilityRange ?? 2}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        costVisibilityRange:
+                          event.target.value === 'ALL'
+                            ? 'ALL'
+                            : Number(event.target.value),
+                      })
+                    }
+                  >
+                    {[1, 2, 3, 4].map((distance) => (
+                      <option key={distance} value={distance}>
+                        {distance} {distance === 1 ? 'heks' : 'heksy'}
+                      </option>
+                    ))}
+                    <option value="ALL">Cała plansza</option>
+                  </select>
+                </label>
+                <p className="visibility-hint">
+                  Nieznane pola są szare i oznaczone „?”. Znany typ pola z
+                  ukrytym kosztem pokazuje „?” zamiast liczby. Widoczność kosztu
+                  odkrywa też typ pola.
+                </p>
+              </>
+            )}
+          </div>
+        </section>
         <section className="panel lobby-players-panel">
           <div className="panel-header">
             <div>
@@ -315,23 +421,7 @@ export function RoomPage() {
             </div>
           )}
         </section>
-        {room && (
-          <section className="panel map-shape-panel">
-            <div className="panel-header">
-              <div>
-                <small className="panel-kicker">PODGLĄD WYPRAWY</small>
-                <h2>{room.customMap ? 'Mapa wyprawy' : 'Kształt mapy'}</h2>
-              </div>
-            </div>
-            <MapShapePreview shape={room.mapShape} map={room.customMap} />
-            <p>
-              {room.customMap
-                ? 'Podgląd całej zapisanej mapy wraz z terenami i kosztami.'
-                : 'Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.'}
-            </p>
-          </section>
-        )}
-        <section className="panel lobby-settings-panel">
+        <section className="panel lobby-settings-panel lobby-map-panel">
           <div className="panel-header">
             <div>
               <small className="panel-kicker">TWOJA TRASA</small>
@@ -345,6 +435,16 @@ export function RoomPage() {
               </p>
             </div>
           </div>
+          {room && (
+            <div className="lobby-map-preview">
+              <MapShapePreview shape={room.mapShape} map={room.customMap} />
+              <p>
+                {room.customMap
+                  ? 'Podgląd całej zapisanej mapy wraz z terenami i kosztami.'
+                  : 'Kolory odróżniają płatki. Tereny i koszty pozostają ukryte.'}
+              </p>
+            </div>
+          )}
           <div className="form-grid compact-grid">
             <label>
               Źródło mapy
@@ -369,7 +469,10 @@ export function RoomPage() {
                     value={settings.seed}
                     disabled={!isHost}
                     onChange={(event) =>
-                      updateSettings({ ...settings, seed: event.target.value })
+                      updateSettings({
+                        ...settings,
+                        seed: event.target.value,
+                      })
                     }
                   />
                 </label>
@@ -475,117 +578,6 @@ export function RoomPage() {
                 }
               >
                 Losuj ziarno
-              </button>
-            </div>
-          )}
-        </section>
-        <section className="panel lobby-settings-panel">
-          <div className="panel-header">
-            <div>
-              <small className="panel-kicker">ZASADY WYPRAWY</small>
-              <h2>Ustawienia gry</h2>
-              <p>Wspólne zasady ruchu i widoczności dla wszystkich graczy.</p>
-            </div>
-          </div>
-          <div className="form-grid compact-grid">
-            <label className="checkbox-field">
-              <input
-                type="checkbox"
-                checked={settings.allowSharedTiles}
-                disabled={!isHost}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    allowSharedTiles: event.target.checked,
-                  })
-                }
-              />
-              Gracze mogą stać na tym samym polu
-            </label>
-            <label>
-              Mgła wojny
-              <select
-                value={settings.fogMode}
-                disabled={!isHost}
-                onChange={(event) =>
-                  updateSettings({
-                    ...settings,
-                    fogMode: event.target.value as typeof settings.fogMode,
-                  })
-                }
-              >
-                <option value="NONE">Wyłączona — cała mapa odkryta</option>
-                <option value="RANGE">Własny zasięg widoczności</option>
-                <option value="PETAL">Płatki mapy</option>
-                <option value="MEDIUM">Średnia — typy do 4, koszty do 2</option>
-                <option value="FULL">Pełna — typy do 2, koszty do 1</option>
-              </select>
-            </label>
-            {settings.fogMode === 'RANGE' && (
-              <>
-                <label>
-                  Widoczność typu pola
-                  <select
-                    value={settings.terrainVisibilityRange ?? 4}
-                    disabled={!isHost}
-                    onChange={(event) =>
-                      updateSettings({
-                        ...settings,
-                        terrainVisibilityRange:
-                          event.target.value === 'ALL'
-                            ? 'ALL'
-                            : Number(event.target.value),
-                      })
-                    }
-                  >
-                    {[2, 3, 4, 5, 6].map((distance) => (
-                      <option key={distance} value={distance}>
-                        {distance} heksy
-                      </option>
-                    ))}
-                    <option value="ALL">Cała plansza</option>
-                  </select>
-                </label>
-                <label>
-                  Widoczność kosztu wejścia
-                  <select
-                    value={settings.costVisibilityRange ?? 2}
-                    disabled={!isHost}
-                    onChange={(event) =>
-                      updateSettings({
-                        ...settings,
-                        costVisibilityRange:
-                          event.target.value === 'ALL'
-                            ? 'ALL'
-                            : Number(event.target.value),
-                      })
-                    }
-                  >
-                    {[1, 2, 3, 4].map((distance) => (
-                      <option key={distance} value={distance}>
-                        {distance} {distance === 1 ? 'heks' : 'heksy'}
-                      </option>
-                    ))}
-                    <option value="ALL">Cała plansza</option>
-                  </select>
-                </label>
-                <p className="visibility-hint">
-                  Nieznane pola są szare i oznaczone „?”. Znany typ pola z
-                  ukrytym kosztem pokazuje „?” zamiast liczby. Widoczność kosztu
-                  odkrywa też typ pola.
-                </p>
-              </>
-            )}
-          </div>
-          {isHost && (
-            <div className="hero-actions lobby-start-actions">
-              <button
-                type="button"
-                className="primary-button"
-                disabled={!canStart}
-                onClick={startGame}
-              >
-                Rozpocznij grę
               </button>
             </div>
           )}

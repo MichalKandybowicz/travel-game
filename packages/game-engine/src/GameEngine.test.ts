@@ -205,16 +205,22 @@ describe('GameEngine', () => {
     expect(game.players.map((player) => player.id)).toEqual(['p3', 'p1'])
   })
 
-  it('builds a nine-card starting deck with four green, three yellow and two blue cards', () => {
+  it('builds a ten-card starting deck with one universal movement card', () => {
     const deck = buildStartingDeck('p1', 'STARTER-42')
     const movementTypes = deck.map(
       (card) => CARD_BY_ID[card.cardId]!.movementType,
     )
 
-    expect(deck).toHaveLength(9)
+    expect(deck).toHaveLength(10)
     expect(movementTypes.filter((type) => type === 'GREEN')).toHaveLength(4)
     expect(movementTypes.filter((type) => type === 'YELLOW')).toHaveLength(3)
     expect(movementTypes.filter((type) => type === 'BLUE')).toHaveLength(2)
+    expect(movementTypes.filter((type) => type === 'WILD')).toHaveLength(1)
+    expect(CARD_BY_ID.wanderer_spark).toMatchObject({
+      movementType: 'WILD',
+      movementValue: 1,
+      goldValue: 1,
+    })
     expect(
       deck.every(
         (card) =>

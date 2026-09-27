@@ -60,6 +60,7 @@ export const cardLabels: Record<string, { name: string }> = {
   captain: { name: 'Władca sztormu' },
   admiral: { name: 'Lewiatan' },
   coin: { name: 'Złota runa' },
+  wanderer_spark: { name: 'Iskra wędrowca' },
   dune_runner: { name: 'Pustynny biegacz' },
   sand_merchant: { name: 'Kupiec piasków' },
   trader: { name: 'Alchemik' },

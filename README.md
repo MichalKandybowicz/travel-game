@@ -79,9 +79,9 @@ Rozmiar krawędzi segmentu określa długość każdej strony heksagonalnego **p
 
 W poczekalni wszyscy gracze widzą podgląd kształtu wygenerowanej mapy. Podgląd rozróżnia płatki, ale nie pokazuje typów terenów, kosztów ani położenia celu. Zmienia się po aktualizacji ustawień mapy.
 
-W poczekalni **Ustawienia mapy** zawierają generator, długość krawędzi segmentu, płatki i obozy, a **Ustawienia gry** określają, czy gracze mogą stać na jednym polu, oraz zasady mgły wojny. Mgłę można wyłączyć, wybrać jeden z dotychczasowych trybów albo ustawić własny zasięg. Własny zasięg widoczności **typu pola** wynosi 2–6 heksów lub całą planszę, a zasięg widoczności **kosztu wejścia** 1–4 heksy lub całą planszę. Widoczność kosztu odkrywa również typ pola, jeśli jej zasięg jest większy.
+W poczekalni **Ustawienia gry** są nad graczami i mapą. Można tam włączyć przenikanie graczy oraz mgłę wojny. Po włączeniu mgły samodzielnie ustawia się zasięg widoczności **typu pola** na 2–6 heksów lub całą planszę oraz zasięg widoczności **kosztu wejścia** na 1–4 heksy lub całą planszę. Widoczność kosztu odkrywa również typ pola, jeśli jej zasięg jest większy. Podgląd kształtu i **Ustawienia mapy** są w jednym panelu obok listy graczy. Przycisk **Rozpocznij grę** znajduje się obok **Opuść pokój**.
 
-W trybie własnego zasięgu nieznane pola pozostają na mapie jako szare heksy ze znakiem **?**. Znany typ pola z ukrytym kosztem pokazuje **?** zamiast kosztu. Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z pionkiem; odległe pola ponownie się zasłaniają.
+Przy włączonej mgle nieznane pola pozostają na mapie jako szare heksy ze znakiem **?**. Znany typ pola z ukrytym kosztem pokazuje **?** zamiast kosztu. Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z pionkiem; odległe pola ponownie się zasłaniają.
 
 W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Liczba punktów ruchu i złota wynika z wartości zapisanych na danej karcie; interfejs tworzy opisy z tych samych danych. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
 
@@ -108,7 +108,7 @@ Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połącz
 
 Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku gry i każdej kolejnej tury gracz dobiera karty do stanu **5 na ręce**. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
-Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte) i **2 Żeglarzy** (niebieskie), łącznie 9 kart.
+Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte), **2 Żeglarzy** (niebieskie) i **1 Iskrę wędrowca** (uniwersalna: 1 ruchu albo 1 złoto), łącznie 10 kart. Na początku gracz dobiera 5 kart.
 
 Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Wśród mocniejszych kart są **Przewodnik**, **Kapitan**, **Karawana** i **Pionier**. Ich ruch, wartość w złocie i cena są pokazywane na podstawie aktualnych definicji kart.
 

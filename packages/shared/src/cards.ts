@@ -110,6 +110,15 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     purchaseCost: 2,
   },
   {
+    id: 'wanderer_spark',
+    name: 'Wanderer Spark',
+    type: 'MOVEMENT',
+    movementType: 'WILD',
+    movementValue: 1,
+    goldValue: 1,
+    purchaseCost: 2,
+  },
+  {
     id: 'dune_runner',
     name: 'Dune Runner',
     type: 'MOVEMENT',
@@ -431,6 +440,7 @@ export const STARTING_DECK: Array<{ cardId: string; count: number }> = [
   { cardId: 'explorer', count: 4 },
   { cardId: 'sailor', count: 2 },
   { cardId: 'coin', count: 3 },
+  { cardId: 'wanderer_spark', count: 1 },
 ]
 
 export const MARKET_CARD_IDS = [
