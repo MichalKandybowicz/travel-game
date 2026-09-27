@@ -15,6 +15,7 @@ import {
   canReachWithHand,
   cardMovementFor,
   chooseBotStart,
+  findBotTurnRoute,
   findBotRoute,
   nextPlannedBotStep,
 } from './botMovement.js'
@@ -193,8 +194,36 @@ describe('bot movement planning', () => {
     expect(nextPlannedBotStep([start, ...route], plannedFirst.id)).toBe(
       plannedSecond,
     )
-    expect(nextPlannedBotStep([start, alternative, goal], plannedFirst.id)).toBe(
-      undefined,
-    )
+    expect(
+      nextPlannedBotStep([start, alternative, goal], plannedFirst.id),
+    ).toBe(undefined)
+  })
+
+  it('anchors a planned bot route at its current hex so the first step is available', () => {
+    const start = tile('start', 0, 'START')
+    const goal = { ...tile('goal', 1, 'GOAL'), difficulty: 0 }
+    const player = {
+      id: 'bot',
+      name: 'Bot',
+      position: start.id,
+      hand: [],
+      drawPile: [],
+      discardPile: [],
+      removedCards: [],
+      playedCards: [],
+      availableMovement: { GREEN: 0, BLUE: 0, YELLOW: 0, WILD: 0 },
+      availableGold: 0,
+      isReady: true,
+      connected: true,
+    } as PlayerState
+    const game = {
+      map: { tiles: [start, goal], goalHexId: goal.id },
+      settings: { allowSharedTiles: true },
+      players: [player],
+    } as GameState
+    const route = findBotTurnRoute(game, player)
+
+    expect(route.map((entry) => entry.id)).toEqual([start.id, goal.id])
+    expect(nextPlannedBotStep(route, start.id)).toBe(goal)
   })
 })

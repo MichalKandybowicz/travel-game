@@ -66,7 +66,7 @@ import {
   cardMovementFor,
   chooseBotSealHex,
   chooseBotStart,
-  findBotRoute,
+  findBotTurnRoute,
   nextPlannedBotStep,
 } from './botMovement.js'
 import {
@@ -435,7 +435,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         plannedTurn = {
           playerId: bot.id,
           turnNumber: game.turnNumber,
-          route: findBotRoute(knowledge, botKnowledge),
+          route: findBotTurnRoute(knowledge, botKnowledge),
         }
       }
       const target = nextPlannedBotStep(plannedTurn.route, player.position)

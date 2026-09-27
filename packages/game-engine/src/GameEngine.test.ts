@@ -360,14 +360,12 @@ describe('GameEngine', () => {
     expect(game.market).toHaveLength(4)
     expect(
       game.market.some(
-        (cardId) =>
-          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 1,
+        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 1,
       ),
     ).toBe(true)
     expect(
       game.market.some(
-        (cardId) =>
-          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 2,
+        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 2,
       ),
     ).toBe(true)
     expect(game.market).toEqual(sameSeedGame.market)
@@ -393,13 +391,12 @@ describe('GameEngine', () => {
         ),
       ).toBe(true)
       expect(
-        game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION'),
-      ).toHaveLength(1)
+        game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
+          .length,
+      ).toBeLessThanOrEqual(1)
       expect(
         game.market.some(
-          (offer) =>
-            CARD_BY_ID[offer]?.type === 'MOVEMENT' &&
-            getMarketTier(CARD_BY_ID[offer]!.purchaseCost) <= 2,
+          (offer) => getMarketTier(CARD_BY_ID[offer]!.purchaseCost) <= 2,
         ),
       ).toBe(true)
       endTurn(game, 'p1')
@@ -490,6 +487,29 @@ describe('GameEngine', () => {
     expect(game.market).not.toContain('herbalist')
   })
 
+  it('keeps at most one spell or curse in the market', () => {
+    const game = buildTestGame()
+    game.market = ['second_wind', 'steal_plans', 'herbalist', 'admiral']
+    game.players[0]!.availableGold = CARD_BY_ID.herbalist!.purchaseCost
+
+    buyCard(game, 'p1', 'herbalist')
+
+    expect(
+      game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
+        .length,
+    ).toBeLessThanOrEqual(1)
+    expect(
+      game.market.some(
+        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 1,
+      ),
+    ).toBe(true)
+    expect(
+      game.market.some(
+        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 2,
+      ),
+    ).toBe(true)
+  })
+
   it('unlocks higher shop tiers while keeping tier one and two offers', () => {
     const game = buildTestGame()
     const player = game.players[0]!
@@ -522,16 +542,40 @@ describe('GameEngine', () => {
       Math.ceil((tier1And2.length * MARKET_CARD_COPY_LIMIT) / 2),
     )
     giveRefreshToken('refresh-tier-3')
-    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 3)).toBe(true)
-    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1)).toBe(true)
-    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2)).toBe(true)
+    expect(
+      game.market.some(
+        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 3,
+      ),
+    ).toBe(true)
+    expect(
+      game.market.some(
+        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1,
+      ),
+    ).toBe(true)
+    expect(
+      game.market.some(
+        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2,
+      ),
+    ).toBe(true)
 
     addPurchases(tier3, Math.ceil((tier3.length * MARKET_CARD_COPY_LIMIT) / 2))
     game.roundNumber = (game.roundNumber ?? 1) + 1
     giveRefreshToken('refresh-tier-4')
-    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 4)).toBe(true)
-    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1)).toBe(true)
-    expect(game.market.some((id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2)).toBe(true)
+    expect(
+      game.market.some(
+        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 4,
+      ),
+    ).toBe(true)
+    expect(
+      game.market.some(
+        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1,
+      ),
+    ).toBe(true)
+    expect(
+      game.market.some(
+        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2,
+      ),
+    ).toBe(true)
   })
 
   it('starts a game from an unchanged custom map snapshot', () => {

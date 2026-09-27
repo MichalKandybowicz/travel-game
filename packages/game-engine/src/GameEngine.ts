@@ -516,7 +516,9 @@ export const chooseStart = (
   return gameState
 }
 
-const cardCopiesInPlayerPiles = (gameState: GameState): Record<string, number> =>
+const cardCopiesInPlayerPiles = (
+  gameState: GameState,
+): Record<string, number> =>
   Object.fromEntries(
     MARKET_CARD_IDS.map((cardId) => [
       cardId,
@@ -567,19 +569,26 @@ const createMarketOffers = (
 ): string[] => {
   const purchaseCounts = getPurchaseCounts(gameState)
   const unlockedTier = getUnlockedMarketTier(purchaseCounts)
+  const isSpecial = (cardId: string): boolean =>
+    CARD_BY_ID[cardId]?.type === 'ACTION'
   const random = new SeededRandom(
     `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
   )
   const retainedCounts = new Map<string, number>()
-  const offers = gameState.market.filter((cardId) => {
+  const offers: string[] = []
+  for (const cardId of gameState.market) {
     const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
     const retainedCount = (retainedCounts.get(cardId) ?? 0) + 1
     retainedCounts.set(cardId, retainedCount)
-    return (
-      tier <= unlockedTier &&
-      (purchaseCounts[cardId] ?? 0) + retainedCount <= MARKET_CARD_COPY_LIMIT
-    )
-  })
+    if (
+      tier > unlockedTier ||
+      (isSpecial(cardId) && offers.some((offer) => isSpecial(offer))) ||
+      (purchaseCounts[cardId] ?? 0) + retainedCount > MARKET_CARD_COPY_LIMIT
+    ) {
+      continue
+    }
+    offers.push(cardId)
+  }
   const marketCounts = new Map<string, number>()
   for (const cardId of offers) {
     marketCounts.set(cardId, (marketCounts.get(cardId) ?? 0) + 1)
@@ -601,15 +610,17 @@ const createMarketOffers = (
   for (const tier of [...new Set([1, 2, unlockedTier])]) {
     if (
       offers.some(
-        (cardId) =>
-          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier,
+        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier,
       )
     ) {
       protectedTiers.add(tier)
       continue
     }
     const availableIndex = available.findIndex((cardId) => {
-      return getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier
+      return (
+        getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier &&
+        (!isSpecial(cardId) || !offers.some((offer) => isSpecial(offer)))
+      )
     })
     if (availableIndex >= 0) {
       if (offers.length >= amount) {
@@ -651,8 +662,7 @@ const createMarketOffers = (
 
   while (offers.length < amount && available.length > 0) {
     const nextIndex = available.findIndex((cardId) => {
-      if (CARD_BY_ID[cardId]?.type !== 'ACTION') return true
-      return !offers.some((offer) => CARD_BY_ID[offer]?.type === 'ACTION')
+      return !isSpecial(cardId) || !offers.some((offer) => isSpecial(offer))
     })
     if (nextIndex < 0) break
     offers.push(available.splice(nextIndex, 1)[0]!)
