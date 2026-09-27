@@ -1,14 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { canAffordMove } from '../../../packages/game-engine/src/index.js'
+import {
+  canAffordMove,
+  createGameState,
+} from '../../../packages/game-engine/src/index.js'
 import {
   CARD_BY_ID,
   type GameState,
   type HexTile,
   type PlayerState,
+  type MapSettings,
 } from '../../../packages/shared/src/index.js'
 import {
+  buildBotKnowledge,
   canReachWithHand,
   cardMovementFor,
+  chooseBotStart,
   findBotRoute,
 } from './botMovement.js'
 
@@ -22,6 +28,97 @@ const tile = (id: string, q: number, terrain: HexTile['terrain']): HexTile => ({
 })
 
 describe('bot movement planning', () => {
+  it('chooses the more promising start instead of the first free slot', () => {
+    const first = tile('first', 0, 'START')
+    const second = { ...tile('second', 0, 'START'), r: 1 }
+    const expensive = tile('expensive', 1, 'WATER')
+    expensive.difficulty = 4
+    const affordable = {
+      ...tile('affordable', 1, 'JUNGLE'),
+      r: 1,
+      difficulty: 1,
+    }
+    const goal = { ...tile('goal', 2, 'GOAL'), difficulty: 0 }
+    const player = {
+      id: 'bot',
+      name: 'Bot',
+      position: '',
+      hand: [{ instanceId: 'explorer-test', cardId: 'explorer' }],
+      drawPile: [],
+      discardPile: [],
+      removedCards: [],
+      playedCards: [],
+      availableMovement: { GREEN: 0, BLUE: 0, YELLOW: 0, WILD: 0 },
+      availableGold: 0,
+      isReady: true,
+      connected: true,
+    } satisfies PlayerState
+    const game = {
+      map: {
+        tiles: [first, second, expensive, affordable, goal],
+        startHexId: first.id,
+        startHexIds: [first.id, second.id],
+        goalHexId: goal.id,
+      },
+      settings: { allowSharedTiles: true },
+      players: [player],
+    } as unknown as GameState
+
+    expect(chooseBotStart(game, player)).toBe(second.id)
+  })
+
+  it('does not expose hidden terrain, cost or blocked status to the bot planner', () => {
+    const settings: MapSettings = {
+      seed: 'BOT-FOG',
+      mapSize: 'SMALL',
+      segmentEdgeLength: 5,
+      difficulty: 'EASY',
+      routeCount: 1,
+      jungleDensity: 0.4,
+      waterDensity: 0.2,
+      mountainDensity: 0.1,
+      specialTileDensity: 0.05,
+      chokepointCount: 1,
+      allowSharedTiles: true,
+      petalCount: 3,
+      campCountMinPerPetal: 1,
+      campCountMaxPerPetal: 1,
+      fogMode: 'RANGE',
+      terrainVisibilityRange: 2,
+      costVisibilityRange: 1,
+    }
+    const game = createGameState('ABCDE', settings, [
+      { id: 'bot', name: 'Bot' },
+      { id: 'human', name: 'Human' },
+    ])
+    game.status = 'ACTIVE'
+    game.players[0]!.position = game.map.startHexIds![0]!
+    const knowledge = buildBotKnowledge(game, 'bot')
+    const hidden = knowledge.map.tiles.find(
+      (entry) => entry.terrain === 'UNKNOWN',
+    )!
+    expect(hidden).toBeDefined()
+    const original = game.map.tiles.find((entry) => entry.id === hidden.id)!
+    original.terrain = 'MOUNTAIN'
+    original.difficulty = 0
+    original.isBlocked = true
+    const changedKnowledge = buildBotKnowledge(game, 'bot')
+    expect(
+      changedKnowledge.map.tiles.find((entry) => entry.id === hidden.id),
+    ).toEqual(hidden)
+    expect(changedKnowledge.map.goalHexId).toBe(knowledge.map.goalHexId)
+    expect(
+      findBotRoute(
+        changedKnowledge,
+        changedKnowledge.players.find((player) => player.id === 'bot')!,
+      ).map((entry) => entry.id),
+    ).toEqual(
+      findBotRoute(
+        knowledge,
+        knowledge.players.find((player) => player.id === 'bot')!,
+      ).map((entry) => entry.id),
+    )
+  })
   it('plays another color to pay the extra point from a movement curse', () => {
     const from = tile('start', 0, 'START')
     const target = tile('jungle', 1, 'JUNGLE')

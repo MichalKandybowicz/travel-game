@@ -129,28 +129,10 @@ Po zagraniu klątwy pojawia się powiadomienie z jej nazwą, dokładnym opisem d
 
 Klątwa podnosząca koszt ruchu działa do następnego udanego przejścia. Bot uwzględnia ten dodatkowy punkt przy wyborze kart, run i trasy; jeśli w danej turze nie ma wystarczających zasobów, efekt pozostaje aktywny.
 
+Bot porównuje dostępne pola startowe według przewidywanego kosztu drogi, terenów i kart w swojej talii. Trasę przelicza po każdym ruchu. Korzysta z odkrytych pól i kosztów oraz publicznego kształtu mapy; zakrytym polom przypisuje szacunkowy koszt, bez odczytywania ich ukrytego terenu. Gdy cel jest zakryty, kieruje się ku końcowi ostatniego segmentu, a po jego odkryciu planuje drogę do dokładnego pola celu.
+
 ## Docker
 
 ```bash
 docker compose up --build
 ```
-
-## MVP features implemented
-
-- Room creation and join by room code
-- Lobby with map settings editing by the host
-- Deterministic seeded procedural hex map generation
-- Map validation and analysis statistics
-- Server-authoritative multiplayer turn flow over Socket.IO
-- Shared market, deck shuffling, drawing, playing cards, movement, buying, and turn rotation
-- Winner detection on reaching the goal
-- Reconnection using a persisted session token
-- SVG hex map with hover, selection, reachable highlight, zoom, pan, and player tokens
-
-## Recommended next tasks
-
-1. Add explicit ready states and host-side ready checks before starting.
-2. Implement optional camp deck-trashing interactions in the UI.
-3. Add bots and solo practice rooms.
-4. Add richer market rules, supply piles, and more card abilities.
-5. Add persistence for daily challenges, rankings, and resumable matches.

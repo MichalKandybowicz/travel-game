@@ -61,8 +61,11 @@ import {
   registerAccount,
 } from './auth.js'
 import {
+  buildBotKnowledge,
   canReachWithHand,
   cardMovementFor,
+  chooseBotSealHex,
+  chooseBotStart,
   findBotRoute,
 } from './botMovement.js'
 import {
@@ -382,10 +385,11 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
 
       await wait(350)
       if (game.status === 'CHOOSING_START') {
-        const startIds = game.map.startHexIds ?? [game.map.startHexId]
-        const hexId = startIds.find(
-          (id) => !game.players.some((player) => player.position === id),
-        )
+        const knowledge = buildBotKnowledge(game, bot.id)
+        const botKnowledge = knowledge.players.find(
+          (entry) => entry.id === bot.id,
+        )!
+        const hexId = chooseBotStart(knowledge, botKnowledge)
         if (!hexId) return
         chooseStart(game, bot.id, hexId)
         logGameAction(room, bot.id, 'choose_start', { hexId })
@@ -410,7 +414,11 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       const currentTile = game.map.tiles.find(
         (tile) => tile.id === player.position,
       )!
-      const target = findBotRoute(game, player)[0]
+      const knowledge = buildBotKnowledge(game, bot.id)
+      const botKnowledge = knowledge.players.find(
+        (entry) => entry.id === bot.id,
+      )!
+      const target = findBotRoute(knowledge, botKnowledge)[0]
       if (!target) {
         endTurn(game, bot.id)
         logGameAction(room, bot.id, 'end_turn', {
@@ -419,6 +427,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         await emitRoom(io, room)
         continue
       }
+      const sealHexId = chooseBotSealHex(knowledge, botKnowledge, target.id)
       const actionCard = !player.hasUsedActionCardThisTurn
         ? player.hand.find((card) => {
             const definition = CARD_BY_ID[card.cardId]
@@ -431,36 +440,15 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
               effect === 'PHASE_WALK' ||
               effect === 'RESHUFFLE_HAND' ||
               effect === 'PROTECTIVE_CIRCLE' ||
-              definition?.actionCategory === 'CURSE'
+              (definition?.actionCategory === 'CURSE' &&
+                (effect !== 'HEX_SEAL' || !!sealHexId))
             )
           })
         : undefined
       if (actionCard) {
         const definition = CARD_BY_ID[actionCard.cardId]!
         const effect = definition.actionEffect
-        const targetHexId =
-          effect === 'HEX_SEAL'
-            ? game.map.tiles.find((tile) => {
-                const dq = tile.q - currentTile.q
-                const dr = tile.r - currentTile.r
-                const distance = Math.max(
-                  Math.abs(dq),
-                  Math.abs(dr),
-                  Math.abs(dq + dr),
-                )
-                return (
-                  distance >= 1 &&
-                  distance <= 2 &&
-                  !tile.isBlocked &&
-                  !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(
-                    tile.terrain,
-                  ) &&
-                  !game.players.some(
-                    (candidate) => candidate.position === tile.id,
-                  )
-                )
-              })?.id
-            : undefined
+        const targetHexId = effect === 'HEX_SEAL' ? sealHexId : undefined
         const targetPlayerId =
           definition.actionCategory === 'CURSE' && effect !== 'HEX_SEAL'
             ? game.players.find(
