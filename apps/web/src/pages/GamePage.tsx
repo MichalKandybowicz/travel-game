@@ -29,13 +29,14 @@ export function GamePage() {
   const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
   const useToken = useGameStore((state) => state.useToken)
-  const useActionCard = useGameStore((state) => state.useActionCard)
+  const playActionCard = useGameStore((state) => state.useActionCard)
   const discardCard = useGameStore((state) => state.discardCard)
   const endTurn = useGameStore((state) => state.endTurn)
   const leaveFinishedGame = useGameStore((state) => state.leaveFinishedGame)
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const [leaving, setLeaving] = useState(false)
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
+  const [pendingHexCurseCardId, setPendingHexCurseCardId] = useState<string>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
 
   useEffect(() => {
@@ -137,7 +138,10 @@ export function GamePage() {
                     ◈
                   </span>
                 )}
-                <span>{curseTarget?.name ?? 'Sklep'}</span>
+                <span>
+                  {curseTarget?.name ??
+                    (visibleCurse.targetHexId ? 'Pole na mapie' : 'Sklep')}
+                </span>
               </div>
             </div>
             {curseDescription && (
@@ -328,9 +332,13 @@ export function GamePage() {
               isActive={isActive}
               onPlayCard={playCard}
               onUseToken={useToken}
-              onUseActionCard={useActionCard}
+              onUseActionCard={playActionCard}
+              onChooseHexCurseCard={setPendingHexCurseCardId}
               onDiscardCard={discardCard}
-              onEndTurn={endTurn}
+              onEndTurn={() => {
+                setPendingHexCurseCardId(undefined)
+                endTurn()
+              }}
               roundNumber={game.roundNumber ?? 1}
               market={
                 <Market
@@ -342,6 +350,17 @@ export function GamePage() {
               }
             />
           )}
+          {isActive && pendingHexCurseCardId && (
+            <div className="hex-curse-prompt" role="status">
+              <span>Wybierz podświetlone pole w zasięgu 2 heksów.</span>
+              <button
+                type="button"
+                onClick={() => setPendingHexCurseCardId(undefined)}
+              >
+                Anuluj
+              </button>
+            </div>
+          )}
           <HexMap
             game={game}
             playerId={session?.playerId}
@@ -349,6 +368,12 @@ export function GamePage() {
             canChooseStart={isMyStartChoice}
             onSelectHex={movePlayer}
             onChooseStart={chooseStart}
+            blockTargeting={isActive && !!pendingHexCurseCardId}
+            onBlockHex={(hexId) => {
+              if (!pendingHexCurseCardId) return
+              playActionCard(pendingHexCurseCardId, undefined, hexId)
+              setPendingHexCurseCardId(undefined)
+            }}
           />
         </div>
       </section>

@@ -173,6 +173,7 @@ export const useActionCardSchema = z.object({
   playerId: z.string(),
   cardInstanceId: z.string(),
   targetPlayerId: z.string().optional(),
+  targetHexId: z.string().optional(),
 })
 
 export const discardCardSchema = z.object({

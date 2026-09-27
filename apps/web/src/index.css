@@ -2226,6 +2226,33 @@ select {
   animation: rune-pulse 1.65s ease-in-out infinite;
 }
 
+.curse-target-hex {
+  cursor: pointer;
+  filter: drop-shadow(0 0 8px #c084fc);
+  animation: rune-pulse 1.2s ease-in-out infinite;
+}
+
+.curse-target-hex polygon {
+  stroke: #e9a8ff;
+  stroke-width: 3px;
+}
+
+.hex-curse-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #c084fc;
+  border-radius: 10px;
+  background: #392249;
+  color: #fff2ff;
+}
+
+.hex-curse-prompt button {
+  cursor: pointer;
+}
+
 .map-player-marker--active {
   filter: drop-shadow(0 0 3px #fff3bf) drop-shadow(0 0 7px #c084fc);
   animation: familiar-float 1.8s ease-in-out infinite;

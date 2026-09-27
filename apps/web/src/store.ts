@@ -104,7 +104,11 @@ interface GameStore {
     mode: CardPlayMode,
     sacrifice?: boolean,
   ) => void
-  useActionCard: (cardInstanceId: string, targetPlayerId?: string) => void
+  useActionCard: (
+    cardInstanceId: string,
+    targetPlayerId?: string,
+    targetHexId?: string,
+  ) => void
   discardCard: (cardInstanceId: string) => void
   movePlayer: (targetHexId: string) => void
   buyCard: (cardId: string) => void
@@ -362,7 +366,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       sacrifice,
     })
   },
-  useActionCard: (cardInstanceId, targetPlayerId) => {
+  useActionCard: (cardInstanceId, targetPlayerId, targetHexId) => {
     const { session } = get()
     if (!session) return
     getSocket().emit(EVENTS.gameUseActionCard, {
@@ -370,6 +374,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerId: session.playerId,
       cardInstanceId,
       targetPlayerId,
+      targetHexId,
     })
   },
   discardCard: (cardInstanceId) => {

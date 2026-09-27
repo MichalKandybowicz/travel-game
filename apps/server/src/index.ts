@@ -438,25 +438,54 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       if (actionCard) {
         const definition = CARD_BY_ID[actionCard.cardId]!
         const effect = definition.actionEffect
+        const targetHexId =
+          effect === 'HEX_SEAL'
+            ? game.map.tiles.find((tile) => {
+                const dq = tile.q - currentTile.q
+                const dr = tile.r - currentTile.r
+                const distance = Math.max(
+                  Math.abs(dq),
+                  Math.abs(dr),
+                  Math.abs(dq + dr),
+                )
+                return (
+                  distance >= 1 &&
+                  distance <= 2 &&
+                  !tile.isBlocked &&
+                  !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(
+                    tile.terrain,
+                  ) &&
+                  !game.players.some(
+                    (candidate) => candidate.position === tile.id,
+                  )
+                )
+              })?.id
+            : undefined
         const targetPlayerId =
-          definition.actionCategory === 'CURSE'
+          definition.actionCategory === 'CURSE' && effect !== 'HEX_SEAL'
             ? game.players.find(
                 (candidate) =>
                   candidate.id !== bot.id &&
                   (effect !== 'STEAL_PLANS' || candidate.hand.length > 0),
               )?.id
             : undefined
-        if (definition.actionCategory !== 'CURSE' || targetPlayerId) {
+        if (
+          definition.actionCategory !== 'CURSE' ||
+          targetPlayerId ||
+          targetHexId
+        ) {
           activateActionCard(
             game,
             bot.id,
             actionCard.instanceId,
             targetPlayerId,
+            targetHexId,
           )
           logGameAction(room, bot.id, 'use_action_card', {
             cardInstanceId: actionCard.instanceId,
             cardId: actionCard.cardId,
             targetPlayerId,
+            targetHexId,
           })
           await emitRoom(io, room)
           continue
@@ -1712,6 +1741,7 @@ io.on('connection', (socket) => {
         parsed.data.playerId,
         parsed.data.cardInstanceId,
         parsed.data.targetPlayerId,
+        parsed.data.targetHexId,
       )
       logGameAction(room, parsed.data.playerId, 'use_action_card', {
         cardInstanceId: parsed.data.cardInstanceId,

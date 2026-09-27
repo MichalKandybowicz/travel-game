@@ -494,6 +494,7 @@ export const createGameState = (
     marketCycle: 0,
     marketPurchasedThisRound: false,
     roundPlayedCards: [],
+    temporaryBlockedHexes: [],
   }
 }
 
@@ -625,6 +626,7 @@ export const useActionCard = (
   playerId: string,
   cardInstanceId: string,
   targetPlayerId?: string,
+  targetHexId?: string,
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
@@ -644,6 +646,23 @@ export const useActionCard = (
   }
   const actionCard = card!
   const actionDefinition = definition!
+  const isHexSeal = actionDefinition.actionEffect === 'HEX_SEAL'
+  let sealedTile: HexTile | undefined
+  if (isHexSeal) {
+    if (!targetHexId) error('INVALID_ACTION', 'Choose a hex to block.')
+    sealedTile = findTile(gameState.map, targetHexId!)
+    const casterTile = findTile(gameState.map, player.position)
+    const distance = axialDistance(casterTile, sealedTile)
+    if (
+      distance < 1 ||
+      distance > 2 ||
+      sealedTile.isBlocked ||
+      ['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(sealedTile.terrain) ||
+      gameState.players.some((other) => other.position === sealedTile!.id)
+    ) {
+      error('INVALID_ACTION', 'Choose an empty, passable hex within two hexes.')
+    }
+  }
   if (
     actionDefinition.actionEffect === 'MAP_SHORTCUT' &&
     player.shortcutBlocked
@@ -651,7 +670,7 @@ export const useActionCard = (
     error('INVALID_ACTION', 'A curse blocks shortcuts during this turn.')
   }
   const curseTarget =
-    actionDefinition.actionCategory === 'CURSE'
+    actionDefinition.actionCategory === 'CURSE' && !isHexSeal
       ? !targetPlayerId || targetPlayerId === playerId
         ? error('INVALID_ACTION', 'Choose an opponent for this curse.')
         : findPlayer(gameState, targetPlayerId)
@@ -759,6 +778,14 @@ export const useActionCard = (
       case 'CLOSED_MARKET':
         curseTarget!.marketBlocked = true
         break
+      case 'HEX_SEAL':
+        sealedTile!.isBlocked = true
+        gameState.temporaryBlockedHexes ??= []
+        gameState.temporaryBlockedHexes.push({
+          hexId: sealedTile!.id,
+          casterPlayerId: playerId,
+        })
+        break
     }
 
   if (!actionCardRemoved) {
@@ -779,6 +806,7 @@ export const useActionCard = (
       source: 'CARD',
       cardId: actionDefinition.id,
       ...(targetPlayerId ? { targetPlayerId } : {}),
+      ...(targetHexId ? { targetHexId } : {}),
       blocked: curseBlocked,
     }
   }
@@ -1061,6 +1089,16 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   do {
     gameState.turnNumber += 1
     gameState.currentPlayerId = nextPlayerId(gameState)
+    const expiredBlocks = (gameState.temporaryBlockedHexes ?? []).filter(
+      (block) => block.casterPlayerId === gameState.currentPlayerId,
+    )
+    for (const block of expiredBlocks) {
+      const tile = gameState.map.tiles.find((entry) => entry.id === block.hexId)
+      if (tile) tile.isBlocked = false
+    }
+    gameState.temporaryBlockedHexes = (
+      gameState.temporaryBlockedHexes ?? []
+    ).filter((block) => block.casterPlayerId !== gameState.currentPlayerId)
     if (gameState.currentPlayerId === gameState.players[0]?.id) {
       gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
       gameState.roundPlayedCards = []
@@ -1127,6 +1165,14 @@ export const removePlayer = (
     return gameState
   }
   const leavingPlayer = findPlayer(gameState, playerId)
+  for (const block of gameState.temporaryBlockedHexes ?? []) {
+    if (block.casterPlayerId !== playerId) continue
+    const tile = gameState.map.tiles.find((entry) => entry.id === block.hexId)
+    if (tile) tile.isBlocked = false
+  }
+  gameState.temporaryBlockedHexes = (
+    gameState.temporaryBlockedHexes ?? []
+  ).filter((block) => block.casterPlayerId !== playerId)
   if (gameState.currentPlayerId === playerId && gameState.players.length > 1) {
     endTurn(gameState, playerId)
   }
@@ -1212,6 +1258,9 @@ export const serializePublicGameState = (
   )
   return {
     ...gameState,
+    temporaryBlockedHexes: (gameState.temporaryBlockedHexes ?? []).filter(
+      (block) => visibleIds.has(block.hexId),
+    ),
     map:
       fogMode === 'NONE'
         ? gameState.map

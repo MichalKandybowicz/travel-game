@@ -347,6 +347,39 @@ describe('GameEngine', () => {
     ).toBeLessThanOrEqual(1)
   })
 
+  it('offers affordable yellow upgrades while pricing protection and curses higher', () => {
+    expect(CARD_BY_ID.dune_runner).toMatchObject({
+      movementType: 'YELLOW',
+      movementValue: 3,
+      goldValue: 2,
+      purchaseCost: 4,
+    })
+    expect(CARD_BY_ID.sand_merchant).toMatchObject({
+      movementType: 'YELLOW',
+      movementValue: 2,
+      goldValue: 3,
+      purchaseCost: 4,
+    })
+    expect(MARKET_CARD_IDS).toEqual(
+      expect.arrayContaining(['dune_runner', 'sand_merchant']),
+    )
+    expect(CARD_BY_ID.protective_circle!.purchaseCost).toBe(8)
+    expect(
+      MARKET_CARD_IDS.filter(
+        (cardId) => CARD_BY_ID[cardId]?.actionCategory === 'CURSE',
+      ).every((cardId) => CARD_BY_ID[cardId]!.purchaseCost >= 7),
+    ).toBe(true)
+
+    const game = buildTestGame()
+    game.market = [
+      'dune_runner',
+      ...game.market.filter((cardId) => cardId !== 'dune_runner').slice(0, 3),
+    ]
+    game.players[0]!.availableGold = 4
+    buyCard(game, 'p1', 'dune_runner')
+    expect(game.players[0]!.discardPile.at(-1)?.cardId).toBe('dune_runner')
+  })
+
   it('starts a game from an unchanged custom map snapshot', () => {
     const generated = createGameState('SOURCE', settings, [
       { id: 'source-1', name: 'Source 1' },
@@ -656,6 +689,57 @@ describe('GameEngine', () => {
     buyCard(game, target.id, cardId)
     expect(target.availableGold).toBe(0)
     expect(target.nextPurchaseCostIncrease).toBe(0)
+  })
+
+  it('blocks an empty hex within two steps until the caster next plays', () => {
+    const game = buildTestGame()
+    const caster = game.players[0]!
+    const origin = game.map.tiles.find((tile) => tile.id === caster.position)!
+    const target = game.map.tiles.find(
+      (tile) =>
+        axialDistance(origin, tile) === 1 &&
+        !tile.isBlocked &&
+        !['START', 'GOAL', 'MOUNTAIN'].includes(tile.terrain) &&
+        !game.players.some((player) => player.position === tile.id),
+    )!
+    expect(target).toBeDefined()
+    caster.hand.push({ cardId: 'hex_seal', instanceId: 'seal-test' })
+    expect(() =>
+      activateActionCard(
+        game,
+        caster.id,
+        'seal-test',
+        undefined,
+        caster.position,
+      ),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    expect(() =>
+      activateActionCard(
+        game,
+        caster.id,
+        'seal-test',
+        undefined,
+        game.players[1]!.position,
+      ),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    const distant = game.map.tiles.find(
+      (tile) => axialDistance(origin, tile) > 2,
+    )!
+    expect(() =>
+      activateActionCard(game, caster.id, 'seal-test', undefined, distant.id),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    activateActionCard(game, caster.id, 'seal-test', undefined, target.id)
+    expect(target.isBlocked).toBe(true)
+    expect(game.latestCurse?.targetHexId).toBe(target.id)
+    caster.availableMovement.WILD = 20
+    expect(() => movePlayer(game, caster.id, target.id)).toThrow(
+      expect.objectContaining({ code: 'HEX_BLOCKED' }),
+    )
+    endTurn(game, caster.id)
+    expect(target.isBlocked).toBe(true)
+    endTurn(game, game.players[1]!.id)
+    expect(target.isBlocked).toBe(false)
+    expect(game.temporaryBlockedHexes).toEqual([])
   })
 
   it('replaces every unsold offer after a round without purchases', () => {

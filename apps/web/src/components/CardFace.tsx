@@ -70,6 +70,7 @@ export function CardFace({
       POVERTY_CURSE: '−',
       TANGLED_ROOTS: '⌇',
       CLOSED_MARKET: '×',
+      HEX_SEAL: '⬢',
     } as const
     return (
       <span className="game-card__inner">

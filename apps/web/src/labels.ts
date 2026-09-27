@@ -60,6 +60,8 @@ export const cardLabels: Record<string, { name: string }> = {
   captain: { name: 'Władca sztormu' },
   admiral: { name: 'Lewiatan' },
   coin: { name: 'Złota runa' },
+  dune_runner: { name: 'Pustynny biegacz' },
+  sand_merchant: { name: 'Kupiec piasków' },
   trader: { name: 'Alchemik' },
   treasurer: { name: 'Strażnik skarbca' },
   master_trader: { name: 'Mistrz transmutacji' },
@@ -87,6 +89,7 @@ export const cardLabels: Record<string, { name: string }> = {
   poverty_curse: { name: 'Klątwa ubóstwa' },
   tangled_roots: { name: 'Splątane korzenie' },
   closed_market: { name: 'Zamknięty bazar' },
+  hex_seal: { name: 'Pieczęć pola' },
 }
 
 export function cardDescription(card: CardDefinition): string {
@@ -113,6 +116,8 @@ export function cardDescription(card: CardDefinition): string {
         'Następny zakup wybranego gracza kosztuje o 2 złota więcej.',
       TANGLED_ROOTS: 'Wybrany gracz nie może użyć skrótu w następnej turze.',
       CLOSED_MARKET: 'Blokuje zakupy wybranego gracza w jego następnej turze.',
+      HEX_SEAL:
+        'Blokuje puste pole w zasięgu 2 heksów do początku twojej następnej tury. Nie można na nie wejść.',
     } as const
     return card.actionEffect
       ? descriptions[card.actionEffect]

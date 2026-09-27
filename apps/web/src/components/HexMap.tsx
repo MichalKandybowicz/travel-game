@@ -131,6 +131,8 @@ interface HexMapProps {
   canChooseStart: boolean
   onSelectHex: (hexId: string) => void
   onChooseStart: (hexId: string) => void
+  blockTargeting: boolean
+  onBlockHex: (hexId: string) => void
 }
 
 export function HexMap({
@@ -140,6 +142,8 @@ export function HexMap({
   canChooseStart,
   onSelectHex,
   onChooseStart,
+  blockTargeting,
+  onBlockHex,
 }: HexMapProps) {
   const [selectedHexId, setSelectedHexId] = useState<string>()
   const svgRef = useRef<SVGSVGElement>(null)
@@ -512,6 +516,18 @@ export function HexMap({
               (player) => player.position === tile.id,
             )
             const isReachable = reachable.has(tile.id)
+            const blockDistance = currentTile
+              ? cubeDistance(currentTile, tile)
+              : Infinity
+            const isBlockTarget =
+              blockTargeting &&
+              blockDistance >= 1 &&
+              blockDistance <= 2 &&
+              !tile.isBlocked &&
+              !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(
+                tile.terrain,
+              ) &&
+              occupiedBy.length === 0
             const isAvailableStart =
               canChooseStart &&
               game.status === 'CHOOSING_START' &&
@@ -525,9 +541,13 @@ export function HexMap({
             return (
               <g
                 key={tile.id}
-                className={`map-tile${(isActive && isReachable) || isAvailableStart ? ' reachable-hex' : ''}`}
+                className={`map-tile${!blockTargeting && ((isActive && isReachable) || isAvailableStart) ? ' reachable-hex' : ''}${isBlockTarget ? ' curse-target-hex' : ''}`}
                 onClick={() => {
                   setSelectedHexId(tile.id)
+                  if (blockTargeting) {
+                    if (isBlockTarget) onBlockHex(tile.id)
+                    return
+                  }
                   if (isActive && isReachable) {
                     onSelectHex(tile.id)
                   } else if (isAvailableStart) {
@@ -585,6 +605,30 @@ export function HexMap({
                 >
                   <TerrainIcon terrain={tile.terrain} scale={1.18} />
                 </g>
+                {game.temporaryBlockedHexes?.some(
+                  (block) => block.hexId === tile.id,
+                ) && (
+                  <g pointerEvents="none" aria-hidden="true">
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r="17"
+                      fill="rgba(68, 19, 89, 0.85)"
+                      stroke="#f0afff"
+                      strokeWidth="2"
+                    />
+                    <text
+                      x={x}
+                      y={y + 6}
+                      textAnchor="middle"
+                      fill="#fff2ff"
+                      fontSize="22"
+                      fontWeight="bold"
+                    >
+                      ✕
+                    </text>
+                  </g>
+                )}
                 {game.status === 'CHOOSING_START' &&
                   tile.terrain === 'START' && (
                     <>

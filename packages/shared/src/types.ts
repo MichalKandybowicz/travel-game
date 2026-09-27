@@ -55,6 +55,7 @@ export type ActionCardEffect =
   | 'POVERTY_CURSE'
   | 'TANGLED_ROOTS'
   | 'CLOSED_MARKET'
+  | 'HEX_SEAL'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL'
@@ -165,6 +166,7 @@ export interface CurseEvent {
   cardId?: string
   tokenType?: TokenType
   targetPlayerId?: string
+  targetHexId?: string
   blocked?: boolean
 }
 
@@ -229,6 +231,7 @@ export interface GameState {
   marketLockedUntilPlayerId?: string
   roundPlayedCards: PlayedCardRecord[]
   latestCurse?: CurseEvent
+  temporaryBlockedHexes?: { hexId: string; casterPlayerId: string }[]
   winnerId?: string
 }
 

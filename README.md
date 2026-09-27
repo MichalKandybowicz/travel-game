@@ -121,12 +121,16 @@ Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każd
 
 W sklepie są też karty mieszane: las i woda, las i pustynia oraz pustynia i woda, każda w dwóch poziomach mocy. Zagrana na ruch karta mieszana dodaje punkty obu kolorów; zagrana na złoto daje tylko wskazaną wartość złota.
 
+Wśród kart za **4 złota** są zielona Druidka, niebieski Zaklinacz fal oraz dwie żółte karty: Pustynny biegacz (3 ruchu lub 2 złota) i Kupiec piasków (2 ruchu lub 3 złota). Ochronny krąg kosztuje **8 złota**, a klątwy **7–8 złota**, zależnie od efektu.
+
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
 
 Runy ruchu i złota mają teraz wartości **+2, +3 albo +4**. W jednej rundzie można użyć jednej runy.
 Karta **Zamiana losu** i runa wymiany ręki odrzucają wskazane karty i dobierają **5 kart**, także gdy przed wymianą na ręce były cztery karty.
 
 ## Klątwy i ochrona
+
+**Pieczęć pola** kosztuje 7 złota. Po zagraniu wybierz na mapie puste, dostępne pole w odległości do 2 heksów od swojego pionka. Pole pozostaje zablokowane dla wszystkich do początku twojej następnej tury. Nie można wybrać pola startu, celu, góry ani pola zajętego przez pionek.
 
 Po zagraniu klątwy pojawia się powiadomienie z jej nazwą, dokładnym opisem działania i krótkim efektem wizualnym między graczem rzucającym a celem. Klątwa sklepu wskazuje sklep; zablokowana klątwa pokazuje efekt ochrony. Krąg wędrowców pokazuje pozostałych graczy oraz ich aktywne efekty klątw i ochronę. Własne efekty widać obok punktów ruchu i złota nad ręką. Etykiety znikają, gdy odpowiadający im efekt zostanie wykorzystany lub wygaśnie.
 

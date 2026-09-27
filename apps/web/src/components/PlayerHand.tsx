@@ -34,6 +34,7 @@ interface PlayerHandProps {
   opponents: PlayerState[]
   onUseToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   onUseActionCard: (cardInstanceId: string, targetPlayerId?: string) => void
+  onChooseHexCurseCard: (cardInstanceId: string) => void
   onDiscardCard: (cardInstanceId: string) => void
   onEndTurn: () => void
   roundNumber: number
@@ -47,6 +48,7 @@ export function PlayerHand({
   opponents,
   onUseToken,
   onUseActionCard,
+  onChooseHexCurseCard,
   onDiscardCard,
   onEndTurn,
   roundNumber,
@@ -176,9 +178,15 @@ export function PlayerHand({
                         !isActive ||
                         mustDiscard ||
                         player.hasUsedActionCardThisTurn ||
-                        (needsTarget && opponents.length === 0)
+                        (needsTarget &&
+                          definition.actionEffect !== 'HEX_SEAL' &&
+                          opponents.length === 0)
                       }
                       onClick={() => {
+                        if (definition.actionEffect === 'HEX_SEAL') {
+                          onChooseHexCurseCard(card.instanceId)
+                          return
+                        }
                         if (needsTarget) {
                           setPendingCurseCardId(card.instanceId)
                           curseTargetDialogRef.current?.showModal()
