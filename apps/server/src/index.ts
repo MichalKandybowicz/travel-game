@@ -9,7 +9,6 @@ import {
   chooseStart,
   createGameState,
   canAffordMove,
-  getMoveRequirements,
   endTurn,
   movePlayer,
   playCard,
@@ -21,9 +20,7 @@ import {
 } from '../../../packages/game-engine/src/index.js'
 import {
   analyzeMap,
-  axialDistance,
   generateMap,
-  getNeighbors,
 } from '../../../packages/map-generator/src/index.js'
 import {
   EVENTS,
@@ -53,7 +50,6 @@ import {
   type CardInstance,
   type GameState,
   type HexTile,
-  type MovementPool,
   type PlayerState,
   type RoomState,
   type SessionState,
@@ -64,6 +60,11 @@ import {
   loginAccount,
   registerAccount,
 } from './auth.js'
+import {
+  canReachWithHand,
+  cardMovementFor,
+  findBotRoute,
+} from './botMovement.js'
 import {
   connectStorage,
   type AccountRecord,
@@ -187,98 +188,11 @@ const botRooms = new Set<string>()
 const wait = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 
-const findBotRoute = (game: GameState, player: PlayerState): HexTile[] => {
-  const start = game.map.tiles.find((tile) => tile.id === player.position)
-  const goal = game.map.tiles.find((tile) => tile.id === game.map.goalHexId)
-  if (!start || !goal) return []
-
-  const queue = [start]
-  const previous = new Map<string, string>()
-  const visited = new Set([start.id])
-  while (queue.length > 0) {
-    const tile = queue.shift()!
-    if (tile.id === goal.id) break
-    const neighbors = getNeighbors(game.map.tiles, tile)
-      .filter(
-        (neighbor) =>
-          !neighbor.isBlocked &&
-          neighbor.terrain !== 'MOUNTAIN' &&
-          (game.settings.allowSharedTiles ||
-            neighbor.id === goal.id ||
-            !game.players.some(
-              (other) =>
-                other.id !== player.id && other.position === neighbor.id,
-            )),
-      )
-      .sort(
-        (left, right) => axialDistance(left, goal) - axialDistance(right, goal),
-      )
-    for (const neighbor of neighbors) {
-      if (visited.has(neighbor.id)) continue
-      visited.add(neighbor.id)
-      previous.set(neighbor.id, tile.id)
-      queue.push(neighbor)
-    }
-  }
-  if (!visited.has(goal.id)) return []
-
-  const route: HexTile[] = []
-  let id = goal.id
-  while (id !== start.id) {
-    const tile = game.map.tiles.find((candidate) => candidate.id === id)
-    const parent = previous.get(id)
-    if (!tile || !parent) return []
-    route.unshift(tile)
-    id = parent
-  }
-  return route
-}
-
-const cardMovementFor = (
-  card: CardDefinition,
-  from: HexTile,
-  target: HexTile,
-): number => {
-  const requirements = getMoveRequirements(from, target)
-  if (
-    requirements.some(
-      (requirement) =>
-        requirement.type === 'ANY' || card.movementType === requirement.type,
-    ) ||
-    card.movementType === 'WILD'
-  ) {
-    return card.movementValue
-  }
-  return 0
-}
-
 const cardPlanScore = (
   card: CardDefinition,
   from: HexTile,
   target: HexTile,
 ): number => cardMovementFor(card, from, target) * 10 + card.goldValue
-
-const movementForTarget = (
-  movement: MovementPool,
-  from: HexTile,
-  target: HexTile,
-): number => {
-  const requirements = getMoveRequirements(from, target)
-  if (requirements.length === 0) return 0
-  if (requirements.some((requirement) => requirement.type === 'ANY')) {
-    return Object.values(movement).reduce((sum, value) => sum + value, 0)
-  }
-  return Math.min(
-    requirements.reduce(
-      (sum, requirement) =>
-        sum +
-        (requirement.type === 'ANY' ? 0 : movement[requirement.type]) +
-        movement.WILD,
-      0,
-    ),
-    Object.values(movement).reduce((sum, value) => sum + value, 0),
-  )
-}
 
 const chooseBotPurchase = (
   game: GameState,
@@ -311,7 +225,7 @@ const chooseBotGoldCard = (
   target: HexTile,
 ): CardInstance | undefined => {
   const upcoming = player.drawPile
-    .slice(0, 4)
+    .slice(0, 5)
     .map((card) => CARD_BY_ID[card.cardId])
     .filter((card): card is CardDefinition => Boolean(card))
   const weakestUpcomingScore = upcoming.length
@@ -344,17 +258,7 @@ const chooseBotGoldCard = (
   })
   if (replaceable) return replaceable.card
 
-  const possibleMovement =
-    movementForTarget(player.availableMovement, from, target) +
-    candidates.reduce(
-      (sum, entry) => sum + cardMovementFor(entry.definition, from, target),
-      0,
-    )
-  const requiredMovement = getMoveRequirements(from, target).reduce(
-    (sum, requirement) => sum + requirement.amount,
-    0,
-  )
-  if (player.hand.length >= 4 && possibleMovement < requiredMovement) {
+  if (player.hand.length >= 5 && !canReachWithHand(player, from, target)) {
     return candidates[0]?.card
   }
   return undefined
@@ -373,29 +277,25 @@ const chooseBotToken = (
     return undefined
   }
 
-  const requiredMovement = getMoveRequirements(from, target).reduce(
-    (sum, requirement) => sum + requirement.amount,
-    0,
-  )
-  const currentMovement = movementForTarget(
-    player.availableMovement,
-    from,
-    target,
-  )
+  const canMoveNow = canAffordMove(player, from, target)
+  const canMoveWithCards = canReachWithHand(player, from, target)
   const movementToken = player.tokens.find((token) => {
     const effect = TOKEN_BY_TYPE[token.type].effect
     if (effect.kind !== 'MOVEMENT') return false
-    const bonusPool: MovementPool = {
-      GREEN: 0,
-      BLUE: 0,
-      YELLOW: 0,
-      WILD: 0,
+    const bonusPool = {
+      ...player.availableMovement,
+      [effect.movementType]:
+        player.availableMovement[effect.movementType] + effect.value,
     }
-    bonusPool[effect.movementType] = effect.value
     return (
-      currentMovement < requiredMovement &&
-      currentMovement + movementForTarget(bonusPool, from, target) >=
-        requiredMovement
+      !canMoveNow &&
+      !canMoveWithCards &&
+      (canAffordMove(
+        { ...player, availableMovement: bonusPool },
+        from,
+        target,
+      ) ||
+        canReachWithHand(player, from, target, bonusPool))
     )
   })
   if (movementToken) return { tokenInstanceId: movementToken.instanceId }
@@ -407,7 +307,7 @@ const chooseBotToken = (
         entry,
       ): entry is {
         token: (typeof player.tokens)[number]
-        effect: { kind: 'GOLD'; value: 1 | 2 }
+        effect: { kind: 'GOLD'; value: 2 | 3 | 4 }
       } => entry.effect.kind === 'GOLD',
     )
     .sort((left, right) => left.effect.value - right.effect.value)
@@ -423,14 +323,7 @@ const chooseBotToken = (
     )
   if (goldToken) return { tokenInstanceId: goldToken.token.instanceId }
 
-  const possibleMovement =
-    currentMovement +
-    player.hand.reduce(
-      (sum, card) =>
-        sum + cardMovementFor(CARD_BY_ID[card.cardId]!, from, target),
-      0,
-    )
-  if (possibleMovement < requiredMovement) {
+  if (!canMoveWithCards) {
     const drawToken = player.tokens.find((token) => token.type === 'DRAW_CARD')
     if (drawToken) return { tokenInstanceId: drawToken.instanceId }
     const swapToken = player.tokens.find((token) => token.type === 'SWAP_HAND')
@@ -622,44 +515,31 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         }
       }
 
-      const plannedMovement =
-        movementForTarget(player.availableMovement, currentTile, target) +
-        player.hand.reduce(
-          (sum, card) =>
-            sum +
-            (CARD_BY_ID[card.cardId]?.type === 'MOVEMENT'
-              ? cardMovementFor(CARD_BY_ID[card.cardId]!, currentTile, target)
-              : 0),
-          0,
-        )
-      const requiredMovement = getMoveRequirements(currentTile, target).reduce(
-        (sum, requirement) => sum + requirement.amount,
-        0,
-      )
-      const movementCard =
-        plannedMovement >= requiredMovement
-          ? player.hand
-              .filter((card) => {
-                const definition = CARD_BY_ID[card.cardId]
-                return (
-                  definition?.type === 'MOVEMENT' &&
-                  cardMovementFor(definition, currentTile, target) > 0
-                )
-              })
-              .sort(
-                (left, right) =>
-                  cardMovementFor(
-                    CARD_BY_ID[right.cardId]!,
-                    currentTile,
-                    target,
-                  ) -
-                  cardMovementFor(
-                    CARD_BY_ID[left.cardId]!,
-                    currentTile,
-                    target,
-                  ),
-              )[0]
-          : undefined
+      const movementCard = canReachWithHand(player, currentTile, target)
+        ? player.hand
+            .filter((card) => {
+              const definition = CARD_BY_ID[card.cardId]
+              return (
+                definition?.type === 'MOVEMENT' &&
+                cardMovementFor(definition, currentTile, target, player) > 0
+              )
+            })
+            .sort(
+              (left, right) =>
+                cardMovementFor(
+                  CARD_BY_ID[right.cardId]!,
+                  currentTile,
+                  target,
+                  player,
+                ) -
+                cardMovementFor(
+                  CARD_BY_ID[left.cardId]!,
+                  currentTile,
+                  target,
+                  player,
+                ),
+            )[0]
+        : undefined
       if (movementCard) {
         playCard(game, bot.id, movementCard.instanceId, 'MOVEMENT')
         logGameAction(room, bot.id, 'play_card', {

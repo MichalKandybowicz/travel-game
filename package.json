@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w @travel-game/server\" \"npm run dev -w @travel-game/web\"",
     "build": "npm run build -w @travel-game/shared && npm run build -w @travel-game/map-generator && npm run build -w @travel-game/game-engine && npm run build -w @travel-game/server && npm run build -w @travel-game/web",
-    "test": "npm run test -w @travel-game/map-generator && npm run test -w @travel-game/game-engine",
+    "test": "npm run test -w @travel-game/map-generator && npm run test -w @travel-game/game-engine && npm run test -w @travel-game/server",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write ."
   },

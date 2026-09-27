@@ -1,6 +1,7 @@
 import type {
   CardPlayMode,
   CardInstance,
+  CardDefinition,
   GameError,
   GameMap,
   GameState,
@@ -34,6 +35,18 @@ const createMovementPool = (): MovementPool => ({
   YELLOW: 0,
   WILD: 0,
 })
+
+const addCardMovement = (
+  player: PlayerState,
+  card: CardDefinition,
+  multiplier = 1,
+): void => {
+  player.availableMovement[card.movementType] += card.movementValue * multiplier
+  if (card.secondaryMovementType && card.secondaryMovementValue) {
+    player.availableMovement[card.secondaryMovementType] +=
+      card.secondaryMovementValue * multiplier
+  }
+}
 
 const error = (code: GameError['code'], message: string): never => {
   throw { code, message } satisfies GameError
@@ -460,7 +473,7 @@ export const createGameState = (
       isReady: true,
       connected: true,
     }
-    drawCards(state, 4, `${settings.seed}:${player.id}:opening:${index}`)
+    drawCards(state, 5, `${settings.seed}:${player.id}:opening:${index}`)
     return state
   })
 
@@ -602,8 +615,7 @@ export const playCard = (
   if (mode === 'GOLD') {
     player.availableGold += cardDefinition.goldValue * multiplier
   } else {
-    player.availableMovement[cardDefinition.movementType] +=
-      cardDefinition.movementValue * multiplier
+    addCardMovement(player, cardDefinition, multiplier)
   }
   return gameState
 }
@@ -695,12 +707,11 @@ export const useActionCard = (
       case 'RESHUFFLE_HAND': {
         player.hand.splice(cardIndex, 1)
         player.removedCards.push(actionCard)
-        const handSize = player.hand.length
         player.discardPile.push(...player.hand)
         player.hand = []
         drawCards(
           player,
-          handSize,
+          5,
           `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
         )
         actionCardRemoved = true
@@ -725,8 +736,7 @@ export const useActionCard = (
         if (previousPlay.mode === 'GOLD') {
           player.availableGold += echoedCard.goldValue * multiplier
         } else {
-          player.availableMovement[echoedCard.movementType] +=
-            echoedCard.movementValue * multiplier
+          addCardMovement(player, echoedCard, multiplier)
         }
         break
       }
@@ -901,12 +911,11 @@ export const useToken = (
       player.availableGold += definition.effect.value
       break
     case 'SWAP_HAND': {
-      const handSize = player.hand.length
       player.discardPile.push(...player.hand)
       player.hand = []
       drawCards(
         player,
-        handSize,
+        5,
         `${gameState.seed}:${player.id}:token:${token.instanceId}`,
       )
       break
@@ -1070,10 +1079,10 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   } while (shouldSkipPlayer)
 
   const nextPlayer = findPlayer(gameState, gameState.currentPlayerId)
-  if (nextPlayer.hand.length < 4) {
+  if (nextPlayer.hand.length < 5) {
     drawCards(
       nextPlayer,
-      4 - nextPlayer.hand.length,
+      5 - nextPlayer.hand.length,
       `${gameState.seed}:${nextPlayer.id}:turn:${gameState.turnNumber}`,
     )
   }

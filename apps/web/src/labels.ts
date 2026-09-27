@@ -67,6 +67,12 @@ export const cardLabels: Record<string, { name: string }> = {
   adventurer: { name: 'Wędrowny mag' },
   trailblazer: { name: 'Tkacz szlaków' },
   wayfarer: { name: 'Władca portali' },
+  river_grove: { name: 'Rzeczny gaj' },
+  flooded_forest: { name: 'Zalany las' },
+  sunlit_grove: { name: 'Słoneczny gaj' },
+  golden_canopy: { name: 'Złota korona' },
+  desert_spring: { name: 'Pustynne źródło' },
+  storm_oasis: { name: 'Burzowa oaza' },
   shortcut_map: { name: 'Zwój tajemnych przejść' },
   second_wind: { name: 'Eliksir odnowy' },
   merchant_caravan: { name: 'Widmowy bazar' },
@@ -97,7 +103,7 @@ export function cardDescription(card: CardDefinition): string {
       GUIDE: 'Następne sąsiednie przejście kosztuje 1 dowolnego ruchu.',
       PHASE_WALK:
         'Do końca tury możesz wchodzić na pola zajęte przez innych graczy.',
-      RESHUFFLE_HAND: 'Odrzuć całą rękę i dobierz tyle samo kart.',
+      RESHUFFLE_HAND: 'Odrzuć pozostałe karty z ręki i dobierz 5 kart.',
       ECHO_POWER: 'Skopiuj ostatnią zagraną kartę ruchu lub złota.',
       PROTECTIVE_CIRCLE: 'Ignoruj następną klątwę wymierzoną w ciebie.',
       PATH_FRACTURE: 'Wybrany gracz płaci o 1 więcej za następne przejście.',
@@ -113,10 +119,16 @@ export function cardDescription(card: CardDefinition): string {
       : 'Jednorazowa karta akcji.'
   }
 
-  const movement = `${card.movementValue} ${movementUnitLabel(
+  let movement = `${card.movementValue} ${movementUnitLabel(
     card.movementType,
     card.movementValue,
   )}`
+  if (card.secondaryMovementType && card.secondaryMovementValue) {
+    movement += ` i ${card.secondaryMovementValue} ${movementUnitLabel(
+      card.secondaryMovementType,
+      card.secondaryMovementValue,
+    )}`
+  }
   const gold =
     card.goldValue > 0
       ? ` albo ${card.goldValue} ${
@@ -130,6 +142,16 @@ export function cardDescription(card: CardDefinition): string {
 
   return `Daje ${movement}${gold}.`
 }
+
+export const cardMovementValues = (
+  card: CardDefinition,
+  multiplier = 1,
+): string =>
+  `+${card.movementValue * multiplier}${
+    card.secondaryMovementValue
+      ? `/+${card.secondaryMovementValue * multiplier}`
+      : ''
+  }`
 
 export const errorLabels: Record<string, string> = {
   NOT_YOUR_TURN: 'Teraz jest tura innego gracza.',

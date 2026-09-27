@@ -113,17 +113,24 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 
 Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego obozu na płatek mapy. Obozy dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 
-Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku kolejnej tury gracz dobiera karty do stanu 4 na ręce. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
+Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Na początku gry i każdej kolejnej tury gracz dobiera karty do stanu **5 na ręce**. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
-Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte) i **1 Żeglarza** (niebieski).
+Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte) i **2 Żeglarzy** (niebieskie), łącznie 9 kart.
 
 Na rynku na początku gry pojawiają się cztery losowe, różne karty. Po każdym zakupie sprzedana oferta znika, a serwer dobiera następną, dzięki czemu na rynku stale są cztery oferty. Po wykorzystaniu puli dostępnych rodzajów kart pula jest tasowana ponownie. Wśród mocniejszych kart są **Przewodnik**, **Kapitan**, **Karawana** i **Pionier**. Ich ruch, wartość w złocie i cena są pokazywane na podstawie aktualnych definicji kart.
 
+W sklepie są też karty mieszane: las i woda, las i pustynia oraz pustynia i woda, każda w dwóch poziomach mocy. Zagrana na ruch karta mieszana dodaje punkty obu kolorów; zagrana na złoto daje tylko wskazaną wartość złota.
+
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
+
+Runy ruchu i złota mają teraz wartości **+2, +3 albo +4**. W jednej rundzie można użyć jednej runy.
+Karta **Zamiana losu** i runa wymiany ręki odrzucają wskazane karty i dobierają **5 kart**, także gdy przed wymianą na ręce były cztery karty.
 
 ## Klątwy i ochrona
 
 Po zagraniu klątwy pojawia się powiadomienie z jej nazwą, dokładnym opisem działania i krótkim efektem wizualnym między graczem rzucającym a celem. Klątwa sklepu wskazuje sklep; zablokowana klątwa pokazuje efekt ochrony. Krąg wędrowców pokazuje pozostałych graczy oraz ich aktywne efekty klątw i ochronę. Własne efekty widać obok punktów ruchu i złota nad ręką. Etykiety znikają, gdy odpowiadający im efekt zostanie wykorzystany lub wygaśnie.
+
+Klątwa podnosząca koszt ruchu działa do następnego udanego przejścia. Bot uwzględnia ten dodatkowy punkt przy wyborze kart, run i trasy; jeśli w danej turze nie ma wystarczających zasobów, efekt pozostaje aktywny.
 
 ## Docker
 

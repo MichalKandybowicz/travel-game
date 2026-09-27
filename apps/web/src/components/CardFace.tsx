@@ -1,5 +1,11 @@
 import type { CardDefinition, MovementType } from '@shared'
-import { cardDescription, cardLabels, movementUnitLabel } from '../labels.js'
+import {
+  cardDescription,
+  cardLabels,
+  cardMovementValues,
+  movementLabels,
+  movementUnitLabel,
+} from '../labels.js'
 
 export function MovementGlyph({ type }: { type: MovementType }) {
   return (
@@ -93,15 +99,22 @@ export function CardFace({
       <strong className="game-card__name">
         {cardLabels[card.id]?.name ?? card.name}
       </strong>
-      <span className="game-card__art">
+      <span
+        className={`game-card__art${card.secondaryMovementType ? ' game-card__art--mixed' : ''}`}
+      >
         <MovementGlyph type={card.movementType} />
+        {card.secondaryMovementType && (
+          <MovementGlyph type={card.secondaryMovementType} />
+        )}
       </span>
       {!compact && (
         <>
           <span className="game-card__effect">
-            <strong>+{card.movementValue}</strong>
+            <strong>{cardMovementValues(card)}</strong>
             <span>
-              {movementUnitLabel(card.movementType, card.movementValue)}
+              {card.secondaryMovementType
+                ? `${movementLabels[card.movementType]} + ${movementLabels[card.secondaryMovementType]} punkty ruchu`
+                : movementUnitLabel(card.movementType, card.movementValue)}
             </span>
           </span>
           <span className="game-card__footer">

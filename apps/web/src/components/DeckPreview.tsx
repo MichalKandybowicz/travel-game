@@ -32,6 +32,7 @@ function CardList({ cards }: { cards: CardInstance[] }) {
             key={instance.instanceId}
             className="card game-card deck-card"
             data-movement={card.movementType}
+            data-secondary-movement={card.secondaryMovementType}
             data-card-type={card.type.toLowerCase()}
             data-action-category={card.actionCategory?.toLowerCase()}
           >

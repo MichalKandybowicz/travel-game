@@ -11,7 +11,7 @@ import { cardDescription } from '../labels.js'
 import { tokenDescription, tokenPresentation } from '../tokenPresentation.js'
 import { CardFace } from './CardFace.js'
 
-type CardGroup = 'ALL' | MovementType | 'SPELL' | 'CURSE'
+type CardGroup = 'ALL' | MovementType | 'MIXED' | 'SPELL' | 'CURSE'
 type TokenGroup = 'ALL' | 'MOVEMENT' | 'GOLD' | 'UTILITY' | 'CURSE'
 
 const cardGroups: Array<{ id: CardGroup; label: string }> = [
@@ -20,6 +20,7 @@ const cardGroups: Array<{ id: CardGroup; label: string }> = [
   { id: 'BLUE', label: 'Niebieskie' },
   { id: 'YELLOW', label: 'Żółte' },
   { id: 'WILD', label: 'Uniwersalne' },
+  { id: 'MIXED', label: 'Mieszane' },
   { id: 'SPELL', label: 'Zaklęcia' },
   { id: 'CURSE', label: 'Klątwy' },
 ]
@@ -37,7 +38,11 @@ const marketCards = new Set(MARKET_CARD_IDS)
 
 const matchesCardGroup = (card: CardDefinition, group: CardGroup) =>
   group === 'ALL' ||
-  (card.type === 'MOVEMENT' && card.movementType === group) ||
+  (card.type === 'MOVEMENT' &&
+    group === 'MIXED' &&
+    !!card.secondaryMovementType) ||
+  (card.type === 'MOVEMENT' &&
+    (card.movementType === group || card.secondaryMovementType === group)) ||
   (card.type === 'ACTION' && card.actionCategory === group)
 
 const matchesTokenGroup = (token: TokenDefinition, group: TokenGroup) => {
@@ -140,6 +145,7 @@ export function CardCatalog() {
                   <div
                     className="card game-card catalog-card"
                     data-movement={card.movementType}
+                    data-secondary-movement={card.secondaryMovementType}
                     data-card-type={card.type.toLowerCase()}
                     data-action-category={card.actionCategory?.toLowerCase()}
                   >

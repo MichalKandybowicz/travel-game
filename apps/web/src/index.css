@@ -1815,6 +1815,18 @@ select {
   --card-glow: rgba(192, 132, 252, 0.24);
 }
 
+.game-card[data-movement='GREEN'][data-secondary-movement='BLUE'] {
+  background: linear-gradient(145deg, #1d594b, #17445b 62%, #0a1c24);
+}
+
+.game-card[data-movement='GREEN'][data-secondary-movement='YELLOW'] {
+  background: linear-gradient(145deg, #1d594b, #605022 62%, #0a1c24);
+}
+
+.game-card[data-movement='YELLOW'][data-secondary-movement='BLUE'] {
+  background: linear-gradient(145deg, #605022, #17445b 62%, #0a1c24);
+}
+
 .game-card[data-card-type='action'],
 .hand-card:has(.action-card-art) {
   --card-accent: #c084fc;
@@ -2071,6 +2083,30 @@ select {
   stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.game-card__art--mixed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.game-card__art--mixed svg {
+  width: 40px;
+  height: 40px;
+}
+
+.game-card[data-secondary-movement='BLUE']
+  .game-card__art--mixed
+  svg:last-child {
+  stroke: #7dd3fc;
+}
+
+.game-card[data-secondary-movement='YELLOW']
+  .game-card__art--mixed
+  svg:last-child {
+  stroke: #fde047;
 }
 
 .game-card__effect {

@@ -13,14 +13,24 @@ export type MovementType = 'GREEN' | 'BLUE' | 'YELLOW' | 'WILD'
 export type TokenType =
   | 'GREEN_1'
   | 'GREEN_2'
+  | 'GREEN_3'
+  | 'GREEN_4'
   | 'BLUE_1'
   | 'BLUE_2'
+  | 'BLUE_3'
+  | 'BLUE_4'
   | 'YELLOW_1'
   | 'YELLOW_2'
+  | 'YELLOW_3'
+  | 'YELLOW_4'
   | 'WILD_1'
   | 'WILD_2'
+  | 'WILD_3'
+  | 'WILD_4'
   | 'GOLD_1'
   | 'GOLD_2'
+  | 'GOLD_3'
+  | 'GOLD_4'
   | 'SWAP_HAND'
   | 'DRAW_CARD'
   | 'REFRESH_MARKET'
@@ -115,6 +125,8 @@ export interface CardDefinition {
   type: CardType
   movementType: MovementType
   movementValue: number
+  secondaryMovementType?: MovementType
+  secondaryMovementValue?: number
   goldValue: number
   purchaseCost: number
   actionEffect?: ActionCardEffect

@@ -1,7 +1,7 @@
 import { CARD_BY_ID } from '@shared'
 import { useRef, useState, type ReactNode } from 'react'
 import type { CardPlayMode, PlayerState } from '@shared'
-import { cardDescription, cardLabels } from '../labels.js'
+import { cardDescription, cardLabels, cardMovementValues } from '../labels.js'
 import { CardFace, MovementGlyph } from './CardFace.js'
 import { PlayerTokens } from './PlayerTokens.js'
 import { PlayerEffects } from './PlayerEffects.js'
@@ -163,6 +163,7 @@ export function PlayerHand({
                 key={card.instanceId}
                 className="card game-card hand-card"
                 data-movement={definition.movementType}
+                data-secondary-movement={definition.secondaryMovementType}
                 data-card-type={definition.type.toLowerCase()}
                 data-action-category={definition.actionCategory?.toLowerCase()}
               >
@@ -207,7 +208,7 @@ export function PlayerHand({
                       disabled={!isActive}
                       onClick={() => onPlayCard(card.instanceId, 'MOVEMENT')}
                     >
-                      Ruch +{definition.movementValue}
+                      Ruch {cardMovementValues(definition)}
                     </button>
                     <button
                       type="button"
@@ -304,6 +305,7 @@ export function PlayerHand({
                   key={card.instanceId}
                   className="card game-card sacrifice-card-option"
                   data-movement={definition.movementType}
+                  data-secondary-movement={definition.secondaryMovementType}
                 >
                   <CardFace card={definition} compact />
                   <div className="sacrifice-card-buttons">
@@ -314,7 +316,7 @@ export function PlayerHand({
                         sacrificeDialogRef.current?.close()
                       }}
                     >
-                      Podwój ruch: +{definition.movementValue * 2}
+                      Podwój ruch: {cardMovementValues(definition, 2)}
                     </button>
                     <button
                       type="button"

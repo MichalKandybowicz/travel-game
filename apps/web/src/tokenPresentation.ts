@@ -51,11 +51,11 @@ export const tokenDescription = (type: TokenType): string => {
   const effect = TOKEN_BY_TYPE[type].effect
   switch (effect.kind) {
     case 'MOVEMENT':
-      return `Dodaje ${effect.value} punkt${effect.value === 1 ? '' : 'y'} ${movementLabels[effect.movementType]}.`
+      return `Dodaje ${effect.value} punkty ${movementLabels[effect.movementType]}.`
     case 'GOLD':
       return `Dodaje ${effect.value} złota do wydania w tej turze.`
     case 'SWAP_HAND':
-      return 'Odrzuca wszystkie karty z ręki i dobiera tyle samo nowych.'
+      return 'Odrzuca wszystkie karty z ręki i dobiera 5 kart.'
     case 'DRAW_CARD':
       return 'Dobiera jedną dodatkową kartę do ręki.'
     case 'REFRESH_MARKET':

@@ -1,6 +1,6 @@
 import { CARD_BY_ID } from '@shared'
 import type { PlayerState } from '@shared'
-import { cardLabels, movementLabels } from '../labels.js'
+import { cardLabels, cardMovementValues, movementLabels } from '../labels.js'
 
 export function PlayedCards({ player }: { player: PlayerState }) {
   const playerPlays = player.lastTurnPlayedCards ?? []
@@ -22,24 +22,27 @@ export function PlayedCards({ player }: { player: PlayerState }) {
                     key={play.instanceId}
                     className="mini-card"
                     data-movement={card.movementType}
+                    data-secondary-movement={card.secondaryMovementType}
                     title={`${cardLabels[card.id]?.name ?? card.name}: ${play.mode === 'GOLD' ? 'złoto' : 'ruch'}`}
                   >
                     <strong>{cardLabels[card.id]?.name ?? card.name}</strong>
                     <span>
                       {play.mode === 'ACTION'
                         ? '◆'
-                        : `+${
-                            play.mode === 'GOLD'
-                              ? card.goldValue
-                              : card.movementValue
-                          }`}
+                        : play.mode === 'GOLD'
+                          ? `+${card.goldValue * (play.sacrificed ? 2 : 1)}`
+                          : cardMovementValues(card, play.sacrificed ? 2 : 1)}
                     </span>
                     <small>
                       {play.mode === 'ACTION'
                         ? 'akcja jednorazowa'
                         : play.mode === 'GOLD'
                           ? 'złota'
-                          : movementLabels[card.movementType]}
+                          : `${movementLabels[card.movementType]}${
+                              card.secondaryMovementType
+                                ? ` + ${movementLabels[card.secondaryMovementType]}`
+                                : ''
+                            }`}
                       {play.sacrificed ? ' · spalona' : ''}
                     </small>
                   </div>

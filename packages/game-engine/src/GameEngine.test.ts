@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { GameState, HexTile, MapSettings } from '../../shared/src/index.js'
-import { CARD_BY_ID, MARKET_CARD_IDS } from '../../shared/src/index.js'
+import {
+  CARD_BY_ID,
+  MARKET_CARD_IDS,
+  TOKEN_DEFINITIONS,
+} from '../../shared/src/index.js'
 import { axialDistance, getNeighbors } from '../../map-generator/src/index.js'
 import {
   buyCard,
@@ -160,16 +164,16 @@ describe('GameEngine', () => {
     expect(game.players.map((player) => player.id)).toEqual(['p3', 'p1'])
   })
 
-  it('builds an eight-card starting deck with four green, three yellow and one blue card', () => {
+  it('builds a nine-card starting deck with four green, three yellow and two blue cards', () => {
     const deck = buildStartingDeck('p1', 'STARTER-42')
     const movementTypes = deck.map(
       (card) => CARD_BY_ID[card.cardId]!.movementType,
     )
 
-    expect(deck).toHaveLength(8)
+    expect(deck).toHaveLength(9)
     expect(movementTypes.filter((type) => type === 'GREEN')).toHaveLength(4)
     expect(movementTypes.filter((type) => type === 'YELLOW')).toHaveLength(3)
-    expect(movementTypes.filter((type) => type === 'BLUE')).toHaveLength(1)
+    expect(movementTypes.filter((type) => type === 'BLUE')).toHaveLength(2)
     expect(
       deck.every(
         (card) =>
@@ -188,7 +192,7 @@ describe('GameEngine', () => {
 
     endTurn(game, 'p1')
 
-    expect(nextPlayer.hand).toHaveLength(4)
+    expect(nextPlayer.hand).toHaveLength(5)
   })
 
   it('moves only when the correct movement is available', () => {
@@ -503,20 +507,34 @@ describe('GameEngine', () => {
     expect(player.sharedTileAccessAvailable).toBe(false)
   })
 
-  it('replaces the remaining hand after using reshuffle hand', () => {
+  it('draws five cards after using reshuffle hand from a normal five-card hand', () => {
     const game = buildTestGame()
     const player = game.players[0]!
-    const previousHand = [...player.hand]
-    player.hand.push({
+    player.hand[0] = {
       cardId: 'reshuffle_hand',
       instanceId: 'reshuffle-hand-test',
-    })
+    }
+    const previousHand = player.hand.slice(1)
 
     activateActionCard(game, player.id, 'reshuffle-hand-test')
 
-    expect(player.hand).toHaveLength(previousHand.length)
-    expect(player.discardPile).toEqual(expect.arrayContaining(previousHand))
+    expect(player.hand).toHaveLength(5)
+    expect([...player.hand, ...player.drawPile, ...player.discardPile]).toEqual(
+      expect.arrayContaining(previousHand),
+    )
     expect(player.removedCards.at(-1)?.cardId).toBe('reshuffle_hand')
+  })
+
+  it('draws five cards after using the hand swap rune', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.tokens!.push({ instanceId: 'swap-hand-test', type: 'SWAP_HAND' })
+    player.hand.pop()
+
+    useToken(game, player.id, 'swap-hand-test')
+
+    expect(player.hand).toHaveLength(5)
+    expect(player.tokens).toEqual([])
   })
 
   it('copies the last movement card effect with echo power', () => {
@@ -754,13 +772,13 @@ describe('GameEngine', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     player.tokens!.push(
-      { instanceId: 'green-token', type: 'GREEN_1' },
-      { instanceId: 'gold-token', type: 'GOLD_2' },
+      { instanceId: 'green-token', type: 'GREEN_3' },
+      { instanceId: 'gold-token', type: 'GOLD_4' },
     )
 
     useToken(game, player.id, 'green-token')
 
-    expect(player.availableMovement.GREEN).toBe(1)
+    expect(player.availableMovement.GREEN).toBe(3)
     expect(player.tokens!.map((token) => token.instanceId)).toEqual([
       'gold-token',
     ])
@@ -770,8 +788,19 @@ describe('GameEngine', () => {
     endTurn(game, 'p1')
     endTurn(game, 'p2')
     useToken(game, player.id, 'gold-token')
-    expect(player.availableGold).toBe(2)
+    expect(player.availableGold).toBe(4)
     expect(player.tokens).toEqual([])
+  })
+
+  it('draws only runes worth two, three or four resources', () => {
+    const values = TOKEN_DEFINITIONS.flatMap((token) =>
+      token.effect.kind === 'MOVEMENT' || token.effect.kind === 'GOLD'
+        ? [token.effect.value]
+        : [],
+    )
+
+    expect(new Set(values)).toEqual(new Set([2, 3, 4]))
+    expect(values).toHaveLength(15)
   })
 
   it('grants movement without gold when new cards are played for movement', () => {
@@ -792,6 +821,46 @@ describe('GameEngine', () => {
       CARD_BY_ID.master_trader!.movementValue,
     )
     expect(player.availableGold).toBe(0)
+  })
+
+  it('grants both movement colors from each mixed card but only gold when exchanged', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.hand.push(
+      { cardId: 'river_grove', instanceId: 'river-grove-test' },
+      { cardId: 'sunlit_grove', instanceId: 'sunlit-grove-test' },
+      { cardId: 'desert_spring', instanceId: 'desert-spring-test' },
+      { cardId: 'flooded_forest', instanceId: 'flooded-forest-test' },
+    )
+
+    playCard(game, player.id, 'river-grove-test', 'MOVEMENT')
+    playCard(game, player.id, 'sunlit-grove-test', 'MOVEMENT')
+    playCard(game, player.id, 'desert-spring-test', 'MOVEMENT')
+    expect(player.availableMovement).toMatchObject({
+      GREEN: 4,
+      BLUE: 4,
+      YELLOW: 4,
+    })
+
+    playCard(game, player.id, 'flooded-forest-test', 'GOLD')
+    expect(player.availableMovement.GREEN).toBe(4)
+    expect(player.availableMovement.BLUE).toBe(4)
+    expect(player.availableGold).toBe(2)
+  })
+
+  it('doubles both mixed card colors when sacrificed or echoed', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.hand.push(
+      { cardId: 'storm_oasis', instanceId: 'mixed-sacrifice' },
+      { cardId: 'echo_power', instanceId: 'mixed-echo' },
+    )
+
+    playCard(game, player.id, 'mixed-sacrifice', 'MOVEMENT', true)
+    activateActionCard(game, player.id, 'mixed-echo')
+
+    expect(player.availableMovement.YELLOW).toBe(12)
+    expect(player.availableMovement.BLUE).toBe(12)
   })
 
   it('exchanges cards for the gold value in their definitions', () => {
@@ -862,7 +931,7 @@ describe('GameEngine', () => {
     expect(player.availableGold).toBe(CARD_BY_ID.explorer!.goldValue * 2)
   })
 
-  it('keeps unplayed cards and draws back up to four next round', () => {
+  it('keeps unplayed cards and draws back up to five next round', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const playedCard = player.hand[0]!
@@ -874,8 +943,8 @@ describe('GameEngine', () => {
     expect(player.hand.map((card) => card.instanceId)).toEqual(retainedIds)
     expect(player.discardPile).toContainEqual(playedCard)
     endTurn(game, 'p2')
-    expect(player.hand).toHaveLength(4)
-    expect(player.hand.slice(0, 3).map((card) => card.instanceId)).toEqual(
+    expect(player.hand).toHaveLength(5)
+    expect(player.hand.slice(0, 4).map((card) => card.instanceId)).toEqual(
       retainedIds,
     )
   })
