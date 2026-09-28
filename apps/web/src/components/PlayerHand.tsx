@@ -5,6 +5,7 @@ import { cardDescription, cardLabels, cardMovementValues } from '../labels.js'
 import { CardFace, MovementGlyph } from './CardFace.js'
 import { PlayerTokens } from './PlayerTokens.js'
 import { PlayerEffects } from './PlayerEffects.js'
+import { DeckPreview } from './DeckPreview.js'
 
 const movementResources = [
   { type: 'GREEN', label: 'Zielony' },
@@ -136,6 +137,7 @@ export function PlayerHand({
           >
             Zakończ turę
           </button>
+          <DeckPreview player={player} />
           <button
             type="button"
             className="sacrifice-trigger"

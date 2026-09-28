@@ -2542,13 +2542,52 @@ select {
   font-weight: 700;
 }
 
-.deck-preview {
-  margin-bottom: 16px;
+.deck-trigger {
+  border-color: #c79e69;
+  background: linear-gradient(145deg, #58402c, #243d40);
+  color: #ffe2ad;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
-.deck-preview summary {
-  cursor: pointer;
-  font-weight: 700;
+.deck-dialog {
+  width: min(1100px, calc(100vw - 32px));
+  max-height: min(90vh, 840px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #c79e69;
+  border-radius: 18px;
+  background: #102a32;
+  color: #f8fafc;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+}
+
+.deck-dialog::backdrop {
+  background: rgba(2, 6, 23, 0.78);
+}
+
+.deck-dialog-content {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.deck-dialog-content header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.deck-dialog-content h2,
+.deck-dialog-content p {
+  margin: 0;
+}
+
+.deck-dialog-content header button {
+  min-width: 36px;
+  min-height: 36px;
+  font-size: 1.3rem;
 }
 
 .deck-piles {
@@ -3376,8 +3415,7 @@ select {
 }
 
 .game-shell .game-layout,
-.game-shell .game-result,
-.game-shell .deck-preview {
+.game-shell .game-result {
   max-width: 1520px;
 }
 
@@ -3746,10 +3784,6 @@ select {
   .curse-popup-magic span {
     animation: none;
   }
-}
-
-.game-shell .deck-preview summary {
-  color: #edc185;
 }
 
 .game-shell .game-result {

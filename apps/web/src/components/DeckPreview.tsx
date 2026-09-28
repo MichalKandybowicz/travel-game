@@ -1,5 +1,6 @@
 import { CARD_BY_ID } from '@shared'
 import type { CardInstance, PlayerState } from '@shared'
+import { useRef } from 'react'
 import { CardFace } from './CardFace.js'
 
 const piles: Array<{
@@ -45,34 +46,60 @@ function CardList({ cards }: { cards: CardInstance[] }) {
 }
 
 export function DeckPreview({ player }: { player: PlayerState | undefined }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
   if (!player) {
     return null
   }
 
   return (
-    <details className="panel deck-preview">
-      <summary>
+    <>
+      <button
+        type="button"
+        className="deck-trigger"
+        onClick={() => dialogRef.current?.showModal()}
+      >
         Moja talia (
         {player.drawPile.length +
           player.hand.length +
           player.playedCards.length +
-          player.discardPile.length}{' '}
-        kart)
-      </summary>
-      <p>
-        Karty zagrane po zakończeniu tury czekają tutaj na przetasowanie.
-        Zostaną dodane do stosu dobierania, gdy ten się wyczerpie.
-      </p>
-      <div className="deck-piles">
-        {piles.map(({ label, key }) => (
-          <section key={key}>
-            <h3>
-              {label} ({player[key].length})
-            </h3>
-            <CardList cards={player[key]} />
-          </section>
-        ))}
-      </div>
-    </details>
+          player.discardPile.length}
+        )
+      </button>
+      <dialog
+        ref={dialogRef}
+        className="deck-dialog"
+        aria-labelledby="deck-dialog-title"
+        onClick={(event) => {
+          if (event.target === event.currentTarget) event.currentTarget.close()
+        }}
+      >
+        <div className="deck-dialog-content">
+          <header>
+            <h2 id="deck-dialog-title">Moja talia</h2>
+            <button
+              type="button"
+              aria-label="Zamknij talię"
+              onClick={() => dialogRef.current?.close()}
+            >
+              ×
+            </button>
+          </header>
+          <p>
+            Karty zagrane po zakończeniu tury czekają tutaj na przetasowanie.
+            Zostaną dodane do stosu dobierania, gdy ten się wyczerpie.
+          </p>
+          <div className="deck-piles">
+            {piles.map(({ label, key }) => (
+              <section key={key}>
+                <h3>
+                  {label} ({player[key].length})
+                </h3>
+                <CardList cards={player[key]} />
+              </section>
+            ))}
+          </div>
+        </div>
+      </dialog>
+    </>
   )
 }

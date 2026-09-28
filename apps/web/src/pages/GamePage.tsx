@@ -3,7 +3,6 @@ import { CARD_BY_ID, type CurseEvent } from '@shared'
 import { useNavigate, useParams } from 'react-router-dom'
 import { HexMap } from '../components/HexMap.js'
 import { CardFace } from '../components/CardFace.js'
-import { DeckPreview } from '../components/DeckPreview.js'
 import { Market } from '../components/Market.js'
 import { PlayedCards } from '../components/PlayedCards.js'
 import { PlayerHand } from '../components/PlayerHand.js'
@@ -497,7 +496,6 @@ export function GamePage() {
           </div>
         </div>
       </section>
-      <DeckPreview player={localPlayer} />
     </main>
   )
 }
