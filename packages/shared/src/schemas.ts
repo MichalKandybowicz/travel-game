@@ -83,7 +83,7 @@ export const customMapPayloadSchema = z.object({
     tiles: z.array(hexTileSchema).min(1).max(1500),
     petalCount: z.number().int().min(1).max(12).optional(),
     startHexId: z.string().min(1),
-    startHexIds: z.array(z.string()).min(4).max(9),
+    startHexIds: z.array(z.string()).min(4).max(1500),
     goalHexId: z.string().min(1),
     stats: mapAnalysisSchema,
   }),

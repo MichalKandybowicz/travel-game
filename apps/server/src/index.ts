@@ -19,10 +19,7 @@ import {
   serializePublicGameState,
   useToken as activateToken,
 } from '../../../packages/game-engine/src/index.js'
-import {
-  analyzeMap,
-  generateMap,
-} from '../../../packages/map-generator/src/index.js'
+import { generateMap } from '../../../packages/map-generator/src/index.js'
 import {
   EVENTS,
   CARD_BY_ID,
@@ -81,6 +78,7 @@ import {
 } from './storage.js'
 import { normalizeLobbyFogSettings } from './fogSettings.js'
 import { addDevCard, devToolsEnabled } from './devTools.js'
+import { normalizeCustomMap } from './customMapValidation.js'
 
 const storage = await connectStorage(
   process.env.MONGO_URL ?? 'mongodb://127.0.0.1:27017/travel_game',
@@ -811,60 +809,6 @@ fastify.post('/auth/logout', async (request, reply) => {
 const authenticatedAccount = async (authorization: string | undefined) =>
   findAccountByToken(storage, authorization?.replace(/^Bearer\s+/i, ''))
 
-const normalizeCustomMap = (
-  map: GameState['map'],
-): GameState['map'] | undefined => {
-  const tileIds = new Set(map.tiles.map((tile) => tile.id))
-  const coordinates = new Set(map.tiles.map((tile) => `${tile.q},${tile.r}`))
-  const startIds = map.startHexIds ?? []
-  if (
-    tileIds.size !== map.tiles.length ||
-    coordinates.size !== map.tiles.length ||
-    startIds.length < 4 ||
-    startIds.length > 9 ||
-    new Set(startIds).size !== 4 ||
-    startIds.some((id) => !tileIds.has(id)) ||
-    !tileIds.has(map.goalHexId) ||
-    startIds.includes(map.goalHexId)
-  ) {
-    return undefined
-  }
-  const tiles = map.tiles.map((tile) => ({
-    ...tile,
-    terrain: startIds.includes(tile.id)
-      ? ('START' as const)
-      : tile.id === map.goalHexId
-        ? ('GOAL' as const)
-        : tile.terrain === 'START' || tile.terrain === 'GOAL'
-          ? ('RUBBLE' as const)
-          : tile.terrain,
-    difficulty:
-      startIds.includes(tile.id) || tile.id === map.goalHexId
-        ? 1
-        : tile.terrain === 'MOUNTAIN'
-          ? 0
-          : tile.difficulty,
-    isBlocked: tile.terrain === 'MOUNTAIN',
-  }))
-  const normalized = {
-    ...map,
-    tiles,
-    startHexId: startIds[0]!,
-    startHexIds: startIds,
-  }
-  const stats = analyzeMap(normalized)
-  if (
-    !startIds.every((startHexId) =>
-      Number.isFinite(
-        analyzeMap({ ...normalized, startHexId }).shortestPathLength,
-      ),
-    )
-  ) {
-    return undefined
-  }
-  return { ...normalized, stats }
-}
-
 fastify.get('/custom-maps', async (request, reply) => {
   const account = await authenticatedAccount(request.headers.authorization)
   if (!account) {
@@ -903,9 +847,9 @@ fastify.post('/custom-maps', async (request, reply) => {
     })),
   })
   if (!map) {
-    return reply
-      .code(400)
-      .send({ message: 'Mapa musi mieć 4 starty i drogę do portalu.' })
+    return reply.code(400).send({
+      message: 'Mapa musi mieć co najmniej 4 starty i drogę do portalu.',
+    })
   }
   const now = Date.now()
   const customMap = {
@@ -952,9 +896,9 @@ fastify.put('/custom-maps/:id', async (request, reply) => {
     })),
   })
   if (!map) {
-    return reply
-      .code(400)
-      .send({ message: 'Mapa musi mieć 4 starty i drogę do portalu.' })
+    return reply.code(400).send({
+      message: 'Mapa musi mieć co najmniej 4 starty i drogę do portalu.',
+    })
   }
   const existingMap = await storage.customMaps.findOne({
     id: id.data.id,

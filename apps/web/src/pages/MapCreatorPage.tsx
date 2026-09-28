@@ -1,4 +1,5 @@
 import { analyzeMap, generateMap } from '@map-generator'
+import { findDiverseFastestRoutes, type MapRoute } from '@game-engine'
 import type { CustomMap, HexTile, MapSettings, TerrainType } from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
@@ -49,12 +50,12 @@ export function MapCreatorPage() {
     seed: `MAP-${Math.floor(Math.random() * 1000000)}`,
   }))
   const [map, setMap] = useState(() => generateMap(settings))
-  const requiredStartCount =
-    settings.segmentEdgeLength ?? Math.max(4, map.startHexIds?.length ?? 4)
   const [name, setName] = useState('Moja magiczna mapa')
   const [customMaps, setCustomMaps] = useState<CustomMap[]>([])
   const [selectedMapId, setSelectedMapId] = useState('')
   const [tool, setTool] = useState<Tool>('JUNGLE')
+  const [selectedSpawnId, setSelectedSpawnId] = useState('')
+  const [routePreview, setRoutePreview] = useState<MapRoute[] | null>(null)
   const [difficulty, setDifficulty] = useState(2)
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
@@ -86,6 +87,8 @@ export function MapCreatorPage() {
         setName(selectedMap.name)
         setSettings(selectedMap.settings)
         setMap(selectedMap.map)
+        setSelectedSpawnId(selectedMap.map.startHexId)
+        setRoutePreview(null)
       })
       .catch((caught: unknown) => {
         setMessage(
@@ -119,6 +122,11 @@ export function MapCreatorPage() {
       height,
     }
   }, [bounds, pan, zoom])
+  const startIds = map.startHexIds ?? [map.startHexId]
+  const selectedStartId = startIds.includes(selectedSpawnId)
+    ? selectedSpawnId
+    : (startIds[0] ?? '')
+  const tilesById = new Map(map.tiles.map((tile) => [tile.id, tile]))
 
   const updateZoom = (nextZoom: number) => {
     const normalizedZoom = Math.min(4, Math.max(1, nextZoom))
@@ -129,16 +137,14 @@ export function MapCreatorPage() {
   if (!account) return <Navigate to="/" replace />
 
   const editTile = (tileId: string) => {
+    setRoutePreview(null)
     setMap((current) => {
       let startHexIds = [...(current.startHexIds ?? [])]
       let goalHexId = current.goalHexId
       if (tool === 'SET_START') {
         if (startHexIds.includes(tileId) && startHexIds.length > 1) {
           startHexIds = startHexIds.filter((id) => id !== tileId)
-        } else if (
-          startHexIds.length < requiredStartCount &&
-          tileId !== goalHexId
-        ) {
+        } else if (tileId !== goalHexId) {
           startHexIds.push(tileId)
         }
       } else if (tool === 'SET_GOAL' && !startHexIds.includes(tileId)) {
@@ -230,6 +236,7 @@ export function MapCreatorPage() {
                   setName(selectedMap.name)
                   setSettings(selectedMap.settings)
                   setMap(selectedMap.map)
+                  setSelectedSpawnId(selectedMap.map.startHexId)
                 } else {
                   const nextSettings = {
                     ...defaultSettings,
@@ -238,7 +245,9 @@ export function MapCreatorPage() {
                   setName('Moja magiczna mapa')
                   setSettings(nextSettings)
                   setMap(generateMap(nextSettings))
+                  setSelectedSpawnId('')
                 }
+                setRoutePreview(null)
                 updateZoom(1)
                 setMessage('')
               }}
@@ -297,6 +306,8 @@ export function MapCreatorPage() {
                 }
                 setSettings(nextSettings)
                 setMap(generateMap(nextSettings))
+                setSelectedSpawnId('')
+                setRoutePreview(null)
                 updateZoom(1)
                 setMessage('')
               }}
@@ -321,7 +332,7 @@ export function MapCreatorPage() {
               aria-pressed={tool === 'SET_START'}
               onClick={() => setTool('SET_START')}
             >
-              Starty ({map.startHexIds?.length ?? 0}/{requiredStartCount})
+              Starty ({map.startHexIds?.length ?? 0}, min. 4)
             </button>
             <button
               type="button"
@@ -351,13 +362,57 @@ export function MapCreatorPage() {
             <span>Najkrótsza droga: {map.stats.shortestPathLength}</span>
             <span>Trasy ze startu: {map.stats.routeCount}</span>
           </div>
+          <div className="map-editor-route-check">
+            <label>
+              Punkt startowy do sprawdzenia
+              <select
+                value={selectedStartId}
+                onChange={(event) => {
+                  setSelectedSpawnId(event.target.value)
+                  setRoutePreview(null)
+                }}
+              >
+                {startIds.map((id, index) => {
+                  const tile = tilesById.get(id)
+                  return (
+                    <option key={id} value={id}>
+                      Start {index + 1} ({tile?.q}, {tile?.r})
+                    </option>
+                  )
+                })}
+              </select>
+            </label>
+            <button
+              type="button"
+              disabled={!selectedStartId || !map.goalHexId}
+              onClick={() =>
+                setRoutePreview(findDiverseFastestRoutes(map, selectedStartId))
+              }
+            >
+              Sprawdź 3 najszybsze drogi
+            </button>
+            {routePreview && (
+              <div className="map-editor-route-result" role="status">
+                <strong>
+                  Znaleziono {routePreview.length} z 3 dróg różniących się o co
+                  najmniej 80% odcinków.
+                </strong>
+                {routePreview.map((route, index) => (
+                  <span key={index}>
+                    Droga {index + 1}: {route.cost} punktów ruchu ·{' '}
+                    {route.tileIds.length - 1} przejść
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             type="button"
             className="primary-button"
             disabled={
               saving ||
               !name.trim() ||
-              map.startHexIds?.length !== requiredStartCount ||
+              (map.startHexIds?.length ?? 0) < 4 ||
               !Number.isFinite(map.stats.shortestPathLength)
             }
             onClick={async () => {
@@ -525,6 +580,27 @@ export function MapCreatorPage() {
                 </g>
               )
             })}
+            {routePreview?.map((route, index) => (
+              <polyline
+                key={index}
+                className="map-editor-route-line"
+                points={route.tileIds
+                  .map((id) => tilesById.get(id))
+                  .filter((tile): tile is HexTile => Boolean(tile))
+                  .map((tile) => {
+                    const { x, y } = pixel(tile)
+                    return `${x},${y}`
+                  })
+                  .join(' ')}
+                strokeWidth={index === 0 ? 4 : 3}
+                strokeDasharray={
+                  index === 0 ? undefined : index === 1 ? '8 5' : '3 5'
+                }
+                opacity={index === 0 ? 0.95 : 0.85}
+                fill="none"
+                pointerEvents="none"
+              />
+            ))}
           </svg>
         </section>
       </div>
