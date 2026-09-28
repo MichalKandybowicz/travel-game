@@ -64,10 +64,6 @@ export function CardFace({
   )
   if (card.type === 'ACTION') {
     const description = cardDescription(card)
-    const visibleDescription =
-      !discardAction && description.length > 60
-        ? `${description.slice(0, 57).trimEnd()}...`
-        : description
     const symbols = {
       MAP_SHORTCUT: '↝',
       SECOND_WIND: '↻',
@@ -102,19 +98,10 @@ export function CardFace({
           {discardButton}
         </span>
         <span className="game-card__action-effect" title={description}>
-          {visibleDescription}
-        </span>
-        <span
-          className="game-card__action-fate"
-          title="Użycie efektu usuwa kartę z gry. Wymiana na złoto odkłada ją po turze na stos odrzuconych; wróci po przetasowaniu."
-        >
-          <span>Użyj: spala kartę</span>
-          <span>Złoto: wraca po tasowaniu</span>
+          {description}
         </span>
         {purchaseCost !== undefined && (
-          <span className="game-card__footer">
-            Koszt: {purchaseCost} złota · Zamiana: +{card.goldValue} złota
-          </span>
+          <span className="game-card__footer">Koszt: {purchaseCost} złota</span>
         )}
       </span>
     )

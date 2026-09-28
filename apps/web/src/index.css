@@ -1275,15 +1275,14 @@ select {
   transform-origin: center bottom;
 }
 
-.hand-card-grid .hand-card[data-pending-discard='true'] {
+.hand-card-grid .hand-card[data-card-type='action'] {
   height: auto;
   min-height: 240px;
 }
 
-.hand-card[data-pending-discard='true'] .game-card__action-effect {
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
+.hand-card-grid .hand-card[data-pending-discard='true'] {
+  height: auto;
+  min-height: 240px;
 }
 
 .hand-card-grid .hand-card + .hand-card {
@@ -2195,15 +2194,13 @@ select {
 }
 
 .game-card__action-effect {
-  display: -webkit-box;
-  min-height: 3.9em;
-  overflow: hidden;
+  display: block;
+  margin-bottom: 8px;
   color: #f3e8ff;
   font-size: 0.74rem;
   line-height: 1.3;
   text-align: center;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  overflow-wrap: anywhere;
 }
 
 .game-card__hand-summary {
@@ -2221,21 +2218,6 @@ select {
   color: #ffe4e6;
 }
 
-.game-card__action-fate {
-  display: grid;
-  gap: 1px;
-  margin: 3px 0 5px;
-  color: #f5d0fe;
-  font-size: 0.56rem;
-  font-weight: 400;
-  line-height: 1.2;
-  text-align: center;
-}
-
-.game-card[data-action-category='curse'] .game-card__action-fate {
-  color: #fecdd3;
-}
-
 .game-card__art.action-card-art {
   height: 48px;
   min-height: 48px;
@@ -2245,10 +2227,6 @@ select {
 .hand-card[data-card-type='action'] .game-card__art {
   height: 46px;
   min-height: 46px;
-}
-
-.deck-card .game-card__action-fate {
-  font-size: 0.55rem;
 }
 
 .curse-target-dialog {
