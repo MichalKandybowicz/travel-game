@@ -48,7 +48,7 @@ export function GamePage() {
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
   const [pendingHexCurseCardId, setPendingHexCurseCardId] = useState<string>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
-  const mapChoiceRef = useRef<HTMLDivElement>(null)
+  const runeChoiceRef = useRef<HTMLDivElement>(null)
   const pendingCampId = game?.players.find(
     (player) => player.id === session?.playerId,
   )?.pendingCampReward?.campId
@@ -100,7 +100,7 @@ export function GamePage() {
 
   useEffect(() => {
     if (pendingCampId) {
-      mapChoiceRef.current?.scrollIntoView({
+      runeChoiceRef.current?.scrollIntoView({
         block: 'start',
         behavior: 'smooth',
       })
@@ -265,216 +265,138 @@ export function GamePage() {
         </div>
       )}
       <section className="game-layout">
-        <header className="panel top-bar">
-          <div className="game-brand-small">
-            <span aria-hidden="true">⬡</span>
-            <strong>
-              TRAVEL<span>GAME</span>
-            </strong>
-          </div>
-          <div className="game-room-line">
-            <small>POKÓJ</small>
-            <strong>{room?.roomCode ?? game.roomCode}</strong>
-          </div>
-          <div className="game-turn-line">
-            <small>ETAP WYPRAWY</small>
-            <strong>
+        <details className="game-info-drawer">
+          <summary>
+            <span aria-hidden="true">☰</span>
+            <span>
               {isChoosingStart
                 ? 'Wybór startu'
                 : `Runda ${game.roundNumber ?? 1}`}
-            </strong>
-            {!isChoosingStart && game.status === 'ACTIVE' && (
-              <span>
-                Ruch {moveInRound} z {game.players.length}
-              </span>
-            )}
-          </div>
-          <label className="game-sound-control">
-            <span>
-              GŁOŚNOŚĆ DŹWIĘKU <strong>{soundVolume}%</strong>
             </span>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={soundVolume}
-              aria-label="Głośność dźwięku końca tury"
-              onChange={(event) => {
-                const value = Number(event.target.value)
-                setSoundVolume(value)
-                setTurnSoundVolume(value)
-              }}
-            />
-          </label>
-          {game.status === 'FINISHED' ? (
-            <div className="game-current-player">
-              <small>STATUS</small>
-              <strong>Gra zakończona</strong>
-            </div>
-          ) : (
-            <div className="game-current-player">
-              <small>{isChoosingStart ? 'WYBIERA POLE' : 'GRA TERAZ'}</small>
-              <strong>
-                {
-                  game.players.find(
-                    (player) => player.id === game.currentPlayerId,
-                  )?.name
-                }
-              </strong>
-            </div>
-          )}
-          {game.settings.fogMode === 'NONE' && (
-            <small className="game-seed">Ziarno: {game.seed}</small>
-          )}
-          {game.status !== 'FINISHED' && (
-            <button
-              type="button"
-              disabled={leaving}
-              onClick={async () => {
-                setLeaving(true)
-                if (await leaveRoom()) {
-                  navigate('/')
-                } else {
-                  setLeaving(false)
-                }
-              }}
-            >
-              {leaving ? 'Opuszczanie…' : 'Opuść grę'}
-            </button>
-          )}
-        </header>
-        <div className="game-sidebar">
-          <aside className="panel sidebar game-players-panel">
-            <div className="panel-header">
-              <div>
-                <small className="panel-kicker">KRĄG WĘDROWCÓW</small>
-                <h2>Magowie</h2>
+            <small>
+              {game.status === 'ACTIVE'
+                ? `Ruch ${moveInRound} z ${game.players.length}`
+                : 'Informacje o grze'}
+            </small>
+          </summary>
+          <div className="game-info-content">
+            <header className="panel top-bar">
+              <div className="game-brand-small">
+                <span aria-hidden="true">⬡</span>
+                <strong>
+                  TRAVEL<span>GAME</span>
+                </strong>
               </div>
-            </div>
-            <ul className="player-list">
-              {game.players.map((player, index) =>
-                player.id === session?.playerId ? null : (
-                  <li key={player.id}>
-                    <div className="sidebar-player-heading">
-                      <PlayerBadge
-                        index={index}
-                        color={player.color}
-                        symbol={player.symbol}
-                      />
-                      <strong>{player.name}</strong>
-                    </div>
-                    <div className="sidebar-player-status">
-                      <small>
-                        {player.connected ? 'połączony' : 'rozłączony'}
-                      </small>
-                    </div>
-                    <PlayerEffects player={player} game={game} />
-                    <PlayedCards player={player} />
-                  </li>
-                ),
-              )}
-            </ul>
-          </aside>
-        </div>
-        <div className="game-main">
-          {isChoosingStart && (
-            <section className="panel start-choice" aria-live="polite">
-              <strong>
-                {isMyStartChoice
-                  ? 'Wybierz pole startowe'
-                  : 'Czekamy na wybór pola startowego'}
-              </strong>
-              <p>
-                Gracze wybierają kolejno. Ostatnia osoba wybierająca rozpocznie
-                grę, a tury pójdą w odwrotnej kolejności.
-              </p>
-              <div className="start-choice-options">
-                {startIds.map((hexId, index) => {
-                  const occupant = game.players.find(
-                    (player) => player.position === hexId,
-                  )
-                  return (
-                    <button
-                      key={hexId}
-                      type="button"
-                      disabled={!isMyStartChoice || !!occupant}
-                      onClick={() => chooseStart(hexId)}
-                    >
-                      Pole {index + 1}
-                      {occupant ? ` — ${occupant.name}` : ''}
-                    </button>
-                  )
-                })}
+              <div className="game-room-line">
+                <small>POKÓJ</small>
+                <strong>{room?.roomCode ?? game.roomCode}</strong>
               </div>
-              {localPlayer && (
-                <div className="starting-hand-preview">
-                  <strong>Twoja ręka na start</strong>
-                  <div className="card-grid hand-card-grid">
-                    {localPlayer.hand.map((card) => {
-                      const definition = CARD_BY_ID[card.cardId]
-                      return definition ? (
-                        <div
-                          key={card.instanceId}
-                          className="card game-card hand-card"
-                          data-movement={definition.movementType}
-                          data-secondary-movement={
-                            definition.secondaryMovementType
-                          }
-                          data-card-type={definition.type.toLowerCase()}
-                        >
-                          <CardFace card={definition} compact />
-                        </div>
-                      ) : null
-                    })}
-                  </div>
+              <div className="game-turn-line">
+                <small>ETAP WYPRAWY</small>
+                <strong>
+                  {isChoosingStart
+                    ? 'Wybór startu'
+                    : `Runda ${game.roundNumber ?? 1}`}
+                </strong>
+                {!isChoosingStart && game.status === 'ACTIVE' && (
+                  <span>
+                    Ruch {moveInRound} z {game.players.length}
+                  </span>
+                )}
+              </div>
+              <label className="game-sound-control">
+                <span>
+                  GŁOŚNOŚĆ DŹWIĘKU <strong>{soundVolume}%</strong>
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={soundVolume}
+                  aria-label="Głośność dźwięku końca tury"
+                  onChange={(event) => {
+                    const value = Number(event.target.value)
+                    setSoundVolume(value)
+                    setTurnSoundVolume(value)
+                  }}
+                />
+              </label>
+              {game.status === 'FINISHED' ? (
+                <div className="game-current-player">
+                  <small>STATUS</small>
+                  <strong>Gra zakończona</strong>
+                </div>
+              ) : (
+                <div className="game-current-player">
+                  <small>
+                    {isChoosingStart ? 'WYBIERA POLE' : 'GRA TERAZ'}
+                  </small>
+                  <strong>
+                    {
+                      game.players.find(
+                        (player) => player.id === game.currentPlayerId,
+                      )?.name
+                    }
+                  </strong>
                 </div>
               )}
-            </section>
-          )}
-          {!isChoosingStart && (
-            <PlayerHand
-              game={game}
-              player={localPlayer}
-              opponents={game.players.filter(
-                (player) => player.id !== localPlayer?.id,
+              {game.settings.fogMode === 'NONE' && (
+                <small className="game-seed">Ziarno: {game.seed}</small>
               )}
-              isActive={isActive}
-              onPlayCard={playCard}
-              onUseToken={useToken}
-              onUseActionCard={playActionCard}
-              onChooseHexCurseCard={setPendingHexCurseCardId}
-              onDiscardCard={discardCard}
-              onEndTurn={() => {
-                setPendingHexCurseCardId(undefined)
-                endTurn()
-              }}
-              roundNumber={game.roundNumber ?? 1}
-              market={
-                <Market
-                  game={game}
-                  player={localPlayer}
-                  isActive={isActive}
-                  onBuyCard={buyCard}
-                />
-              }
-            />
-          )}
-          {isActive && pendingHexCurseCardId && (
-            <div className="hex-curse-prompt" role="status">
-              <span>Wybierz podświetlone pole w zasięgu 2 heksów.</span>
-              <button
-                type="button"
-                onClick={() => setPendingHexCurseCardId(undefined)}
-              >
-                Anuluj
-              </button>
+              {game.status !== 'FINISHED' && (
+                <button
+                  type="button"
+                  disabled={leaving}
+                  onClick={async () => {
+                    setLeaving(true)
+                    if (await leaveRoom()) {
+                      navigate('/')
+                    } else {
+                      setLeaving(false)
+                    }
+                  }}
+                >
+                  {leaving ? 'Opuszczanie…' : 'Opuść grę'}
+                </button>
+              )}
+            </header>
+            <div className="game-sidebar">
+              <aside className="panel sidebar game-players-panel">
+                <div className="panel-header">
+                  <div>
+                    <small className="panel-kicker">KRĄG WĘDROWCÓW</small>
+                    <h2>Magowie</h2>
+                  </div>
+                </div>
+                <ul className="player-list">
+                  {game.players.map((player, index) =>
+                    player.id === session?.playerId ? null : (
+                      <li key={player.id}>
+                        <div className="sidebar-player-heading">
+                          <PlayerBadge
+                            index={index}
+                            color={player.color}
+                            symbol={player.symbol}
+                          />
+                          <strong>{player.name}</strong>
+                        </div>
+                        <div className="sidebar-player-status">
+                          <small>
+                            {player.connected ? 'połączony' : 'rozłączony'}
+                          </small>
+                        </div>
+                        <PlayerEffects player={player} game={game} />
+                        <PlayedCards player={player} />
+                      </li>
+                    ),
+                  )}
+                </ul>
+              </aside>
             </div>
-          )}
-          <div
-            ref={mapChoiceRef}
-            className="game-map-choice-layout"
-            data-choosing-rune={Boolean(localPlayer?.pendingCampReward)}
-          >
+          </div>
+        </details>
+        <div className="game-main">
+          <div className="game-map-choice-layout">
             <HexMap
               game={game}
               playerId={session?.playerId}
@@ -490,8 +412,105 @@ export function GamePage() {
                 setPendingHexCurseCardId(undefined)
               }}
             />
+          </div>
+          <div className="game-hand-column">
+            {isChoosingStart && (
+              <section className="panel start-choice" aria-live="polite">
+                <strong>
+                  {isMyStartChoice
+                    ? 'Wybierz pole startowe'
+                    : 'Czekamy na wybór pola startowego'}
+                </strong>
+                <p>
+                  Gracze wybierają kolejno. Ostatnia osoba wybierająca
+                  rozpocznie grę, a tury pójdą w odwrotnej kolejności.
+                </p>
+                <div className="start-choice-options">
+                  {startIds.map((hexId, index) => {
+                    const occupant = game.players.find(
+                      (player) => player.position === hexId,
+                    )
+                    return (
+                      <button
+                        key={hexId}
+                        type="button"
+                        disabled={!isMyStartChoice || !!occupant}
+                        onClick={() => chooseStart(hexId)}
+                      >
+                        Pole {index + 1}
+                        {occupant ? ` — ${occupant.name}` : ''}
+                      </button>
+                    )
+                  })}
+                </div>
+                {localPlayer && (
+                  <div className="starting-hand-preview">
+                    <strong>Twoja ręka na start</strong>
+                    <div className="card-grid hand-card-grid">
+                      {localPlayer.hand.map((card) => {
+                        const definition = CARD_BY_ID[card.cardId]
+                        return definition ? (
+                          <div
+                            key={card.instanceId}
+                            className="card game-card hand-card"
+                            data-movement={definition.movementType}
+                            data-secondary-movement={
+                              definition.secondaryMovementType
+                            }
+                            data-card-type={definition.type.toLowerCase()}
+                          >
+                            <CardFace card={definition} compact />
+                          </div>
+                        ) : null
+                      })}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+            {!isChoosingStart && (
+              <PlayerHand
+                game={game}
+                player={localPlayer}
+                opponents={game.players.filter(
+                  (player) => player.id !== localPlayer?.id,
+                )}
+                isActive={isActive}
+                onPlayCard={playCard}
+                onUseToken={useToken}
+                onUseActionCard={playActionCard}
+                onChooseHexCurseCard={setPendingHexCurseCardId}
+                onDiscardCard={discardCard}
+                onEndTurn={() => {
+                  setPendingHexCurseCardId(undefined)
+                  endTurn()
+                }}
+                roundNumber={game.roundNumber ?? 1}
+                market={
+                  <Market
+                    game={game}
+                    player={localPlayer}
+                    isActive={isActive}
+                    onBuyCard={buyCard}
+                  />
+                }
+              />
+            )}
             {localPlayer?.pendingCampReward && (
-              <CampReward player={localPlayer} onChoose={chooseCampReward} />
+              <div ref={runeChoiceRef} className="game-rune-choice">
+                <CampReward player={localPlayer} onChoose={chooseCampReward} />
+              </div>
+            )}
+            {isActive && pendingHexCurseCardId && (
+              <div className="hex-curse-prompt" role="status">
+                <span>Wybierz podświetlone pole w zasięgu 2 heksów.</span>
+                <button
+                  type="button"
+                  onClick={() => setPendingHexCurseCardId(undefined)}
+                >
+                  Anuluj
+                </button>
+              </div>
             )}
           </div>
         </div>

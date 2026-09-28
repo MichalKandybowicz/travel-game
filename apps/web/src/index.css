@@ -1487,11 +1487,6 @@ select {
   scroll-margin-top: 16px;
 }
 
-.game-map-choice-layout[data-choosing-rune='true'] {
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
-  align-items: start;
-}
-
 .game-map-choice-layout .map-panel {
   min-width: 0;
 }
@@ -1554,15 +1549,6 @@ select {
 .camp-reward-options button > span:last-child {
   color: #cbd5e1;
   font-size: 0.85rem;
-}
-
-@media (max-width: 1050px) {
-  .game-map-choice-layout[data-choosing-rune='true'] {
-    grid-template-columns: 1fr;
-  }
-  .game-map-choice-layout[data-choosing-rune='true'] .hex-map {
-    height: clamp(240px, 42vh, 400px);
-  }
 }
 
 .catalog-dialog {
@@ -3814,6 +3800,171 @@ select {
   background:
     linear-gradient(100deg, rgba(56, 38, 14, 0.96), rgba(10, 30, 37, 0.9)),
     url('/images/expedition-map.webp') center / cover;
+}
+
+.game-shell .game-layout {
+  display: block;
+  max-width: 1720px;
+  margin-inline: auto;
+}
+
+.game-shell .game-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(380px, 0.9fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.game-hand-column {
+  display: grid;
+  min-width: 0;
+  gap: 16px;
+}
+
+.game-shell .game-map-choice-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.game-rune-choice {
+  min-width: 0;
+  scroll-margin-top: 16px;
+}
+
+.game-shell .map-panel {
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+}
+
+.game-shell .game-map-choice-layout .hex-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
+}
+
+.game-shell .hand-panel {
+  min-width: 0;
+}
+
+.game-shell .hand-panel > .panel-header {
+  align-items: flex-start;
+}
+
+.game-shell .hand-turn-actions {
+  flex-wrap: wrap;
+}
+
+.game-shell .hand-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.game-shell .hand-resources {
+  display: flex;
+  grid-row: 2;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.game-shell .hand-resource {
+  min-width: 0;
+  flex-direction: row;
+  gap: 5px;
+  padding: 3px 7px 3px 4px;
+}
+
+.game-shell .hand-cards-area {
+  display: grid;
+  grid-row: 1;
+  min-width: 0;
+  gap: 5px;
+}
+
+.game-shell .hand-card-grid {
+  width: 100%;
+}
+
+.game-info-drawer {
+  position: fixed;
+  z-index: 100;
+  top: 16px;
+  right: 16px;
+  width: min(230px, calc(100vw - 32px));
+  color: #f5f1e8;
+}
+
+.game-info-drawer > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 13px;
+  border: 1px solid rgba(233, 182, 105, 0.7);
+  border-radius: 12px;
+  background: #17323a;
+  box-shadow: 0 8px 26px rgba(2, 10, 14, 0.45);
+  cursor: pointer;
+  list-style: none;
+  font-weight: 800;
+}
+
+.game-info-drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.game-info-drawer > summary small {
+  margin-left: auto;
+  color: #edc185;
+  font-size: 0.69rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.game-info-drawer[open] {
+  width: min(320px, calc(100vw - 32px));
+}
+
+.game-info-content {
+  display: grid;
+  max-height: calc(100dvh - 78px);
+  gap: 12px;
+  margin-top: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 18px;
+  box-shadow: 0 22px 55px rgba(2, 10, 14, 0.55);
+}
+
+.game-info-drawer:not([open]) .game-info-content {
+  display: none;
+}
+
+.game-info-content .top-bar,
+.game-info-content .game-sidebar {
+  grid-area: auto;
+}
+
+.game-info-content .game-sidebar {
+  display: block;
+}
+
+@media (max-width: 1120px) {
+  .game-shell .game-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .game-hand-column {
+    order: -1;
+  }
+
+  .game-shell .game-map-choice-layout {
+    width: min(100%, 780px);
+    margin-inline: auto;
+  }
 }
 
 .journey-page .error-banner {

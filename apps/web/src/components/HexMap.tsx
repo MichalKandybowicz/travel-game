@@ -29,7 +29,7 @@ const tilePalette: Record<
   MOUNTAIN: { light: '#647c7c', dark: '#293f47', edge: '#9eb1a9' },
 }
 
-const MAX_ZOOM = 12
+const MAX_ZOOM = 24
 const HEX_SPACING = 39
 const HEX_RADIUS = 26
 const BUTTON_ZOOM_FACTOR = 1.5

@@ -103,34 +103,7 @@ export function PlayerHand({
       <div className="panel-header">
         <div className="hand-header-details">
           <strong>Ręka</strong>
-          {player && (
-            <div className="hand-resources" aria-label="Dostępne zasoby">
-              {movementResources.map(({ type, label }) => (
-                <span
-                  key={type}
-                  className="hand-resource"
-                  data-resource={type.toLowerCase()}
-                  title={`${label}: ${player.availableMovement[type]}`}
-                >
-                  <span className="hand-resource-icon">
-                    <MovementGlyph type={type} />
-                  </span>
-                  <strong>{player.availableMovement[type]}</strong>
-                </span>
-              ))}
-              <span
-                className="hand-resource hand-resource--gold"
-                data-resource="gold"
-                title={`Złoto do wydania: ${player.availableGold}`}
-              >
-                <span className="hand-resource-icon">
-                  <GoldGlyph />
-                </span>
-                <strong>{player.availableGold}</strong>
-              </span>
-              <PlayerEffects player={player} game={game} />
-            </div>
-          )}
+          {player && <PlayerEffects player={player} game={game} />}
         </div>
         <div className="hand-turn-actions">
           <button
@@ -174,75 +147,106 @@ export function PlayerHand({
 
       <div className="hand-content">
         {player && (
-          <PlayerTokens
-            player={player}
-            opponents={opponents}
-            roundNumber={roundNumber}
-            isActive={isActive}
-            onUseToken={onUseToken}
-          />
+          <div className="hand-resources" aria-label="Dostępne zasoby">
+            {movementResources.map(({ type, label }) => (
+              <span
+                key={type}
+                className="hand-resource"
+                data-resource={type.toLowerCase()}
+                title={`${label}: ${player.availableMovement[type]}`}
+                aria-label={`${label}: ${player.availableMovement[type]}`}
+              >
+                <span className="hand-resource-icon">
+                  <MovementGlyph type={type} />
+                </span>
+                <strong>{player.availableMovement[type]}</strong>
+              </span>
+            ))}
+            <span
+              className="hand-resource hand-resource--gold"
+              data-resource="gold"
+              title={`Złoto do wydania: ${player.availableGold}`}
+              aria-label={`Złoto do wydania: ${player.availableGold}`}
+            >
+              <span className="hand-resource-icon">
+                <GoldGlyph />
+              </span>
+              <strong>{player.availableGold}</strong>
+            </span>
+          </div>
         )}
-        <div className="card-grid hand-card-grid">
-          {player?.hand.map((card) => {
-            const definition = CARD_BY_ID[card.cardId]
-            if (!definition) {
-              return null
-            }
-            return (
-              <div
-                key={card.instanceId}
-                className="card game-card hand-card"
-                data-movement={definition.movementType}
-                data-secondary-movement={definition.secondaryMovementType}
-                data-card-type={definition.type.toLowerCase()}
-                data-action-category={definition.actionCategory?.toLowerCase()}
-                data-pending-discard={mustDiscard || undefined}
-              >
-                <CardFace
-                  card={definition}
-                  compact
-                  {...(mustDiscard
-                    ? {
-                        discardAction: {
-                          onDiscard: () => onDiscardCard(card.instanceId),
-                          disabled: !isActive,
-                        },
-                      }
-                    : {})}
-                />
-                <div className="hand-card-actions">
-                  <button
-                    type="button"
-                    disabled={!isActive || mustDiscard}
-                    onClick={() => {
-                      setSelectedCardId(card.instanceId)
-                      cardDialogRef.current?.showModal()
-                    }}
-                  >
-                    Użyj
-                  </button>
+        <div className="hand-cards-area">
+          {player && (
+            <PlayerTokens
+              player={player}
+              opponents={opponents}
+              roundNumber={roundNumber}
+              isActive={isActive}
+              onUseToken={onUseToken}
+            />
+          )}
+          <div className="card-grid hand-card-grid">
+            {player?.hand.map((card) => {
+              const definition = CARD_BY_ID[card.cardId]
+              if (!definition) {
+                return null
+              }
+              return (
+                <div
+                  key={card.instanceId}
+                  className="card game-card hand-card"
+                  data-movement={definition.movementType}
+                  data-secondary-movement={definition.secondaryMovementType}
+                  data-card-type={definition.type.toLowerCase()}
+                  data-action-category={definition.actionCategory?.toLowerCase()}
+                  data-pending-discard={mustDiscard || undefined}
+                >
+                  <CardFace
+                    card={definition}
+                    compact
+                    {...(mustDiscard
+                      ? {
+                          discardAction: {
+                            onDiscard: () => onDiscardCard(card.instanceId),
+                            disabled: !isActive,
+                          },
+                        }
+                      : {})}
+                  />
+                  <div className="hand-card-actions">
+                    <button
+                      type="button"
+                      disabled={!isActive || mustDiscard}
+                      onClick={() => {
+                        setSelectedCardId(card.instanceId)
+                        cardDialogRef.current?.showModal()
+                      }}
+                    >
+                      Użyj
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-          {usedCards.map((play) => {
-            const definition = CARD_BY_ID[play.cardId]
-            if (!definition) return null
-            return (
-              <div
-                key={play.instanceId}
-                className="card game-card hand-card hand-card--used"
-                data-movement={definition.movementType}
-                data-secondary-movement={definition.secondaryMovementType}
-                data-card-type={definition.type.toLowerCase()}
-                data-action-category={definition.actionCategory?.toLowerCase()}
-                aria-label={`${cardLabels[definition.id]?.name ?? definition.name} — wykorzystana`}
-              >
-                <CardFace card={definition} compact />
-                <span className="hand-card-used-label">Wykorzystana</span>
-              </div>
-            )
-          })}
+              )
+            })}
+            {usedCards.map((play) => {
+              const definition = CARD_BY_ID[play.cardId]
+              if (!definition) return null
+              return (
+                <div
+                  key={play.instanceId}
+                  className="card game-card hand-card hand-card--used"
+                  data-movement={definition.movementType}
+                  data-secondary-movement={definition.secondaryMovementType}
+                  data-card-type={definition.type.toLowerCase()}
+                  data-action-category={definition.actionCategory?.toLowerCase()}
+                  aria-label={`${cardLabels[definition.id]?.name ?? definition.name} — wykorzystana`}
+                >
+                  <CardFace card={definition} compact />
+                  <span className="hand-card-used-label">Wykorzystana</span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
       <dialog
