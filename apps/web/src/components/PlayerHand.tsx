@@ -80,6 +80,10 @@ export function PlayerHand({
   const selectedDefinition = selectedCard
     ? CARD_BY_ID[selectedCard.cardId]
     : undefined
+  const usedCards =
+    player && game.currentPlayerId === player.id
+      ? game.roundPlayedCards.filter((play) => play.playerId === player.id)
+      : []
 
   const useSelectedAction = () => {
     if (!selectedCard || !selectedDefinition) return
@@ -218,6 +222,24 @@ export function PlayerHand({
                     Użyj
                   </button>
                 </div>
+              </div>
+            )
+          })}
+          {usedCards.map((play) => {
+            const definition = CARD_BY_ID[play.cardId]
+            if (!definition) return null
+            return (
+              <div
+                key={play.instanceId}
+                className="card game-card hand-card hand-card--used"
+                data-movement={definition.movementType}
+                data-secondary-movement={definition.secondaryMovementType}
+                data-card-type={definition.type.toLowerCase()}
+                data-action-category={definition.actionCategory?.toLowerCase()}
+                aria-label={`${cardLabels[definition.id]?.name ?? definition.name} — wykorzystana`}
+              >
+                <CardFace card={definition} compact />
+                <span className="hand-card-used-label">Wykorzystana</span>
               </div>
             )
           })}

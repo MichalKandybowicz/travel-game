@@ -2321,6 +2321,11 @@ select {
     0 7px 16px rgba(0, 0, 0, 0.22);
 }
 
+.hand-card-grid .hand-card--used:hover,
+.hand-card-grid .hand-card--used:focus-within {
+  transform: none;
+}
+
 .hand-card-used-label {
   display: block;
   padding: 0 8px 8px;
