@@ -57,6 +57,8 @@ export function PlayerHand({
   market,
 }: PlayerHandProps) {
   const [pendingCurseCardId, setPendingCurseCardId] = useState<string>()
+  const [selectedCardId, setSelectedCardId] = useState<string>()
+  const cardDialogRef = useRef<HTMLDialogElement>(null)
   const sacrificeDialogRef = useRef<HTMLDialogElement>(null)
   const curseTargetDialogRef = useRef<HTMLDialogElement>(null)
   const mustDiscard = (player?.pendingDiscardCount ?? 0) > 0
@@ -71,6 +73,25 @@ export function PlayerHand({
   const pendingCurseDefinition = pendingCurse
     ? CARD_BY_ID[pendingCurse.cardId]
     : undefined
+  const selectedCard = selectedCardId
+    ? player?.hand.find((card) => card.instanceId === selectedCardId)
+    : undefined
+  const selectedDefinition = selectedCard
+    ? CARD_BY_ID[selectedCard.cardId]
+    : undefined
+
+  const useSelectedAction = () => {
+    if (!selectedCard || !selectedDefinition) return
+    cardDialogRef.current?.close()
+    if (selectedDefinition.actionEffect === 'HEX_SEAL') {
+      onChooseHexCurseCard(selectedCard.instanceId)
+    } else if (selectedDefinition.actionCategory === 'CURSE') {
+      setPendingCurseCardId(selectedCard.instanceId)
+      curseTargetDialogRef.current?.showModal()
+    } else {
+      onUseActionCard(selectedCard.instanceId)
+    }
+  }
 
   return (
     <div className="panel hand-panel">
@@ -161,7 +182,6 @@ export function PlayerHand({
             if (!definition) {
               return null
             }
-            const needsTarget = definition.actionCategory === 'CURSE'
             return (
               <div
                 key={card.instanceId}
@@ -184,63 +204,122 @@ export function PlayerHand({
                       }
                     : {})}
                 />
-                {definition.type === 'ACTION' ? (
-                  <div className="hand-card-actions hand-card-actions--action">
-                    <button
-                      type="button"
-                      disabled={
-                        !isActive ||
-                        mustDiscard ||
-                        (needsTarget &&
-                          definition.actionEffect !== 'HEX_SEAL' &&
-                          opponents.length === 0)
-                      }
-                      onClick={() => {
-                        if (definition.actionEffect === 'HEX_SEAL') {
-                          onChooseHexCurseCard(card.instanceId)
-                          return
-                        }
-                        if (needsTarget) {
-                          setPendingCurseCardId(card.instanceId)
-                          curseTargetDialogRef.current?.showModal()
-                          return
-                        }
-                        onUseActionCard(card.instanceId)
-                      }}
-                    >
-                      Użyj
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!isActive || mustDiscard}
-                      onClick={() => onPlayCard(card.instanceId, 'GOLD')}
-                    >
-                      Złoto +{definition.goldValue}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="hand-card-actions">
-                    <button
-                      type="button"
-                      disabled={!isActive || mustDiscard}
-                      onClick={() => onPlayCard(card.instanceId, 'MOVEMENT')}
-                    >
-                      Ruch {cardMovementValues(definition)}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!isActive || mustDiscard}
-                      onClick={() => onPlayCard(card.instanceId, 'GOLD')}
-                    >
-                      Złoto +{definition.goldValue}
-                    </button>
-                  </div>
-                )}
+                <div className="hand-card-actions">
+                  <button
+                    type="button"
+                    disabled={!isActive || mustDiscard}
+                    onClick={() => {
+                      setSelectedCardId(card.instanceId)
+                      cardDialogRef.current?.showModal()
+                    }}
+                  >
+                    Użyj
+                  </button>
+                </div>
               </div>
             )
           })}
         </div>
       </div>
+      <dialog
+        ref={cardDialogRef}
+        className="market-dialog card-choice-dialog"
+        aria-labelledby="card-choice-title"
+        onClose={() => setSelectedCardId(undefined)}
+      >
+        <div className="market-dialog-content">
+          <header className="market-dialog-header">
+            <div>
+              <small>Wybór zagrania</small>
+              <h2 id="card-choice-title">
+                {selectedDefinition
+                  ? (cardLabels[selectedDefinition.id]?.name ??
+                    selectedDefinition.name)
+                  : 'Karta'}
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="market-dialog-close"
+              aria-label="Zamknij"
+              onClick={() => cardDialogRef.current?.close()}
+            >
+              ×
+            </button>
+          </header>
+          {selectedDefinition && selectedCard && (
+            <>
+              <p className="card-choice-description">
+                {cardDescription(selectedDefinition)}
+              </p>
+              <div className="choice-list">
+                {selectedDefinition.type === 'ACTION' ? (
+                  <button
+                    type="button"
+                    className="choice-option"
+                    disabled={
+                      !isActive ||
+                      mustDiscard ||
+                      (selectedDefinition.actionCategory === 'CURSE' &&
+                        selectedDefinition.actionEffect !== 'HEX_SEAL' &&
+                        opponents.length === 0)
+                    }
+                    onClick={useSelectedAction}
+                  >
+                    <strong>Akcja specjalna</strong>
+                    <span>{cardDescription(selectedDefinition)}</span>
+                    <small>
+                      {selectedDefinition.actionCategory === 'CURSE'
+                        ? selectedDefinition.actionEffect === 'HEX_SEAL'
+                          ? 'Następnie wskażesz pole na mapie.'
+                          : 'Następnie wybierzesz przeciwnika.'
+                        : 'Efekt zostanie użyty od razu.'}{' '}
+                      Karta zostanie spalona.
+                    </small>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="choice-option"
+                    disabled={!isActive || mustDiscard}
+                    onClick={() => {
+                      onPlayCard(selectedCard.instanceId, 'MOVEMENT')
+                      cardDialogRef.current?.close()
+                    }}
+                  >
+                    <strong>
+                      Ruch {cardMovementValues(selectedDefinition)}
+                    </strong>
+                    <span>
+                      Dodaje punkty ruchu pokazanych na karcie rodzajów.
+                    </span>
+                    <small>
+                      Karta trafi po turze na stos odrzuconych i wróci po
+                      przetasowaniu.
+                    </small>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="choice-option"
+                  disabled={!isActive || mustDiscard}
+                  onClick={() => {
+                    onPlayCard(selectedCard.instanceId, 'GOLD')
+                    cardDialogRef.current?.close()
+                  }}
+                >
+                  <strong>Złoto +{selectedDefinition.goldValue}</strong>
+                  <span>Dodaje złoto do wydania w tej turze.</span>
+                  <small>
+                    Karta trafi po turze na stos odrzuconych i wróci po
+                    przetasowaniu.
+                  </small>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </dialog>
       <dialog
         ref={curseTargetDialogRef}
         className="market-dialog curse-target-dialog"

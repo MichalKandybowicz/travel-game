@@ -134,6 +134,11 @@ export function CardFace({
         )}
         {discardButton}
       </span>
+      {compact && (
+        <span className="game-card__hand-summary" title={cardDescription(card)}>
+          {cardDescription(card)}
+        </span>
+      )}
       {!compact && (
         <>
           <span className="game-card__effect">

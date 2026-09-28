@@ -2132,6 +2132,17 @@ select {
   -webkit-line-clamp: 3;
 }
 
+.game-card__hand-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #e4f2ed;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .game-card[data-action-category='curse'] .game-card__action-effect {
   color: #ffe4e6;
 }
@@ -2288,8 +2299,6 @@ select {
 
 .hand-card-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
   padding: 0 8px 8px;
   flex: none;
 }
@@ -2306,6 +2315,55 @@ select {
 .hand-card-actions button:focus-visible {
   outline: 2px solid #f8fafc;
   outline-offset: 2px;
+}
+
+.card-choice-dialog,
+.token-choice-dialog {
+  width: min(580px, calc(100vw - 32px));
+}
+
+.card-choice-description,
+.token-choice-rule {
+  margin: 0;
+  color: #d9e4e4;
+  line-height: 1.5;
+}
+
+.choice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.choice-option {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 14px 16px;
+  border-color: rgba(233, 182, 105, 0.45);
+  background: #17343c;
+  text-align: left;
+}
+
+.choice-option strong {
+  color: #ffe0a6;
+  font-size: 1rem;
+}
+
+.choice-option span,
+.choice-option small {
+  color: #d9e4e4;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.choice-option small {
+  color: #afc7c8;
+}
+
+.choice-option:not(:disabled):hover,
+.choice-option:not(:disabled):focus-visible {
+  border-color: #f3c474;
+  background: #22505a;
 }
 
 .hand-card[data-pending-discard='true'] .hand-card-actions button:disabled {
@@ -2579,25 +2637,18 @@ select {
 }
 
 .player-tokens {
-  display: block;
-  min-height: 42px;
-  padding: 5px 7px;
-  border: 1px solid rgba(233, 182, 105, 0.3);
-  border-radius: 14px;
-  background: rgba(8, 28, 32, 0.58);
+  display: flex;
+  align-items: flex-start;
 }
 
 .player-tokens-heading {
-  display: flex;
+  display: inline-flex;
   min-width: 0;
   align-items: center;
   gap: 7px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.player-tokens-heading::-webkit-details-marker {
-  display: none;
+  padding: 8px 12px;
+  border-color: rgba(233, 182, 105, 0.5);
+  background: rgba(8, 28, 32, 0.8);
 }
 
 .player-tokens-heading::after {
@@ -2605,17 +2656,6 @@ select {
   margin-left: auto;
   color: #e9b669;
   font-size: 1.2rem;
-}
-
-.player-tokens[open] .player-tokens-heading::after {
-  transform: rotate(90deg);
-}
-
-.token-limit {
-  display: block;
-  margin: 9px 0 5px;
-  color: #a7beb5;
-  font-size: 0.7rem;
 }
 
 .player-tokens-heading small,
@@ -2628,38 +2668,40 @@ select {
   white-space: nowrap;
 }
 
-.token-list {
+.token-choice-summary {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 3px 0 5px;
-}
-
-.token-action {
-  display: flex;
-  gap: 4px;
-}
-
-.token-action select {
-  max-width: 190px;
-  padding: 5px 8px;
-  border: 1px solid #6b7280;
-  border-radius: 8px;
-  background: #17262d;
-  color: #f8fafc;
-}
-
-.token {
-  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px 3px 3px;
-  border: 1px solid #6b7280;
-  border-radius: 999px;
-  background: #17262d;
-  color: #f8fafc;
-  font-size: 0.7rem;
-  font-weight: 750;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(233, 182, 105, 0.4);
+  border-radius: 12px;
+  background: rgba(8, 28, 32, 0.58);
+}
+
+.token-choice-summary p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.token-choice-option {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.token-choice-option > span:last-child {
+  display: grid;
+  gap: 3px;
+}
+
+.token-choice-option .token-icon {
+  flex: none;
+  color: #fff;
+  font-size: 0.74rem;
+}
+
+.token-choice-back {
+  justify-self: start;
 }
 
 .token-icon {
@@ -2674,39 +2716,29 @@ select {
   font-weight: 900;
 }
 
-.token[data-tone='green'] .token-icon {
+.token-icon[data-tone='green'] {
   background: #166534;
 }
 
-.token[data-tone='blue'] .token-icon {
+.token-icon[data-tone='blue'] {
   background: #075985;
 }
 
-.token[data-tone='yellow'] .token-icon,
-.token[data-tone='gold'] .token-icon {
+.token-icon[data-tone='yellow'],
+.token-icon[data-tone='gold'] {
   background: #a16207;
 }
 
-.token[data-tone='wild'] .token-icon {
+.token-icon[data-tone='wild'] {
   background: linear-gradient(135deg, #166534, #075985 52%, #a16207);
 }
 
-.token[data-tone='market'] .token-icon {
+.token-icon[data-tone='market'] {
   background: #7c2d12;
 }
 
-.token[data-tone='curse'] .token-icon {
+.token-icon[data-tone='curse'] {
   background: #6b21a8;
-}
-
-.token:not(:disabled):hover {
-  border-color: #f5cc91;
-  transform: translateY(-1px);
-}
-
-.token:disabled {
-  cursor: not-allowed;
-  opacity: 0.48;
 }
 
 .error-banner {

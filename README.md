@@ -96,6 +96,8 @@ Przy włączonej mgle nieznane pola pozostają na mapie jako szare heksy ze znak
 
 W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Liczba punktów ruchu i złota wynika z wartości zapisanych na danej karcie; interfejs tworzy opisy z tych samych danych. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
 
+Każda karta na ręce ma opis i przycisk **Użyj**. Otwiera on okno z możliwymi sposobami zagrania: ruchem albo akcją specjalną oraz wymianą na złoto. Przy każdym wyborze widać efekt i informację, czy karta wróci po przetasowaniu. Przycisk **Runy** otwiera podobne okno z opisami dostępnych run; runa klątwy pozwala tam wskazać przeciwnika.
+
 Karty zaklęć i klątw można **użyć i usunąć** albo **wymienić na 1 złoto**. Wymieniona karta trafia po turze na stos odrzuconych i wraca do talii przy przetasowaniu; użycie efektu usuwa ją z gry. W jednej turze można użyć kilku zaklęć i klątw, jeśli są na ręce.
 
 Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte na pustyni. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju.
