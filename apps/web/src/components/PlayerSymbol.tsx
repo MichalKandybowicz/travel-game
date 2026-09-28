@@ -96,6 +96,56 @@ export function PlayerSymbol({
           fill="#102b32"
         />
       )}
+      {symbol === 'PICKAXE' && (
+        <>
+          <path d="M6 21 15 7" strokeWidth="3" />
+          <path
+            d="M3 8c4-5 11-6 18-2-5-1-8 0-10 3-2-1-5-2-8-1Z"
+            fill="#102b32"
+          />
+        </>
+      )}
+      {symbol === 'RACCOON' && (
+        <>
+          <path d="M4 9 2.5 3.5 8 5l4-1 4 1 5.5-1.5L20 9c1 2 1 5-1 8-2 3-5 4-7 4s-5-1-7-4C3 14 3 11 4 9Z" />
+          <path
+            d="M4 11c2-2 5-2 8 0 3-2 6-2 8 0-1 3-3 5-6 5h-4c-3 0-5-2-6-5Z"
+            fill="#102b32"
+          />
+          <path d="M8 12.5h1m6 0h1" stroke="#f5f1e8" strokeWidth="2" />
+          <path d="m10 17 2 1.5 2-1.5" />
+        </>
+      )}
+      {symbol === 'HORSE' && (
+        <>
+          <path
+            d="M5 21h15v-2l-4-2 1-5 2-2-2-5-5-2-4 3-2 5-3 2 1 4 4-1-1 3-2 2Z"
+            fill="#102b32"
+          />
+          <path d="M13 8h1" stroke="#f5f1e8" strokeWidth="2" />
+        </>
+      )}
+      {symbol === 'DOVE' && (
+        <>
+          <path
+            d="M3 16c3-1 5-3 7-6l-1-6c3 1 5 4 5 7 2-2 4-3 7-3l-3 4 4 2-5 1c-1 4-4 6-8 6-3 0-5-2-6-5Z"
+            fill="#102b32"
+          />
+          <path d="M15 12h1" stroke="#f5f1e8" strokeWidth="2" />
+        </>
+      )}
+      {symbol === 'MICROPHONE' && (
+        <>
+          <rect x="9" y="2" width="6" height="13" rx="3" fill="#102b32" />
+          <path d="M6 11a6 6 0 0 0 12 0M12 17v4m-4 0h8" />
+        </>
+      )}
+      {symbol === 'SWORD' && (
+        <>
+          <path d="m13 3 8-1-1 8-9 9-5-5 7-11Z" fill="#102b32" />
+          <path d="m5 13 6 6m-7 1 4-4m-4 4-2 2" />
+        </>
+      )}
     </svg>
   )
 }

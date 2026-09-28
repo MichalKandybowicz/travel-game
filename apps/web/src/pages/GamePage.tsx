@@ -47,8 +47,11 @@ export function GamePage() {
   const [soundVolume, setSoundVolume] = useState(getTurnSoundVolume)
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
   const [pendingHexCurseCardId, setPendingHexCurseCardId] = useState<string>()
+  const [focusHexRequest, setFocusHexRequest] = useState<{ hexId: string }>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
   const runeChoiceRef = useRef<HTMLDivElement>(null)
+  const mapAreaRef = useRef<HTMLDivElement>(null)
+  const gameInfoRef = useRef<HTMLDetailsElement>(null)
   const pendingCampId = game?.players.find(
     (player) => player.id === session?.playerId,
   )?.pendingCampReward?.campId
@@ -265,7 +268,7 @@ export function GamePage() {
         </div>
       )}
       <section className="game-layout">
-        <details className="game-info-drawer">
+        <details ref={gameInfoRef} className="game-info-drawer">
           <summary>
             <span aria-hidden="true">☰</span>
             <span>
@@ -373,11 +376,27 @@ export function GamePage() {
                     player.id === session?.playerId ? null : (
                       <li key={player.id}>
                         <div className="sidebar-player-heading">
-                          <PlayerBadge
-                            index={index}
-                            color={player.color}
-                            symbol={player.symbol}
-                          />
+                          <button
+                            type="button"
+                            className="sidebar-player-focus"
+                            aria-label={`Pokaż ${player.name} na mapie`}
+                            title={`Pokaż ${player.name} na mapie`}
+                            onClick={() => {
+                              setFocusHexRequest({ hexId: player.position })
+                              if (gameInfoRef.current)
+                                gameInfoRef.current.open = false
+                              mapAreaRef.current?.scrollIntoView({
+                                block: 'start',
+                                behavior: 'smooth',
+                              })
+                            }}
+                          >
+                            <PlayerBadge
+                              index={index}
+                              color={player.color}
+                              symbol={player.symbol}
+                            />
+                          </button>
                           <strong>{player.name}</strong>
                         </div>
                         <div className="sidebar-player-status">
@@ -396,13 +415,14 @@ export function GamePage() {
           </div>
         </details>
         <div className="game-main">
-          <div className="game-map-choice-layout">
+          <div ref={mapAreaRef} className="game-map-choice-layout">
             <HexMap
               game={game}
               playerId={session?.playerId}
               isActive={isActive && !localPlayer?.pendingCampReward}
               canChooseStart={isMyStartChoice}
               focusOnPlayer={pendingCampId}
+              focusHexRequest={focusHexRequest}
               onSelectHex={movePlayer}
               onChooseStart={chooseStart}
               blockTargeting={isActive && !!pendingHexCurseCardId}

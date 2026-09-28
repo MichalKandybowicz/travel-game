@@ -3535,6 +3535,26 @@ select {
   border-top: 1px solid rgba(220, 225, 205, 0.14);
 }
 
+.sidebar-player-focus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sidebar-player-focus:hover {
+  background: rgba(233, 182, 105, 0.18);
+}
+
+.sidebar-player-focus:focus-visible {
+  outline: 2px solid #e9b669;
+  outline-offset: 2px;
+}
+
 .game-players-panel .player-list li > small {
   margin-left: 31px;
   color: #a7beb5;

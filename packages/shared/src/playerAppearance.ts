@@ -24,6 +24,12 @@ export const PLAYER_SYMBOLS = [
   'WAND',
   'CROWN',
   'DRAGON',
+  'PICKAXE',
+  'RACCOON',
+  'HORSE',
+  'DOVE',
+  'MICROPHONE',
+  'SWORD',
 ] as const
 
 export type PlayerColor = (typeof PLAYER_COLORS)[number]

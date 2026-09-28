@@ -22,4 +22,10 @@ export const playerSymbolLabels: Record<PlayerSymbol, string> = {
   WAND: 'Różdżka',
   CROWN: 'Korona',
   DRAGON: 'Smok',
+  PICKAXE: 'Kilof',
+  RACCOON: 'Twarz szopa',
+  HORSE: 'Koń',
+  DOVE: 'Gołąb',
+  MICROPHONE: 'Mikrofon',
+  SWORD: 'Miecz',
 }
