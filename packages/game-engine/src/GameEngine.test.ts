@@ -908,7 +908,6 @@ describe('GameEngine', () => {
     expect(player.availableGold).toBe(1)
     expect(player.playedCards).toContainEqual(curse)
     expect(player.removedCards).not.toContainEqual(curse)
-    expect(player.hasUsedActionCardThisTurn).toBe(false)
     expect(game.latestCurse).toBeUndefined()
     endTurn(game, player.id)
 
@@ -930,6 +929,25 @@ describe('GameEngine', () => {
     activateActionCard(game, player.id, 'echo-after-action-gold')
 
     expect(player.availableGold).toBe(CARD_BY_ID.coin!.goldValue * 2 + 1)
+  })
+
+  it('uses a spell and a curse in the same turn', () => {
+    const game = buildTestGame()
+    const caster = game.players[0]!
+    const target = game.players[1]!
+    caster.hand.push(
+      { cardId: 'guide', instanceId: 'guide-combo' },
+      { cardId: 'path_fracture', instanceId: 'curse-combo' },
+    )
+
+    activateActionCard(game, caster.id, 'guide-combo')
+    activateActionCard(game, caster.id, 'curse-combo', target.id)
+
+    expect(caster.guidedMoveAvailable).toBe(true)
+    expect(target.extraMoveCostPending).toBe(true)
+    expect(caster.removedCards.map((card) => card.instanceId)).toEqual(
+      expect.arrayContaining(['guide-combo', 'curse-combo']),
+    )
   })
 
   it('protective circle consumes and ignores the next curse', () => {
@@ -959,7 +977,6 @@ describe('GameEngine', () => {
       targetPlayerId: target.id,
       blocked: true,
     })
-    caster.hasUsedActionCardThisTurn = false
     activateActionCard(game, caster.id, 'active-curse', target.id)
     expect(target.extraMoveCostPending).toBe(true)
     expect(game.latestCurse?.blocked).toBe(false)
@@ -1008,7 +1025,6 @@ describe('GameEngine', () => {
 
     for (const [, instanceId] of curseCards) {
       activateCurse(instanceId)
-      caster.hasUsedActionCardThisTurn = false
     }
 
     expect(target.fogCostsHidden).toBe(true)

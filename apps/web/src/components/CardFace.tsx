@@ -104,6 +104,13 @@ export function CardFace({
         <span className="game-card__action-effect" title={description}>
           {visibleDescription}
         </span>
+        <span
+          className="game-card__action-fate"
+          title="Użycie efektu usuwa kartę z gry. Wymiana na złoto odkłada ją po turze na stos odrzuconych; wróci po przetasowaniu."
+        >
+          <span>Użyj: spala kartę</span>
+          <span>Złoto: wraca po tasowaniu</span>
+        </span>
         {purchaseCost !== undefined && (
           <span className="game-card__footer">
             Koszt: {purchaseCost} złota · Zamiana: +{card.goldValue} złota

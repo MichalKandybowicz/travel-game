@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "TRAVEL_GAME_DEV_TOOLS=1 tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "start": "node dist/apps/server/src/index.js"

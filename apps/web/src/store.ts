@@ -126,7 +126,7 @@ interface GameStore {
   logout: () => Promise<void>
 }
 
-const getSocket = (): Socket => {
+export const getSocket = (): Socket => {
   if (!socket) {
     socket = io(serverUrl)
   }

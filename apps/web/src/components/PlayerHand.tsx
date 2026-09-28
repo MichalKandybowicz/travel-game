@@ -191,7 +191,6 @@ export function PlayerHand({
                       disabled={
                         !isActive ||
                         mustDiscard ||
-                        player.hasUsedActionCardThisTurn ||
                         (needsTarget &&
                           definition.actionEffect !== 'HEX_SEAL' &&
                           opponents.length === 0)

@@ -534,7 +534,6 @@ export const createGameState = (
       purchasesThisTurn: 0,
       hasSacrificedCardThisTurn: false,
       sacrificeCooldownTurns: 0,
-      hasUsedActionCardThisTurn: false,
       extraPurchaseAvailable: false,
       shortcutMoveAvailable: false,
       guidedMoveAvailable: false,
@@ -856,9 +855,6 @@ export const useActionCard = (
   if ((player.pendingDiscardCount ?? 0) > 0) {
     error('INVALID_ACTION', 'Discard a card before taking another action.')
   }
-  if (player.hasUsedActionCardThisTurn) {
-    error('INVALID_ACTION', 'Only one action card can be used per turn.')
-  }
   const cardIndex = player.hand.findIndex(
     (card) => card.instanceId === cardInstanceId,
   )
@@ -1016,7 +1012,6 @@ export const useActionCard = (
     player.hand.splice(cardIndex, 1)
     player.removedCards.push(actionCard)
   }
-  player.hasUsedActionCardThisTurn = true
   gameState.roundPlayedCards.push({
     instanceId: actionCard.instanceId,
     playerId,
@@ -1347,7 +1342,6 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
     player.sacrificeCooldownTurns = (player.sacrificeCooldownTurns ?? 0) - 1
   }
   player.hasSacrificedCardThisTurn = false
-  player.hasUsedActionCardThisTurn = false
   player.extraPurchaseAvailable = false
   player.shortcutMoveAvailable = false
   player.guidedMoveAvailable = false

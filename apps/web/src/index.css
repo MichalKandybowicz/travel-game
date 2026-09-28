@@ -2114,7 +2114,9 @@ select {
   place-items: center;
   color: #e9d5ff;
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 3.6rem;
+  font-size: 2.1rem;
+  line-height: 1;
+  overflow: hidden;
   text-shadow: 0 0 12px rgba(192, 132, 252, 0.55);
 }
 
@@ -2132,6 +2134,36 @@ select {
 
 .game-card[data-action-category='curse'] .game-card__action-effect {
   color: #ffe4e6;
+}
+
+.game-card__action-fate {
+  display: grid;
+  gap: 1px;
+  margin: 3px 0 5px;
+  color: #f5d0fe;
+  font-size: 0.56rem;
+  font-weight: 400;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.game-card[data-action-category='curse'] .game-card__action-fate {
+  color: #fecdd3;
+}
+
+.game-card__art.action-card-art {
+  height: 48px;
+  min-height: 48px;
+  margin: 4px 0;
+}
+
+.hand-card[data-card-type='action'] .game-card__art {
+  height: 46px;
+  min-height: 46px;
+}
+
+.deck-card .game-card__action-fate {
+  font-size: 0.55rem;
 }
 
 .curse-target-dialog {

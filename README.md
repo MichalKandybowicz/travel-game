@@ -56,6 +56,17 @@ Przycisk **Zobacz wszystkie karty i runy** na stronie głównej otwiera katalog 
 
 The server listens on `http://localhost:3000`. By default it connects to `mongodb://127.0.0.1:27017/travel_game`; set `MONGO_URL` to use another MongoDB instance.
 
+### Dodawanie kart podczas testów
+
+Po uruchomieniu przez `npm run dev` dołącz do rozpoczętej gry i otwórz konsolę przeglądarki. Dostępne są komendy:
+
+```js
+travelGameDev.listCards() // lista kart z numerami
+await travelGameDev.addCard(1) // dodaje kartę nr 1 na Twoją rękę
+```
+
+Można tak dodać każdą grywalną kartę, również zaklęcie lub klątwę. Numer bierze się z kolumny `number` w wyniku `listCards()`. Nadal działa też tekstowe ID, np. `addCard('explorer')`. Komenda działa tylko w trybie `dev`; serwer odrzuca ją przy zwykłym uruchomieniu gry.
+
 ## Test z osobą przez internet
 
 Uruchom `docker compose up --build`. Klient jest dostępny pod `http://localhost:5173`, a połączenia API i Socket.IO przechodzą przez ten sam adres. Do krótkiego testu możesz udostępnić jeden port na dwa sposoby:
@@ -85,7 +96,7 @@ Przy włączonej mgle nieznane pola pozostają na mapie jako szare heksy ze znak
 
 W swojej turze gracz może zagrać kartę dla punktów ruchu **albo** zamienić ją na złoto. Liczba punktów ruchu i złota wynika z wartości zapisanych na danej karcie; interfejs tworzy opisy z tych samych danych. Ta sama karta nie może dać jednocześnie ruchu i złota. Złoto służy do zakupów na rynku; żółte punkty służą do ruchu i są od złota niezależne.
 
-Karty zaklęć i klątw można **użyć i usunąć** albo **wymienić na 1 złoto**. Wymieniona karta trafia po turze na stos odrzuconych i wraca do talii przy przetasowaniu; użycie efektu usuwa ją z gry.
+Karty zaklęć i klątw można **użyć i usunąć** albo **wymienić na 1 złoto**. Wymieniona karta trafia po turze na stos odrzuconych i wraca do talii przy przetasowaniu; użycie efektu usuwa ją z gry. W jednej turze można użyć kilku zaklęć i klątw, jeśli są na ręce.
 
 Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte na pustyni. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju.
 

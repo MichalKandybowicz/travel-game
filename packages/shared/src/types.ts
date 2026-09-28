@@ -193,7 +193,6 @@ export interface PlayerState {
   purchasesThisTurn?: number
   hasSacrificedCardThisTurn?: boolean
   sacrificeCooldownTurns?: number
-  hasUsedActionCardThisTurn?: boolean
   extraPurchaseAvailable?: boolean
   shortcutMoveAvailable?: boolean
   guidedMoveAvailable?: boolean

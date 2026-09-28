@@ -174,6 +174,15 @@ export const playCardSchema = z.object({
   sacrifice: z.boolean().default(false),
 })
 
+export const devAddCardSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string().min(1),
+  cardId: z.string().min(1),
+})
+
 export const useActionCardSchema = z.object({
   roomCode: z
     .string()

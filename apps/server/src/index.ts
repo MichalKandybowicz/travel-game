@@ -40,6 +40,7 @@ import {
   roomBotSchema,
   customMapPayloadSchema,
   playCardSchema,
+  devAddCardSchema,
   useActionCardSchema,
   discardCardSchema,
   movePlayerSchema,
@@ -79,6 +80,7 @@ import {
   type RoomRecord,
 } from './storage.js'
 import { normalizeLobbyFogSettings } from './fogSettings.js'
+import { addDevCard, devToolsEnabled } from './devTools.js'
 
 const storage = await connectStorage(
   process.env.MONGO_URL ?? 'mongodb://127.0.0.1:27017/travel_game',
@@ -459,23 +461,21 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
       const sealHexId = chooseBotSealHex(knowledge, botKnowledge, target.id)
-      const actionCard = !player.hasUsedActionCardThisTurn
-        ? player.hand.find((card) => {
-            const definition = CARD_BY_ID[card.cardId]
-            const effect = definition?.actionEffect
-            return (
-              effect === 'GUIDE' ||
-              effect === 'SECOND_WIND' ||
-              effect === 'MERCHANT_CARAVAN' ||
-              effect === 'STEAL_PLANS' ||
-              effect === 'PHASE_WALK' ||
-              effect === 'RESHUFFLE_HAND' ||
-              effect === 'PROTECTIVE_CIRCLE' ||
-              (definition?.actionCategory === 'CURSE' &&
-                (effect !== 'HEX_SEAL' || !!sealHexId))
-            )
-          })
-        : undefined
+      const actionCard = player.hand.find((card) => {
+        const definition = CARD_BY_ID[card.cardId]
+        const effect = definition?.actionEffect
+        return (
+          effect === 'GUIDE' ||
+          effect === 'SECOND_WIND' ||
+          effect === 'MERCHANT_CARAVAN' ||
+          effect === 'STEAL_PLANS' ||
+          effect === 'PHASE_WALK' ||
+          effect === 'RESHUFFLE_HAND' ||
+          effect === 'PROTECTIVE_CIRCLE' ||
+          (definition?.actionCategory === 'CURSE' &&
+            (effect !== 'HEX_SEAL' || !!sealHexId))
+        )
+      })
       if (actionCard) {
         const definition = CARD_BY_ID[actionCard.cardId]!
         const effect = definition.actionEffect
@@ -1693,6 +1693,51 @@ io.on('connection', (socket) => {
       sendError(socket.id, io, caught as GameError)
     }
   })
+
+  socket.on(
+    EVENTS.gameDevAddCard,
+    async (
+      payload: unknown,
+      ack?: (
+        result:
+          | { ok: true; cardId: string; name: string }
+          | { ok: false; message: string },
+      ) => void,
+    ) => {
+      if (!devToolsEnabled(process.env)) {
+        ack?.({ ok: false, message: 'Narzędzia testowe wymagają npm run dev.' })
+        return
+      }
+      const parsed = devAddCardSchema.safeParse(payload)
+      if (!parsed.success) {
+        ack?.({ ok: false, message: 'Nieprawidłowe dane karty lub gracza.' })
+        return
+      }
+      const { roomCode, playerId, cardId } = parsed.data
+      const room = roomStore.get(roomCode)
+      if (!room?.gameState || !authorizeRoomPlayer(room, socket.id, playerId)) {
+        ack?.({
+          ok: false,
+          message: 'Brak aktywnej gry lub dostępu do gracza.',
+        })
+        return
+      }
+      try {
+        const card = addDevCard(room.gameState, playerId, cardId)
+        logGameAction(room, playerId, 'dev_add_card', { cardId })
+        await emitRoom(io, room)
+        ack?.({ ok: true, cardId, name: card.name })
+      } catch (error) {
+        ack?.({
+          ok: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Nie udało się dodać karty.',
+        })
+      }
+    },
+  )
 
   socket.on(EVENTS.gamePlayCard, async (payload: unknown) => {
     const parsed = playCardSchema.safeParse(payload)
