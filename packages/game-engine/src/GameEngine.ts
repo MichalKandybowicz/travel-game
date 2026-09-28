@@ -152,7 +152,10 @@ const ensureTurn = (gameState: GameState, playerId: string): void => {
     error('GAME_NOT_STARTED', 'The game is not active.')
   }
   if (findPlayer(gameState, playerId).pendingCampReward) {
-    error('INVALID_ACTION', 'Choose a rune from the rune circle before continuing.')
+    error(
+      'INVALID_ACTION',
+      'Choose a rune from the rune circle before continuing.',
+    )
   }
 }
 
@@ -800,11 +803,11 @@ export const playCard = (
     error('INVALID_ACTION', 'Card definition was not found.')
   }
   const cardDefinition = definition!
-  if (cardDefinition.type !== 'MOVEMENT') {
-    error('INVALID_ACTION', 'Action cards must be used as actions.')
-  }
   if (mode !== 'MOVEMENT' && mode !== 'GOLD') {
     error('INVALID_ACTION', 'Invalid card play mode.')
+  }
+  if (cardDefinition.type === 'ACTION' && (mode !== 'GOLD' || sacrifice)) {
+    error('INVALID_ACTION', 'Action cards can only be exchanged for gold.')
   }
   if (
     sacrifice &&
@@ -962,7 +965,8 @@ export const useActionCard = (
           .find(
             (play) =>
               play.playerId === playerId &&
-              (play.mode === 'MOVEMENT' || play.mode === 'GOLD'),
+              (play.mode === 'MOVEMENT' || play.mode === 'GOLD') &&
+              CARD_BY_ID[play.cardId]?.type === 'MOVEMENT',
           )
         if (!previousPlay) {
           return error('INVALID_ACTION', 'No movement card can be echoed.')

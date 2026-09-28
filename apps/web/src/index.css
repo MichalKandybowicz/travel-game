@@ -1985,15 +1985,6 @@ select {
   color: #ffe4e6;
 }
 
-.hand-card-actions--action {
-  grid-template-columns: 1fr;
-}
-
-.hand-card-actions--action button {
-  width: 100%;
-  grid-column: 1 / -1;
-}
-
 .curse-target-dialog {
   width: min(520px, calc(100vw - 32px));
   border-color: rgba(251, 113, 133, 0.66);

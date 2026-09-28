@@ -209,6 +209,13 @@ export function PlayerHand({
                     >
                       Użyj i usuń
                     </button>
+                    <button
+                      type="button"
+                      disabled={!isActive || mustDiscard}
+                      onClick={() => onPlayCard(card.instanceId, 'GOLD')}
+                    >
+                      Złoto +{definition.goldValue}
+                    </button>
                   </div>
                 ) : (
                   <div className="hand-card-actions">

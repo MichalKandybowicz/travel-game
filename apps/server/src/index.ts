@@ -267,9 +267,10 @@ const chooseBotGoldCard = (
   if (replaceable) return replaceable.card
 
   if (player.hand.length >= 5 && !canReachWithHand(player, from, target)) {
-    return candidates[0]?.card
+    const movementCard = candidates[0]?.card
+    if (movementCard) return movementCard
   }
-  return undefined
+  return player.hand.find((card) => CARD_BY_ID[card.cardId]?.type === 'ACTION')
 }
 
 const chooseBotToken = (

@@ -882,6 +882,49 @@ describe('GameEngine', () => {
     expect(player.availableGold).toBe(CARD_BY_ID.coin!.goldValue * 2)
   })
 
+  it('exchanges a curse for one gold and returns it to the deck after reshuffling', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const curse = { cardId: 'path_fracture', instanceId: 'gold-curse' }
+    player.hand = [curse]
+    player.drawPile = []
+    player.discardPile = []
+
+    expect(() =>
+      playCard(game, player.id, curse.instanceId, 'MOVEMENT'),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    expect(() =>
+      playCard(game, player.id, curse.instanceId, 'GOLD', true),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    playCard(game, player.id, curse.instanceId, 'GOLD')
+
+    expect(player.availableGold).toBe(1)
+    expect(player.playedCards).toContainEqual(curse)
+    expect(player.removedCards).not.toContainEqual(curse)
+    expect(player.hasUsedActionCardThisTurn).toBe(false)
+    expect(game.latestCurse).toBeUndefined()
+    endTurn(game, player.id)
+
+    expect(player.hand).toContainEqual(curse)
+    expect(player.removedCards).not.toContainEqual(curse)
+  })
+
+  it('echoes a movement card even after an action card was exchanged for gold', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const coin = player.hand.find((card) => card.cardId === 'coin')!
+    player.hand.push(
+      { cardId: 'guide', instanceId: 'guide-gold' },
+      { cardId: 'echo_power', instanceId: 'echo-after-action-gold' },
+    )
+
+    playCard(game, player.id, coin.instanceId, 'GOLD')
+    playCard(game, player.id, 'guide-gold', 'GOLD')
+    activateActionCard(game, player.id, 'echo-after-action-gold')
+
+    expect(player.availableGold).toBe(CARD_BY_ID.coin!.goldValue * 2 + 1)
+  })
+
   it('protective circle consumes and ignores the next curse', () => {
     const game = buildTestGame()
     const target = game.players[0]!

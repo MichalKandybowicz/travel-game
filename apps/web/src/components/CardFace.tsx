@@ -106,7 +106,7 @@ export function CardFace({
         </span>
         {purchaseCost !== undefined && (
           <span className="game-card__footer">
-            Koszt: {purchaseCost} złota · Jednorazowa
+            Koszt: {purchaseCost} złota · Zamiana: +{card.goldValue} złota
           </span>
         )}
       </span>
