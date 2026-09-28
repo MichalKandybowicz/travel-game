@@ -160,19 +160,19 @@ const ensureTurn = (gameState: GameState, playerId: string): void => {
 }
 
 const spendColor = (
-  player: PlayerState,
+  pool: MovementPool,
   movementType: keyof MovementPool,
   amount: number,
 ): number => {
-  const spent = Math.min(player.availableMovement[movementType], amount)
-  player.availableMovement[movementType] -= spent
+  const spent = Math.min(pool[movementType], amount)
+  pool[movementType] -= spent
   return amount - spent
 }
 
-const spendAny = (player: PlayerState, amount: number): number => {
+const spendAny = (pool: MovementPool, amount: number): number => {
   let remaining = amount
   for (const movementType of ['GREEN', 'BLUE', 'WILD', 'YELLOW'] as const) {
-    remaining = spendColor(player, movementType, remaining)
+    remaining = spendColor(pool, movementType, remaining)
     if (remaining === 0) {
       return 0
     }
@@ -410,22 +410,44 @@ const spendMove = (
   from: HexTile,
   to: HexTile,
   tiles: HexTile[],
+  anyMovementSpent?: MovementPool,
 ): void => {
   const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
   if (requirements.length === 0) {
     error('HEX_BLOCKED', 'That connection is blocked.')
   }
+  const remainingPool = { ...player.availableMovement }
   for (const requirement of requirements) {
     if (requirement.type === 'ANY') continue
-    const remaining = spendColor(player, requirement.type, requirement.amount)
-    if (remaining > 0) spendColor(player, 'WILD', remaining)
+    const remaining = spendColor(
+      remainingPool,
+      requirement.type,
+      requirement.amount,
+    )
+    if (remaining > 0) spendColor(remainingPool, 'WILD', remaining)
   }
   const anyRequired = requirements
     .filter((requirement) => requirement.type === 'ANY')
     .reduce((sum, requirement) => sum + requirement.amount, 0)
-  if (spendAny(player, anyRequired) > 0) {
+  if (anyMovementSpent) {
+    const types = ['GREEN', 'BLUE', 'YELLOW', 'WILD'] as const
+    if (
+      types.some(
+        (type) =>
+          !Number.isSafeInteger(anyMovementSpent[type]) ||
+          anyMovementSpent[type] < 0 ||
+          anyMovementSpent[type] > remainingPool[type],
+      ) ||
+      types.reduce((sum, type) => sum + anyMovementSpent[type], 0) !==
+        anyRequired
+    ) {
+      error('INVALID_ACTION', 'Invalid movement payment.')
+    }
+    for (const type of types) remainingPool[type] -= anyMovementSpent[type]
+  } else if (spendAny(remainingPool, anyRequired) > 0) {
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement points for this route.')
   }
+  player.availableMovement = remainingPool
 }
 
 const nextPlayerId = (gameState: GameState): string => {
@@ -1060,6 +1082,7 @@ export const movePlayer = (
   gameState: GameState,
   playerId: string,
   targetHexId: string,
+  anyMovementSpent?: MovementPool,
 ): GameState => {
   ensureTurn(gameState, playerId)
   const player = findPlayer(gameState, playerId)
@@ -1087,7 +1110,13 @@ export const movePlayer = (
   if (!canAffordMove(player, currentTile, targetTile, gameState.map.tiles)) {
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement for the selected hex.')
   }
-  spendMove(player, currentTile, targetTile, gameState.map.tiles)
+  spendMove(
+    player,
+    currentTile,
+    targetTile,
+    gameState.map.tiles,
+    anyMovementSpent,
+  )
   player.extraMoveCostPending = false
   if (shortcut) player.shortcutMoveAvailable = false
   if (adjacent && player.guidedMoveAvailable) {

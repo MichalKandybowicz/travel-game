@@ -210,6 +210,14 @@ export const movePlayerSchema = z.object({
     .transform((value) => value.toUpperCase()),
   playerId: z.string(),
   targetHexId: z.string(),
+  anyMovementSpent: z
+    .object({
+      GREEN: z.number().int().nonnegative(),
+      BLUE: z.number().int().nonnegative(),
+      YELLOW: z.number().int().nonnegative(),
+      WILD: z.number().int().nonnegative(),
+    })
+    .optional(),
 })
 
 export const chooseStartSchema = z.object({

@@ -6,7 +6,7 @@ import {
   getTerrainCost,
   type MoveRequirement,
 } from '@game-engine'
-import type { GameState, HexTile } from '@shared'
+import type { GameState, HexTile, MovementPool, PlayerState } from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { movementLabels, movementUnitLabel, terrainLabels } from '../labels.js'
 import { playerColor, playerSymbol } from '../playerColors.js'
@@ -32,6 +32,13 @@ const tilePalette: Record<
 const MAX_ZOOM = 12
 const HEX_SPACING = 39
 const HEX_RADIUS = 26
+const movementTypes = ['GREEN', 'BLUE', 'YELLOW', 'WILD'] as const
+const emptyPayment = (): MovementPool => ({
+  GREEN: 0,
+  BLUE: 0,
+  YELLOW: 0,
+  WILD: 0,
+})
 
 type MapView = {
   centerX: number
@@ -132,7 +139,10 @@ interface HexMapProps {
   isActive: boolean
   focusOnPlayer: string | undefined
   canChooseStart: boolean
-  onSelectHex: (hexId: string) => Promise<boolean>
+  onSelectHex: (
+    hexId: string,
+    anyMovementSpent?: MovementPool,
+  ) => Promise<boolean>
   onChooseStart: (hexId: string) => void
   blockTargeting: boolean
   onBlockHex: (hexId: string) => void
@@ -161,6 +171,16 @@ export function HexMap({
   latestGameRef.current = game
   const svgRef = useRef<SVGSVGElement>(null)
   const tileInfoDialogRef = useRef<HTMLDialogElement>(null)
+  const paymentDialogRef = useRef<HTMLDialogElement>(null)
+  const paymentResolverRef = useRef<
+    ((payment: MovementPool | undefined | null) => void) | null
+  >(null)
+  const [pendingPayment, setPendingPayment] = useState<{
+    amount: number
+    available: MovementPool
+  }>()
+  const [selectedPayment, setSelectedPayment] =
+    useState<MovementPool>(emptyPayment)
   const dragRef = useRef<{
     pointerId: number
     startX: number
@@ -428,8 +448,38 @@ export function HexMap({
       animationIdRef.current += 1
       setIsAnimatingMove(false)
       setAnimatedPlayerPosition(undefined)
+      paymentDialogRef.current?.close()
     }
   }, [game.currentPlayerId, isActive, isAnimatingMove, playerId])
+
+  const chooseAnyPayment = (
+    player: PlayerState,
+    from: HexTile,
+    to: HexTile,
+    tiles: HexTile[],
+  ): Promise<MovementPool | undefined | null> => {
+    const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
+    const amount = requirements
+      .filter((requirement) => requirement.type === 'ANY')
+      .reduce((sum, requirement) => sum + requirement.amount, 0)
+    if (amount === 0) return Promise.resolve(undefined)
+    const available = { ...player.availableMovement }
+    for (const requirement of requirements) {
+      if (requirement.type === 'ANY') continue
+      const colored = Math.min(available[requirement.type], requirement.amount)
+      available[requirement.type] -= colored
+      available.WILD -= requirement.amount - colored
+    }
+    if (movementTypes.filter((type) => available[type] > 0).length < 2) {
+      return Promise.resolve(undefined)
+    }
+    setSelectedPayment(emptyPayment())
+    setPendingPayment({ amount, available })
+    return new Promise((resolve) => {
+      paymentResolverRef.current = resolve
+      paymentDialogRef.current?.showModal()
+    })
+  }
 
   const animateMovePath = async (destinationId: string): Promise<void> => {
     if (isAnimatingMove || !playerId) return
@@ -464,6 +514,14 @@ export function HexMap({
           break
         }
 
+        const anyMovementSpent = await chooseAnyPayment(
+          livePlayer,
+          from,
+          next,
+          liveGame.map.tiles,
+        )
+        if (animationIdRef.current !== animationId || anyMovementSpent === null)
+          break
         const startPoint = hexToPixel(from.q, from.r, HEX_SPACING)
         const endPoint = hexToPixel(next.q, next.r, HEX_SPACING)
         const startedAt = performance.now()
@@ -485,7 +543,7 @@ export function HexMap({
         })
         if (!didAnimate) break
 
-        const moved = await onSelectHex(next.id)
+        const moved = await onSelectHex(next.id, anyMovementSpent)
         if (!moved) break
         from = next
       }
@@ -1082,6 +1140,104 @@ export function HexMap({
           </g>
         )}
       </svg>
+      <dialog
+        ref={paymentDialogRef}
+        className="tile-info-dialog movement-payment-dialog"
+        aria-labelledby="movement-payment-title"
+        onClose={() => {
+          paymentResolverRef.current?.(null)
+          paymentResolverRef.current = null
+          setPendingPayment(undefined)
+        }}
+      >
+        {pendingPayment && (
+          <div className="tile-info-content">
+            <header>
+              <div>
+                <small>Koszt przejścia</small>
+                <h2 id="movement-payment-title">Wybierz punkty ruchu</h2>
+              </div>
+            </header>
+            <p>Wydaj {pendingPayment.amount} punktów dowolnego rodzaju.</p>
+            <div className="movement-payment-options">
+              {movementTypes
+                .filter((type) => pendingPayment.available[type] > 0)
+                .map((type) => (
+                  <div
+                    key={type}
+                    className="movement-payment-option"
+                    data-resource={type.toLowerCase()}
+                  >
+                    <span>
+                      {movementLabels[type]}: {selectedPayment[type]} /{' '}
+                      {pendingPayment.available[type]}
+                    </span>
+                    <div>
+                      <button
+                        type="button"
+                        aria-label={`Odejmij punkt: ${movementLabels[type]}`}
+                        disabled={selectedPayment[type] === 0}
+                        onClick={() =>
+                          setSelectedPayment((current) => ({
+                            ...current,
+                            [type]: current[type] - 1,
+                          }))
+                        }
+                      >
+                        −
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Dodaj punkt: ${movementLabels[type]}`}
+                        disabled={
+                          selectedPayment[type] >=
+                            pendingPayment.available[type] ||
+                          movementTypes.reduce(
+                            (sum, key) => sum + selectedPayment[key],
+                            0,
+                          ) >= pendingPayment.amount
+                        }
+                        onClick={() =>
+                          setSelectedPayment((current) => ({
+                            ...current,
+                            [type]: current[type] + 1,
+                          }))
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            <div className="movement-payment-actions">
+              <button
+                type="button"
+                onClick={() => paymentDialogRef.current?.close()}
+              >
+                Anuluj
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={
+                  movementTypes.reduce(
+                    (sum, type) => sum + selectedPayment[type],
+                    0,
+                  ) !== pendingPayment.amount
+                }
+                onClick={() => {
+                  paymentResolverRef.current?.(selectedPayment)
+                  paymentResolverRef.current = null
+                  paymentDialogRef.current?.close()
+                }}
+              >
+                Wykonaj ruch
+              </button>
+            </div>
+          </div>
+        )}
+      </dialog>
       <dialog
         ref={tileInfoDialogRef}
         className="tile-info-dialog"

@@ -324,6 +324,45 @@ describe('GameEngine', () => {
     expect(player.position).toBe(target.id)
   })
 
+  it('spends the chosen colors for a move requiring any movement', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const target = findReachableTile(game, 'JUNGLE')
+    target.terrain = 'RUBBLE'
+    target.difficulty = 2
+    target.isBlocked = false
+    player.availableMovement = { GREEN: 2, BLUE: 2, YELLOW: 0, WILD: 0 }
+
+    expect(() =>
+      movePlayer(game, player.id, target.id, {
+        GREEN: 3,
+        BLUE: 0,
+        YELLOW: 0,
+        WILD: 0,
+      }),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+    expect(player.position).not.toBe(target.id)
+    expect(player.availableMovement).toEqual({
+      GREEN: 2,
+      BLUE: 2,
+      YELLOW: 0,
+      WILD: 0,
+    })
+
+    movePlayer(game, player.id, target.id, {
+      GREEN: 1,
+      BLUE: 1,
+      YELLOW: 0,
+      WILD: 0,
+    })
+    expect(player.availableMovement).toEqual({
+      GREEN: 1,
+      BLUE: 1,
+      YELLOW: 0,
+      WILD: 0,
+    })
+  })
+
   it('rejects movement without a played card or with the wrong terrain color', () => {
     const game = buildTestGame()
     const player = game.players[0]!

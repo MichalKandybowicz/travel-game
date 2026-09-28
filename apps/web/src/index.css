@@ -1329,6 +1329,39 @@ select {
   background: rgba(2, 6, 23, 0.7);
 }
 
+.movement-payment-options {
+  display: grid;
+  gap: 10px;
+}
+
+.movement-payment-option,
+.movement-payment-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.movement-payment-option {
+  padding: 10px 12px;
+  border: 1px solid rgba(183, 214, 191, 0.4);
+  border-radius: 10px;
+}
+
+.movement-payment-option div {
+  display: flex;
+  gap: 8px;
+}
+
+.movement-payment-option button {
+  min-width: 34px;
+  min-height: 34px;
+}
+
+.movement-payment-actions {
+  justify-content: flex-end;
+}
+
 .tile-info-content {
   display: grid;
   gap: 16px;

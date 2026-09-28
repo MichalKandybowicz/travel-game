@@ -7,6 +7,7 @@ import {
   type GameError,
   type GameState,
   type MapSettings,
+  type MovementPool,
   type PlayerColor,
   type PlayerSymbol,
   type RoomState,
@@ -113,7 +114,10 @@ interface GameStore {
     targetHexId?: string,
   ) => void
   discardCard: (cardInstanceId: string) => void
-  movePlayer: (targetHexId: string) => Promise<boolean>
+  movePlayer: (
+    targetHexId: string,
+    anyMovementSpent?: MovementPool,
+  ) => Promise<boolean>
   buyCard: (cardId: string) => void
   useToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   chooseCampReward: (tokenType: string) => void
@@ -390,7 +394,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cardInstanceId,
     })
   },
-  movePlayer: async (targetHexId) => {
+  movePlayer: async (targetHexId, anyMovementSpent) => {
     const { session } = get()
     if (!session) {
       return false
@@ -402,6 +406,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           roomCode: session.roomCode,
           playerId: session.playerId,
           targetHexId,
+          anyMovementSpent,
         })) as { ok: boolean }
       return result.ok
     } catch {

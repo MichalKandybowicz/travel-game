@@ -1904,6 +1904,7 @@ io.on('connection', (socket) => {
           room.gameState,
           parsed.data.playerId,
           parsed.data.targetHexId,
+          parsed.data.anyMovementSpent,
         )
         const targetTile = room.gameState.map.tiles.find(
           (tile) => tile.id === parsed.data.targetHexId,
