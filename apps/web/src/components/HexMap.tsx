@@ -32,6 +32,8 @@ const tilePalette: Record<
 const MAX_ZOOM = 12
 const HEX_SPACING = 39
 const HEX_RADIUS = 26
+const BUTTON_ZOOM_FACTOR = 1.5
+const BUTTON_PAN_FRACTION = 0.75
 const movementTypes = ['GREEN', 'BLUE', 'YELLOW', 'WILD'] as const
 const emptyPayment = (): MovementPool => ({
   GREEN: 0,
@@ -598,7 +600,7 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                zoom: Math.min(MAX_ZOOM, current.zoom + 0.2),
+                zoom: Math.min(MAX_ZOOM, current.zoom * BUTTON_ZOOM_FACTOR),
               }))
             }
           >
@@ -609,7 +611,7 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                zoom: Math.max(0.6, current.zoom - 0.2),
+                zoom: Math.max(0.6, current.zoom / BUTTON_ZOOM_FACTOR),
               }))
             }
           >
@@ -620,7 +622,12 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                pan: { ...current.pan, x: current.pan.x - 20 },
+                pan: {
+                  ...current.pan,
+                  x:
+                    current.pan.x -
+                    (mapView.width / current.zoom) * BUTTON_PAN_FRACTION,
+                },
               }))
             }
           >
@@ -631,7 +638,12 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                pan: { ...current.pan, x: current.pan.x + 20 },
+                pan: {
+                  ...current.pan,
+                  x:
+                    current.pan.x +
+                    (mapView.width / current.zoom) * BUTTON_PAN_FRACTION,
+                },
               }))
             }
           >
@@ -642,7 +654,12 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                pan: { ...current.pan, y: current.pan.y - 20 },
+                pan: {
+                  ...current.pan,
+                  y:
+                    current.pan.y -
+                    (mapView.height / current.zoom) * BUTTON_PAN_FRACTION,
+                },
               }))
             }
           >
@@ -653,7 +670,12 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                pan: { ...current.pan, y: current.pan.y + 20 },
+                pan: {
+                  ...current.pan,
+                  y:
+                    current.pan.y +
+                    (mapView.height / current.zoom) * BUTTON_PAN_FRACTION,
+                },
               }))
             }
           >
