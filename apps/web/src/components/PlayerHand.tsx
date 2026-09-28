@@ -1,6 +1,6 @@
 import { CARD_BY_ID } from '@shared'
 import { useRef, useState, type ReactNode } from 'react'
-import type { CardPlayMode, PlayerState } from '@shared'
+import type { CardPlayMode, GameState, PlayerState } from '@shared'
 import { cardDescription, cardLabels, cardMovementValues } from '../labels.js'
 import { CardFace, MovementGlyph } from './CardFace.js'
 import { PlayerTokens } from './PlayerTokens.js'
@@ -25,6 +25,7 @@ function GoldGlyph() {
 
 interface PlayerHandProps {
   player: PlayerState | undefined
+  game: GameState
   isActive: boolean
   onPlayCard: (
     cardInstanceId: string,
@@ -43,6 +44,7 @@ interface PlayerHandProps {
 
 export function PlayerHand({
   player,
+  game,
   isActive,
   onPlayCard,
   opponents,
@@ -100,7 +102,7 @@ export function PlayerHand({
                 </span>
                 <strong>{player.availableGold}</strong>
               </span>
-              <PlayerEffects player={player} />
+              <PlayerEffects player={player} game={game} />
             </div>
           )}
         </div>
@@ -207,7 +209,7 @@ export function PlayerHand({
                         onUseActionCard(card.instanceId)
                       }}
                     >
-                      Użyj i usuń
+                      Użyj
                     </button>
                     <button
                       type="button"

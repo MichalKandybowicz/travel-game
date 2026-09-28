@@ -484,6 +484,34 @@ export function HexMap({
           </button>
         </div>
       </div>
+      {(localPlayer?.extraMoveCostPending ||
+        localPlayer?.fogCostsHidden ||
+        (game.temporaryBlockedHexes?.length ?? 0) > 0) && (
+        <div
+          className="map-curse-notices"
+          aria-label="Klątwy wpływające na mapę"
+        >
+          {localPlayer?.extraMoveCostPending && (
+            <p>
+              <strong>Pęknięcie szlaku:</strong> następne przejście kosztuje
+              dodatkowy 1 dowolny punkt ruchu. Fioletowe +1 oznacza ten koszt
+              przy wyjściach z Twojego pola.
+            </p>
+          )}
+          {localPlayer?.fogCostsHidden && (
+            <p>
+              <strong>Mgła zapomnienia:</strong> koszty przejść są ukryte do
+              końca Twojej tury.
+            </p>
+          )}
+          {(game.temporaryBlockedHexes?.length ?? 0) > 0 && (
+            <p>
+              <strong>Pieczęć pola:</strong> pole oznaczone fioletowym × jest
+              zablokowane.
+            </p>
+          )}
+        </div>
+      )}
       <svg
         ref={svgRef}
         viewBox={`${mapView.centerX + pan.x - mapView.width / (2 * zoom)} ${mapView.centerY + pan.y - mapView.height / (2 * zoom)} ${mapView.width / zoom} ${mapView.height / zoom}`}
@@ -899,6 +927,38 @@ export function HexMap({
             })
           })}
         </g>
+        {localPlayer?.extraMoveCostPending && currentTile && (
+          <g className="map-curse-costs" pointerEvents="none">
+            {connections
+              .filter(
+                (connection) =>
+                  (connection.from.id === currentTile.id ||
+                    connection.to.id === currentTile.id) &&
+                  getMoveRequirements(connection.from, connection.to).length >
+                    0,
+              )
+              .map((connection) => {
+                const middleX =
+                  (connection.fromPoint.x + connection.toPoint.x) / 2
+                const middleY =
+                  (connection.fromPoint.y + connection.toPoint.y) / 2
+                const deltaX = connection.toPoint.x - connection.fromPoint.x
+                const deltaY = connection.toPoint.y - connection.fromPoint.y
+                const length = Math.hypot(deltaX, deltaY)
+                const x = middleX - (deltaY / length) * 13
+                const y = middleY + (deltaX / length) * 13
+
+                return (
+                  <g key={`${connection.from.id}-${connection.to.id}`}>
+                    <circle cx={x} cy={y} r="7" />
+                    <text x={x} y={y + 2.3} textAnchor="middle">
+                      +1
+                    </text>
+                  </g>
+                )
+              })}
+          </g>
+        )}
       </svg>
       <div className="player-location-legend" aria-label="Pozycje graczy">
         {game.players.map((player, index) => (

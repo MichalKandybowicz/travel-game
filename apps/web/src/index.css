@@ -1110,6 +1110,36 @@ select {
   stroke-width: 1.35px;
 }
 
+.map-curse-notices {
+  display: grid;
+  gap: 5px;
+  padding: 9px 12px;
+  border: 1px solid rgba(226, 151, 236, 0.6);
+  border-radius: 10px;
+  background: rgba(78, 29, 92, 0.55);
+  color: #f8e8fb;
+  font-size: 0.79rem;
+}
+
+.map-curse-notices p {
+  margin: 0;
+}
+
+.map-curse-costs circle {
+  fill: #793394;
+  stroke: #f1b7ff;
+  stroke-width: 1.2;
+}
+
+.map-curse-costs text {
+  fill: #fff2ff;
+  font-size: 6.5px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #451654;
+  stroke-width: 1px;
+}
+
 .map-connection-path {
   stroke-linecap: round;
 }
@@ -1774,7 +1804,7 @@ select {
 .player-effects {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 7px;
   margin: 8px 0 0 31px;
 }
 
@@ -1784,17 +1814,27 @@ select {
 }
 
 .player-effect {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 7px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 6px;
+  max-width: 260px;
+  padding: 6px 8px;
   border: 1px solid rgba(222, 151, 238, 0.55);
-  border-radius: 999px;
+  border-radius: 10px;
   background: rgba(91, 33, 109, 0.45);
   color: #f6d8ff;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 0.72rem;
   line-height: 1.25;
+}
+
+.player-effect-icon {
+  grid-row: span 2;
+}
+
+.player-effect-description {
+  color: #f3e4f7;
+  font-size: 0.66rem;
+  font-weight: 400;
 }
 
 .player-effect[data-kind='shield'] {

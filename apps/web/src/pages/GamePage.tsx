@@ -360,7 +360,7 @@ export function GamePage() {
                         {player.connected ? 'połączony' : 'rozłączony'}
                       </small>
                     </div>
-                    <PlayerEffects player={player} />
+                    <PlayerEffects player={player} game={game} />
                     <PlayedCards player={player} />
                   </li>
                 ),
@@ -425,6 +425,7 @@ export function GamePage() {
           )}
           {!isChoosingStart && (
             <PlayerHand
+              game={game}
               player={localPlayer}
               opponents={game.players.filter(
                 (player) => player.id !== localPlayer?.id,

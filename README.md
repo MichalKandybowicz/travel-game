@@ -129,7 +129,7 @@ Po użyciu **Eliksiru odnowy** wartości i opisy kart pozostają widoczne podcza
 
 **Pieczęć pola** kosztuje 9 złota. Po zagraniu wybierz na mapie puste, dostępne pole w odległości do 2 heksów od swojego pionka. Pole pozostaje zablokowane dla wszystkich do początku twojej następnej tury. Nie można wybrać pola startu, celu, góry ani pola zajętego przez pionek.
 
-Po zagraniu klątwy pojawia się powiadomienie z jej nazwą, dokładnym opisem działania i krótkim efektem wizualnym między graczem rzucającym a celem. Klątwa sklepu wskazuje sklep; zablokowana klątwa pokazuje efekt ochrony. Krąg wędrowców pokazuje pozostałych graczy oraz ich aktywne efekty klątw i ochronę. Własne efekty widać obok punktów ruchu i złota nad ręką. Etykiety znikają, gdy odpowiadający im efekt zostanie wykorzystany lub wygaśnie.
+Po zagraniu klątwy pojawia się powiadomienie z jej nazwą, dokładnym opisem działania i krótkim efektem wizualnym między graczem rzucającym a celem. Klątwa sklepu wskazuje sklep; zablokowana klątwa pokazuje efekt ochrony. Krąg wędrowców pokazuje pozostałych graczy oraz nazwy i dokładne działanie ich aktywnych klątw i ochrony. Własne efekty widać obok punktów ruchu i złota nad ręką. Na mapie dodatkowy koszt następnego przejścia oznacza fioletowe **+1** przy wyjściach z pola gracza; opis nad mapą wyjaśnia też ukrycie kosztów i blokadę pola. Informacje znikają, gdy odpowiadający im efekt zostanie wykorzystany lub wygaśnie.
 
 Klątwa podnosząca koszt ruchu działa do następnego udanego przejścia. Bot uwzględnia ten dodatkowy punkt przy wyborze kart, run i trasy; jeśli w danej turze nie ma wystarczających zasobów, efekt pozostaje aktywny.
 
