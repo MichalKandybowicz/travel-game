@@ -1811,53 +1811,68 @@ io.on('connection', (socket) => {
     }
   })
 
-  socket.on(EVENTS.gameMove, async (payload: unknown) => {
-    const parsed = movePlayerSchema.safeParse(payload)
-    if (!parsed.success) {
-      sendError(socket.id, io, {
-        code: 'INVALID_ACTION',
-        message: parsed.error.message,
-      })
-      return
-    }
-    const room = roomStore.get(parsed.data.roomCode)
-    if (!room?.gameState) {
-      sendError(socket.id, io, {
-        code: 'GAME_NOT_STARTED',
-        message: 'Game has not started.',
-      })
-      return
-    }
-    try {
-      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+  socket.on(
+    EVENTS.gameMove,
+    async (
+      payload: unknown,
+      acknowledge?: (result: { ok: boolean }) => void,
+    ) => {
+      const parsed = movePlayerSchema.safeParse(payload)
+      if (!parsed.success) {
         sendError(socket.id, io, {
-          code: 'PLAYER_NOT_FOUND',
-          message: 'Socket is not authorized for this player.',
+          code: 'INVALID_ACTION',
+          message: parsed.error.message,
         })
+        acknowledge?.({ ok: false })
         return
       }
-      movePlayer(room.gameState, parsed.data.playerId, parsed.data.targetHexId)
-      const targetTile = room.gameState.map.tiles.find(
-        (tile) => tile.id === parsed.data.targetHexId,
-      )
-      logGameAction(room, parsed.data.playerId, 'move', {
-        targetHexId: parsed.data.targetHexId,
-        terrain: targetTile?.terrain,
-        difficulty: targetTile?.difficulty,
-        tokenCount:
-          room.gameState.players.find(
-            (player) => player.id === parsed.data.playerId,
-          )?.tokens?.length ?? 0,
-      })
-      if (room.gameState.status === 'FINISHED') {
-        room.status = 'FINISHED'
+      const room = roomStore.get(parsed.data.roomCode)
+      if (!room?.gameState) {
+        sendError(socket.id, io, {
+          code: 'GAME_NOT_STARTED',
+          message: 'Game has not started.',
+        })
+        acknowledge?.({ ok: false })
+        return
       }
-      await emitRoom(io, room)
-      scheduleBotTurns(io, room)
-    } catch (caught) {
-      sendError(socket.id, io, caught as GameError)
-    }
-  })
+      try {
+        if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+          sendError(socket.id, io, {
+            code: 'PLAYER_NOT_FOUND',
+            message: 'Socket is not authorized for this player.',
+          })
+          acknowledge?.({ ok: false })
+          return
+        }
+        movePlayer(
+          room.gameState,
+          parsed.data.playerId,
+          parsed.data.targetHexId,
+        )
+        const targetTile = room.gameState.map.tiles.find(
+          (tile) => tile.id === parsed.data.targetHexId,
+        )
+        logGameAction(room, parsed.data.playerId, 'move', {
+          targetHexId: parsed.data.targetHexId,
+          terrain: targetTile?.terrain,
+          difficulty: targetTile?.difficulty,
+          tokenCount:
+            room.gameState.players.find(
+              (player) => player.id === parsed.data.playerId,
+            )?.tokens?.length ?? 0,
+        })
+        if (room.gameState.status === 'FINISHED') {
+          room.status = 'FINISHED'
+        }
+        await emitRoom(io, room)
+        scheduleBotTurns(io, room)
+        acknowledge?.({ ok: true })
+      } catch (caught) {
+        sendError(socket.id, io, caught as GameError)
+        acknowledge?.({ ok: false })
+      }
+    },
+  )
 
   socket.on(EVENTS.gameBuyCard, async (payload: unknown) => {
     const parsed = buyCardSchema.safeParse(payload)

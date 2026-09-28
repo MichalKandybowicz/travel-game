@@ -101,7 +101,7 @@ export function cardDescription(card: CardDefinition): string {
     const descriptions = {
       MAP_SHORTCUT:
         'Następny ruch może przeskoczyć przez jedno zablokowane pole.',
-      SECOND_WIND: 'Dobierz dwie karty, a następnie odrzuć jedną z ręki.',
+      SECOND_WIND: 'Dobierz cztery karty, a następnie odrzuć jedną z ręki.',
       MERCHANT_CARAVAN: 'Możesz kupić w tej turze drugą kartę.',
       STEAL_PLANS: 'Wybrany przeciwnik odrzuca losową kartę z ręki.',
       GUIDE: 'Następne sąsiednie przejście kosztuje 1 dowolnego ruchu.',

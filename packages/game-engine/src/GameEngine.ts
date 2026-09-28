@@ -305,6 +305,100 @@ export const canAffordMove = (
   )
 }
 
+export const getReachableMovePaths = (
+  gameState: GameState,
+  playerId: string,
+): Map<string, string[]> => {
+  const player = gameState.players.find((entry) => entry.id === playerId)
+  const start = gameState.map.tiles.find((tile) => tile.id === player?.position)
+  if (!player || !start) return new Map()
+
+  const queue: Array<{ tile: HexTile; player: PlayerState; path: string[] }> = [
+    { tile: start, player, path: [] },
+  ]
+  const visited = new Set<string>()
+  const paths = new Map<string, string[]>()
+  const movementKey = (state: PlayerState, tileId: string): string =>
+    [
+      tileId,
+      state.availableMovement.GREEN,
+      state.availableMovement.BLUE,
+      state.availableMovement.YELLOW,
+      state.availableMovement.WILD,
+      state.shortcutMoveAvailable ? 1 : 0,
+      state.guidedMoveAvailable ? 1 : 0,
+      state.extraMoveCostPending ? 1 : 0,
+    ].join(':')
+
+  while (queue.length > 0) {
+    const current = queue.shift()!
+    const key = movementKey(current.player, current.tile.id)
+    if (visited.has(key)) continue
+    visited.add(key)
+
+    const neighbors = getNeighbors(gameState.map.tiles, current.tile)
+    if (current.player.shortcutMoveAvailable) {
+      for (const candidate of gameState.map.tiles) {
+        if (
+          !neighbors.some((neighbor) => neighbor.id === candidate.id) &&
+          isShortcutMove(gameState.map.tiles, current.tile, candidate)
+        ) {
+          neighbors.push(candidate)
+        }
+      }
+    }
+
+    for (const neighbor of neighbors) {
+      if (
+        gameState.settings.allowSharedTiles === false &&
+        !current.player.sharedTileAccessAvailable &&
+        gameState.players.some(
+          (other) => other.id !== playerId && other.position === neighbor.id,
+        )
+      ) {
+        continue
+      }
+      if (
+        !canAffordMove(
+          current.player,
+          current.tile,
+          neighbor,
+          gameState.map.tiles,
+        )
+      ) {
+        continue
+      }
+
+      const nextPlayer: PlayerState = {
+        ...current.player,
+        availableMovement: { ...current.player.availableMovement },
+      }
+      spendMove(nextPlayer, current.tile, neighbor, gameState.map.tiles)
+      nextPlayer.extraMoveCostPending = false
+      if (
+        nextPlayer.shortcutMoveAvailable &&
+        axialDistance(current.tile, neighbor) > 1
+      ) {
+        nextPlayer.shortcutMoveAvailable = false
+      }
+      if (
+        nextPlayer.guidedMoveAvailable &&
+        axialDistance(current.tile, neighbor) === 1
+      ) {
+        nextPlayer.guidedMoveAvailable = false
+      }
+      const path = [...current.path, neighbor.id]
+      if (neighbor.id !== start.id && !paths.has(neighbor.id)) {
+        paths.set(neighbor.id, path)
+      }
+      if (neighbor.terrain !== 'GOAL') {
+        queue.push({ tile: neighbor, player: nextPlayer, path })
+      }
+    }
+  }
+  return paths
+}
+
 const spendMove = (
   player: PlayerState,
   from: HexTile,
@@ -814,7 +908,7 @@ export const useActionCard = (
         player.removedCards.push(actionCard)
         drawCards(
           player,
-          2,
+          4,
           `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
         )
         player.pendingDiscardCount = 1

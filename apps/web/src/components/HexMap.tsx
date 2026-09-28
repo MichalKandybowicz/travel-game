@@ -1,5 +1,5 @@
 import {
-  canAffordMove,
+  getReachableMovePaths,
   getMoveRequirements,
   getTerrainCost,
   type MoveRequirement,
@@ -129,7 +129,7 @@ interface HexMapProps {
   playerId: string | undefined
   isActive: boolean
   canChooseStart: boolean
-  onSelectHex: (hexId: string) => void
+  onSelectHex: (hexId: string) => Promise<boolean>
   onChooseStart: (hexId: string) => void
   blockTargeting: boolean
   onBlockHex: (hexId: string) => void
@@ -146,6 +146,14 @@ export function HexMap({
   onBlockHex,
 }: HexMapProps) {
   const [selectedHexId, setSelectedHexId] = useState<string>()
+  const [animatedPlayerPosition, setAnimatedPlayerPosition] = useState<{
+    x: number
+    y: number
+  }>()
+  const [isAnimatingMove, setIsAnimatingMove] = useState(false)
+  const animationIdRef = useRef(0)
+  const latestGameRef = useRef(game)
+  latestGameRef.current = game
   const svgRef = useRef<SVGSVGElement>(null)
   const dragRef = useRef<{
     pointerId: number
@@ -268,35 +276,98 @@ export function HexMap({
     return () => svg.removeEventListener('wheel', handleWheel)
   }, [mapView])
 
-  const reachable = useMemo(() => {
-    if (!localPlayer || !currentTile) {
-      return new Set<string>()
+  const reachablePaths = useMemo(
+    () =>
+      isActive && !blockTargeting && playerId
+        ? getReachableMovePaths(game, playerId)
+        : new Map<string, string[]>(),
+    [blockTargeting, game, isActive, playerId],
+  )
+  const reachable = useMemo(
+    () => new Set(reachablePaths.keys()),
+    [reachablePaths],
+  )
+
+  useEffect(
+    () => () => {
+      animationIdRef.current += 1
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (isAnimatingMove && (game.currentPlayerId !== playerId || !isActive)) {
+      animationIdRef.current += 1
+      setIsAnimatingMove(false)
+      setAnimatedPlayerPosition(undefined)
     }
-    return new Set(
-      game.map.tiles
-        .filter(
-          (tile) =>
-            (cubeDistance(tile, currentTile) === 1 ||
-              (localPlayer.shortcutMoveAvailable &&
-                cubeDistance(tile, currentTile) === 2)) &&
-            !tile.isBlocked &&
-            (game.settings.allowSharedTiles !== false ||
-              localPlayer.sharedTileAccessAvailable ||
-              !game.players.some(
-                (player) =>
-                  player.id !== localPlayer.id && player.position === tile.id,
-              )) &&
-            canAffordMove(localPlayer, currentTile, tile, game.map.tiles),
+  }, [game.currentPlayerId, isActive, isAnimatingMove, playerId])
+
+  const animateMovePath = async (destinationId: string): Promise<void> => {
+    if (isAnimatingMove || !playerId) return
+    const path = reachablePaths.get(destinationId)
+    if (!path?.length || !currentTile) return
+
+    const animationId = animationIdRef.current + 1
+    animationIdRef.current = animationId
+    const turnNumber = game.turnNumber
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    const stepDuration = reducedMotion ? 80 : 500
+    let from = currentTile
+    setIsAnimatingMove(true)
+    setAnimatedPlayerPosition(hexToPixel(from.q, from.r, HEX_SPACING))
+
+    try {
+      for (const nextHexId of path) {
+        const next = game.map.tiles.find((tile) => tile.id === nextHexId)
+        if (!next) break
+        const liveGame = latestGameRef.current
+        const livePlayer = liveGame.players.find(
+          (player) => player.id === playerId,
         )
-        .map((tile) => tile.id),
-    )
-  }, [
-    currentTile,
-    game.map.tiles,
-    game.players,
-    game.settings.allowSharedTiles,
-    localPlayer,
-  ])
+        if (
+          animationIdRef.current !== animationId ||
+          liveGame.currentPlayerId !== playerId ||
+          liveGame.turnNumber !== turnNumber ||
+          livePlayer?.position !== from.id
+        ) {
+          break
+        }
+
+        const startPoint = hexToPixel(from.q, from.r, HEX_SPACING)
+        const endPoint = hexToPixel(next.q, next.r, HEX_SPACING)
+        const startedAt = performance.now()
+        const didAnimate = await new Promise<boolean>((resolve) => {
+          const frame = (now: number) => {
+            if (animationIdRef.current !== animationId) {
+              resolve(false)
+              return
+            }
+            const progress = Math.min(1, (now - startedAt) / stepDuration)
+            setAnimatedPlayerPosition({
+              x: startPoint.x + (endPoint.x - startPoint.x) * progress,
+              y: startPoint.y + (endPoint.y - startPoint.y) * progress,
+            })
+            if (progress === 1) resolve(true)
+            else requestAnimationFrame(frame)
+          }
+          requestAnimationFrame(frame)
+        })
+        if (!didAnimate) break
+
+        const moved = await onSelectHex(next.id)
+        if (!moved) break
+        from = next
+      }
+    } finally {
+      if (animationIdRef.current === animationId) {
+        setIsAnimatingMove(false)
+        setAnimatedPlayerPosition(undefined)
+      }
+    }
+  }
   const connections = useMemo(() => {
     const byCoordinates = new Map(
       game.map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile]),
@@ -567,12 +638,13 @@ export function HexMap({
                 className={`map-tile${!blockTargeting && ((isActive && isReachable) || isAvailableStart) ? ' reachable-hex' : ''}${isBlockTarget ? ' curse-target-hex' : ''}`}
                 onClick={() => {
                   setSelectedHexId(tile.id)
+                  if (isAnimatingMove) return
                   if (blockTargeting) {
                     if (isBlockTarget) onBlockHex(tile.id)
                     return
                   }
                   if (isActive && isReachable) {
-                    onSelectHex(tile.id)
+                    void animateMovePath(tile.id)
                   } else if (isAvailableStart) {
                     onChooseStart(tile.id)
                   }
@@ -677,6 +749,7 @@ export function HexMap({
                     </>
                   )}
                 {occupiedBy.map((player, index) => {
+                  if (player.id === playerId && isAnimatingMove) return null
                   const number =
                     game.players.findIndex((entry) => entry.id === player.id) +
                     1
@@ -709,6 +782,34 @@ export function HexMap({
             )
           })}
         </g>
+        {isAnimatingMove && animatedPlayerPosition && localPlayer && (
+          <g
+            className="map-player-marker map-player-marker--active map-player-marker--moving"
+            pointerEvents="none"
+            aria-hidden="true"
+          >
+            <circle
+              cx={animatedPlayerPosition.x}
+              cy={animatedPlayerPosition.y + 7}
+              r="9"
+              fill={playerColor(
+                game.players.findIndex((player) => player.id === playerId),
+                localPlayer.color,
+              )}
+              stroke="#fff8cc"
+              strokeWidth="2.5"
+            />
+            <PlayerSymbol
+              symbol={playerSymbol(
+                game.players.findIndex((player) => player.id === playerId),
+                localPlayer.symbol,
+              )}
+              size={13}
+              x={animatedPlayerPosition.x - 6.5}
+              y={animatedPlayerPosition.y + 0.5}
+            />
+          </g>
+        )}
         <g className="map-edge-costs" pointerEvents="none">
           {connections.map((connection) => {
             const middleX = (connection.fromPoint.x + connection.toPoint.x) / 2

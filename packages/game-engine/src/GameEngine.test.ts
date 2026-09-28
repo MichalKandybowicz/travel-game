@@ -14,6 +14,7 @@ import {
   createGameState,
   endTurn,
   discardCard,
+  getReachableMovePaths,
   getMoveRequirements,
   movePlayer,
   playCard,
@@ -330,6 +331,54 @@ describe('GameEngine', () => {
     expect(game.status).toBe('FINISHED')
     expect(game.winnerId).toBe('p1')
     expect(serializePublicGameState(game, 'p2').winnerId).toBe('p1')
+  })
+
+  it('finds every destination reachable with the movement pool and returns a walkable path', () => {
+    const start: HexTile = {
+      id: 'start',
+      q: 0,
+      r: 0,
+      terrain: 'START',
+      difficulty: 1,
+      isBlocked: false,
+    }
+    const first: HexTile = {
+      id: 'first',
+      q: 1,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 1,
+      isBlocked: false,
+    }
+    const second: HexTile = {
+      id: 'second',
+      q: 2,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 1,
+      isBlocked: false,
+    }
+    const water: HexTile = {
+      id: 'water',
+      q: 1,
+      r: -1,
+      terrain: 'WATER',
+      difficulty: 1,
+      isBlocked: false,
+    }
+    const game = buildTestGame()
+    const player = game.players[0]!
+    game.map.tiles = [start, first, second, water]
+    game.map.goalHexId = 'second'
+    player.position = start.id
+    player.availableMovement = { GREEN: 3, BLUE: 0, YELLOW: 0, WILD: 0 }
+
+    const paths = getReachableMovePaths(game, player.id)
+
+    expect(paths.get(first.id)).toEqual([first.id])
+    expect(paths.get(second.id)).toEqual([first.id, second.id])
+    expect(paths.has(water.id)).toBe(false)
+    expect(player.availableMovement.GREEN).toBe(3)
   })
 
   it('allows buying cards when enough gold is available', () => {

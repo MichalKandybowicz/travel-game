@@ -113,7 +113,7 @@ interface GameStore {
     targetHexId?: string,
   ) => void
   discardCard: (cardInstanceId: string) => void
-  movePlayer: (targetHexId: string) => void
+  movePlayer: (targetHexId: string) => Promise<boolean>
   buyCard: (cardId: string) => void
   useToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   endTurn: () => void
@@ -389,16 +389,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cardInstanceId,
     })
   },
-  movePlayer: (targetHexId) => {
+  movePlayer: async (targetHexId) => {
     const { session } = get()
     if (!session) {
-      return
+      return false
     }
-    getSocket().emit(EVENTS.gameMove, {
-      roomCode: session.roomCode,
-      playerId: session.playerId,
-      targetHexId,
-    })
+    try {
+      const result = (await getSocket()
+        .timeout(5000)
+        .emitWithAck(EVENTS.gameMove, {
+          roomCode: session.roomCode,
+          playerId: session.playerId,
+          targetHexId,
+        })) as { ok: boolean }
+      return result.ok
+    } catch {
+      set({
+        error: {
+          code: 'INVALID_ACTION',
+          message: 'Nie udało się wykonać ruchu. Spróbuj ponownie.',
+        },
+      })
+      return false
+    }
   },
   buyCard: (cardId) => {
     const { session } = get()
