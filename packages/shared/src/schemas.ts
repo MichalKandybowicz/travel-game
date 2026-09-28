@@ -230,3 +230,12 @@ export const useTokenSchema = z.object({
   tokenInstanceId: z.string(),
   targetPlayerId: z.string().optional(),
 })
+
+export const chooseCampRewardSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  tokenType: z.string(),
+})

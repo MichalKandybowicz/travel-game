@@ -11,6 +11,7 @@ import { axialDistance, getNeighbors } from '../../map-generator/src/index.js'
 import {
   buyCard,
   chooseStart,
+  chooseCampReward,
   createGameState,
   endTurn,
   discardCard,
@@ -73,6 +74,41 @@ const findReachableTile = (
 }
 
 describe('GameEngine', () => {
+  it('offers three distinct camp runes and grants only the chosen one', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const camp = findReachableTile(game, 'CAMP')
+    camp.difficulty = 1
+    player.availableMovement.WILD = 2
+
+    movePlayer(game, player.id, camp.id)
+
+    const reward = player.pendingCampReward!
+    expect(reward.options).toHaveLength(3)
+    expect(new Set(reward.options).size).toBe(3)
+    expect(reward.storyIndex).toBeGreaterThanOrEqual(0)
+    expect(reward.storyIndex).toBeLessThan(3)
+    expect(player.tokens).toEqual([])
+    expect(() => endTurn(game, player.id)).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+    expect(() => chooseCampReward(game, player.id, 'GREEN_1')).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+    expect(
+      serializePublicGameState(game, game.players[1]!.id).players[0]!
+        .pendingCampReward,
+    ).toBeUndefined()
+
+    chooseCampReward(game, player.id, reward.options[1])
+    expect(player.pendingCampReward).toBeUndefined()
+    expect(player.tokens).toEqual([
+      { instanceId: `${player.id}-camp-${camp.id}`, type: reward.options[1] },
+    ])
+    expect(() => chooseCampReward(game, player.id, reward.options[0])).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+  })
   it('combines matching terrain costs with a one-point edge discount', () => {
     const greenTwo: HexTile = {
       id: 'green-2',

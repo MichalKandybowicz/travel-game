@@ -116,6 +116,7 @@ interface GameStore {
   movePlayer: (targetHexId: string) => Promise<boolean>
   buyCard: (cardId: string) => void
   useToken: (tokenInstanceId: string, targetPlayerId?: string) => void
+  chooseCampReward: (tokenType: string) => void
   endTurn: () => void
   leaveRoom: () => Promise<boolean>
   leaveFinishedGame: () => void
@@ -432,6 +433,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerId: session.playerId,
       tokenInstanceId,
       ...(targetPlayerId ? { targetPlayerId } : {}),
+    })
+  },
+  chooseCampReward: (tokenType) => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.gameChooseCampReward, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
+      tokenType,
     })
   },
   endTurn: () => {

@@ -167,7 +167,7 @@ export function CardCatalog() {
             <>
               <p className="catalog-token-rule">
                 W jednej rundzie możesz użyć jednej runy. Runy zdobywa się w
-                kręgach mocy.
+                kręgach run.
               </p>
               <div className="catalog-rune-grid" aria-label="Runy">
                 {visibleTokens.map((token) => {

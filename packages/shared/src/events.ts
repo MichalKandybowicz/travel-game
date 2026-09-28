@@ -20,6 +20,7 @@ export const EVENTS = {
   gameMove: 'game:move',
   gameBuyCard: 'game:buy-card',
   gameUseToken: 'game:use-token',
+  gameChooseCampReward: 'game:choose-camp-reward',
   gameEndTurn: 'game:end-turn',
   gameError: 'game:error',
 } as const

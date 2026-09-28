@@ -43,7 +43,7 @@ export const terrainLabels: Record<TerrainType, string> = {
   WATER: 'Kryształowe wody',
   DESERT: 'Złote pustkowia',
   RUBBLE: 'Starożytne ruiny',
-  CAMP: 'Krąg mocy',
+  CAMP: 'Krąg run',
   MOUNTAIN: 'Góry runiczne',
 }
 

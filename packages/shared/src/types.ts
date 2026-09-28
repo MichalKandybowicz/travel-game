@@ -206,6 +206,11 @@ export interface PlayerState {
   nextPurchaseCostIncrease?: number
   pendingDiscardCount?: number
   tokens?: TokenInstance[]
+  pendingCampReward?: {
+    campId: string
+    options: [TokenType, TokenType, TokenType]
+    storyIndex: number
+  }
   claimedCampIds?: string[]
   revealedTileIds?: string[]
   scoutedTileIds?: string[]

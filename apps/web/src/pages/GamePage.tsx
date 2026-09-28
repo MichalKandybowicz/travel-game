@@ -13,6 +13,7 @@ import { PlayerBadge } from '../components/PlayerBadge.js'
 import { PlayerEffects } from '../components/PlayerEffects.js'
 import { cardLabels } from '../labels.js'
 import { tokenDescription, tokenPresentation } from '../tokenPresentation.js'
+import { CampReward } from '../components/CampReward.js'
 
 export function GamePage() {
   const navigate = useNavigate()
@@ -30,6 +31,7 @@ export function GamePage() {
   const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
   const useToken = useGameStore((state) => state.useToken)
+  const chooseCampReward = useGameStore((state) => state.chooseCampReward)
   const playActionCard = useGameStore((state) => state.useActionCard)
   const discardCard = useGameStore((state) => state.discardCard)
   const endTurn = useGameStore((state) => state.endTurn)
@@ -105,6 +107,9 @@ export function GamePage() {
 
   return (
     <main className="page shell journey-page game-shell">
+      {localPlayer?.pendingCampReward && (
+        <CampReward player={localPlayer} onChoose={chooseCampReward} />
+      )}
       {visibleCurse && (
         <div className="curse-popup" role="alert" aria-live="assertive">
           <div className="curse-popup-body">

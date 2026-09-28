@@ -85,7 +85,7 @@ export function PlayerTokens({
         </div>
       ) : (
         <small className="token-empty">
-          Wejdź do kręgu mocy, aby zdobyć losową runę.
+          Wejdź do kręgu run, aby wybrać jedną z trzech run.
         </small>
       )}
     </details>

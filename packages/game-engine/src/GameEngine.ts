@@ -151,6 +151,9 @@ const ensureTurn = (gameState: GameState, playerId: string): void => {
   if (gameState.status !== 'ACTIVE') {
     error('GAME_NOT_STARTED', 'The game is not active.')
   }
+  if (findPlayer(gameState, playerId).pendingCampReward) {
+    error('INVALID_ACTION', 'Choose a rune from the rune circle before continuing.')
+  }
 }
 
 const spendColor = (
@@ -1098,15 +1101,23 @@ export const movePlayer = (
     player.claimedCampIds ??= []
     player.tokens ??= []
     if (!player.claimedCampIds.includes(targetTile.id)) {
-      const tokenType = new SeededRandom(
+      const random = new SeededRandom(
         `${gameState.seed}:${playerId}:camp:${targetTile.id}`,
-      ).pick([...TOKEN_DEFINITIONS]).type
-      const token: TokenInstance = {
-        instanceId: `${playerId}-camp-${targetTile.id}`,
-        type: tokenType,
-      }
+      )
+      const options = random
+        .shuffle([...TOKEN_DEFINITIONS])
+        .slice(0, 3)
+        .map((definition) => definition.type) as [
+        TokenInstance['type'],
+        TokenInstance['type'],
+        TokenInstance['type'],
+      ]
       player.claimedCampIds.push(targetTile.id)
-      player.tokens.push(token)
+      player.pendingCampReward = {
+        campId: targetTile.id,
+        options,
+        storyIndex: random.int(0, 2),
+      }
     }
   }
 
@@ -1115,6 +1126,31 @@ export const movePlayer = (
     gameState.winnerId = playerId
   }
 
+  return gameState
+}
+
+export const chooseCampReward = (
+  gameState: GameState,
+  playerId: string,
+  tokenType: TokenInstance['type'],
+): GameState => {
+  if (gameState.currentPlayerId !== playerId || gameState.status !== 'ACTIVE') {
+    error('NOT_YOUR_TURN', 'It is not your turn.')
+  }
+  const player = findPlayer(gameState, playerId)
+  const reward = player.pendingCampReward
+  if (!reward) {
+    return error('INVALID_ACTION', 'There is no rune circle reward to choose.')
+  }
+  if (!reward.options.includes(tokenType)) {
+    error('INVALID_ACTION', 'That rune is not offered by this rune circle.')
+  }
+  player.tokens ??= []
+  player.tokens.push({
+    instanceId: `${playerId}-camp-${reward.campId}`,
+    type: tokenType,
+  })
+  delete player.pendingCampReward
   return gameState
 }
 
@@ -1564,8 +1600,10 @@ export const serializePublicGameState = (
         }
       }
 
+      const publicPlayer = { ...player }
+      delete publicPlayer.pendingCampReward
       return {
-        ...player,
+        ...publicPlayer,
         position,
         ...(Number.isFinite(remainingRouteCost) ? { remainingRouteCost } : {}),
         tokens: player.tokens?.map((token) => ({ ...token })) ?? [],

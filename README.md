@@ -93,18 +93,18 @@ Cała krawędź pierwszego płatka przeciwna do sąsiedniego płatka stanowi **p
 
 Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
 
-| Teren     | Koszt wejścia                                  | Efekt                                                                  |
-| --------- | ---------------------------------------------- | ---------------------------------------------------------------------- |
-| Dżungla   | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                               |
-| Woda      | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                               |
-| Pustynia  | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                               |
-| Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                               |
-| Obóz      | 1–5 punktów dowolnego koloru                   | Obecnie brak dodatkowego efektu. Usuwanie kart z talii jest planowane. |
-| Góry      | Nie można wejść                                | Pole zablokowane.                                                      |
-| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z czterech pól początkowych, wybieranych przed pierwszą turą.    |
-| Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                                        |
+| Teren     | Koszt wejścia                                  | Efekt                                                               |
+| --------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| Dżungla   | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                            |
+| Woda      | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                            |
+| Pustynia  | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                            |
+| Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                            |
+| Krąg run  | 1–5 punktów dowolnego koloru                   | Przy pierwszym wejściu wybierasz jedną z trzech losowych run.       |
+| Góry      | Nie można wejść                                | Pole zablokowane.                                                   |
+| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z czterech pól początkowych, wybieranych przed pierwszą turą. |
+| Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                                     |
 
-Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego obozu na płatek mapy. Obozy dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
+Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego kręgu run na płatek mapy. Kręgi run dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 
 Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Gracz od razu dobiera karty do stanu **5 na ręce**, więc ma nową rękę także podczas tur przeciwników i może stracić kartę wskutek klątwy. Na początku gry również dobiera 5 kart. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
@@ -119,6 +119,7 @@ Wśród kart za **4 złota** są zielona Druidka, niebieski Zaklinacz fal oraz d
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
 
 Runy ruchu i złota mają teraz wartości **+2, +3 albo +4**. W jednej rundzie można użyć jednej runy.
+Po pierwszym wejściu do kręgu run pojawia się losowy opis wydarzenia i wybór jednej z trzech różnych, losowych run. Oferta czeka na decyzję gracza również po odświeżeniu strony. Bot wybiera jedną z oferowanych run automatycznie.
 Karta **Zamiana losu** i runa wymiany ręki odrzucają wskazane karty i dobierają **5 kart**, także gdy przed wymianą na ręce były cztery karty.
 
 ## Klątwy i ochrona

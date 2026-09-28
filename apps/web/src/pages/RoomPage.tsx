@@ -517,7 +517,7 @@ export function RoomPage() {
                   </select>
                 </label>
                 <label>
-                  Min. obozów na płatek
+                  Min. kręgów run na płatek
                   <select
                     value={settings.campCountMinPerPetal}
                     disabled={!isHost}
@@ -541,7 +541,7 @@ export function RoomPage() {
                   </select>
                 </label>
                 <label>
-                  Maks. obozów na płatek
+                  Maks. kręgów run na płatek
                   <select
                     value={settings.campCountMaxPerPetal}
                     disabled={!isHost}

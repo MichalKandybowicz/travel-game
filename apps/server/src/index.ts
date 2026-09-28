@@ -7,6 +7,7 @@ import { z } from 'zod'
 import {
   buyCard,
   chooseStart,
+  chooseCampReward,
   createGameState,
   canAffordMove,
   endTurn,
@@ -44,6 +45,7 @@ import {
   movePlayerSchema,
   buyCardSchema,
   useTokenSchema,
+  chooseCampRewardSchema,
   chooseStartSchema,
   type GameError,
   type CardDefinition,
@@ -51,6 +53,7 @@ import {
   type GameState,
   type HexTile,
   type PlayerState,
+  type TokenType,
   type RoomState,
   type SessionState,
 } from '../../../packages/shared/src/index.js'
@@ -407,6 +410,13 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       }
 
       const player = game.players.find((entry) => entry.id === bot.id)!
+      if (player.pendingCampReward) {
+        const tokenType = player.pendingCampReward.options[0]
+        chooseCampReward(game, bot.id, tokenType)
+        logGameAction(room, bot.id, 'choose_camp_reward', { tokenType })
+        await emitRoom(io, room)
+        continue
+      }
       if ((player.pendingDiscardCount ?? 0) > 0) {
         const discard = player.hand.find(
           (card) => CARD_BY_ID[card.cardId]?.type === 'MOVEMENT',
@@ -1903,6 +1913,46 @@ io.on('connection', (socket) => {
       logGameAction(room, parsed.data.playerId, 'buy_card', {
         cardId: parsed.data.cardId,
         purchaseCost: CARD_BY_ID[parsed.data.cardId]?.purchaseCost,
+      })
+      await emitRoom(io, room)
+      scheduleBotTurns(io, room)
+    } catch (caught) {
+      sendError(socket.id, io, caught as GameError)
+    }
+  })
+
+  socket.on(EVENTS.gameChooseCampReward, async (payload: unknown) => {
+    const parsed = chooseCampRewardSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room?.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_NOT_STARTED',
+        message: 'Game has not started.',
+      })
+      return
+    }
+    try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
+      chooseCampReward(
+        room.gameState,
+        parsed.data.playerId,
+        parsed.data.tokenType as TokenType,
+      )
+      logGameAction(room, parsed.data.playerId, 'choose_camp_reward', {
+        tokenType: parsed.data.tokenType,
       })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
