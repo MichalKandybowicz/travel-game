@@ -1984,12 +1984,17 @@ select {
   font-size: 0.74rem;
 }
 
-.player-journey-details > small {
+.player-journey-details > summary {
   color: #91aaa0;
   font-size: 0.64rem;
   font-weight: 750;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.player-journey-details > summary:hover {
+  color: #edc185;
 }
 
 .player-journey-content {

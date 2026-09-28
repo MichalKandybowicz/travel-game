@@ -6,8 +6,8 @@ export function PlayedCards({ player }: { player: PlayerState }) {
   const playerPlays = player.lastTurnPlayedCards ?? []
 
   return (
-    <div className="player-journey-details">
-      <small>Ostatnia tura</small>
+    <details className="player-journey-details">
+      <summary>Zagrane karty z ostatniej tury ({playerPlays.length})</summary>
       <div className="player-journey-content">
         <div>
           {playerPlays.length === 0 ? (
@@ -52,6 +52,6 @@ export function PlayedCards({ player }: { player: PlayerState }) {
           )}
         </div>
       </div>
-    </div>
+    </details>
   )
 }
