@@ -1114,6 +1114,19 @@ select {
   stroke-width: 1.35px;
 }
 
+.map-shortcut-costs {
+  filter: drop-shadow(0 1px 2px rgba(36, 9, 48, 0.85));
+}
+
+.map-shortcut-costs text {
+  fill: #fffaf0;
+  font-size: 7px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: #33143f;
+  stroke-width: 1.5px;
+}
+
 .map-curse-notices {
   display: grid;
   gap: 5px;

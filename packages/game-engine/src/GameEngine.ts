@@ -380,7 +380,6 @@ export const getReachableMovePaths = (
         availableMovement: { ...current.player.availableMovement },
       }
       spendMove(nextPlayer, current.tile, neighbor, gameState.map.tiles)
-      nextPlayer.extraMoveCostPending = false
       if (
         nextPlayer.shortcutMoveAvailable &&
         axialDistance(current.tile, neighbor) > 1
@@ -1117,7 +1116,6 @@ export const movePlayer = (
     gameState.map.tiles,
     anyMovementSpent,
   )
-  player.extraMoveCostPending = false
   if (shortcut) player.shortcutMoveAvailable = false
   if (adjacent && player.guidedMoveAvailable) {
     player.guidedMoveAvailable = false
@@ -1395,6 +1393,9 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
     if (gameState.currentPlayerId === gameState.players[0]?.id) {
       gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
       gameState.roundPlayedCards = []
+      for (const roundPlayer of gameState.players) {
+        roundPlayer.extraMoveCostPending = false
+      }
       if (!(gameState.marketPurchasedThisRound ?? false)) {
         refreshMarket(gameState, 'stale')
       }

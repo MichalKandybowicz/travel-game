@@ -31,7 +31,7 @@ export function PlayerEffects({
       player.extraMoveCostPending && {
         label: cardLabels.path_fracture!.name,
         description:
-          'Następne przejście kosztuje o 1 dowolny punkt ruchu więcej.',
+          'Każde przejście kosztuje o 1 dowolny punkt ruchu więcej do końca rundy.',
         kind: 'curse',
         icon: '☠',
       },

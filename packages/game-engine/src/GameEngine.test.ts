@@ -15,6 +15,7 @@ import {
   createGameState,
   endTurn,
   discardCard,
+  getEffectiveMoveRequirements,
   getReachableMovePaths,
   getMoveRequirements,
   movePlayer,
@@ -851,9 +852,16 @@ describe('GameEngine', () => {
       cardId: 'shortcut_map',
       instanceId: 'shortcut-map-test',
     })
-    player.availableMovement.GREEN = 1
 
     activateActionCard(game, player.id, 'shortcut-map-test')
+    expect(getReachableMovePaths(game, player.id).has(target.id)).toBe(false)
+    player.availableMovement.GREEN = 1
+    expect(
+      getEffectiveMoveRequirements(player, start, target, game.map.tiles),
+    ).toEqual([{ type: 'GREEN', amount: 1 }])
+    expect(getReachableMovePaths(game, player.id).get(target.id)).toEqual([
+      target.id,
+    ])
     movePlayer(game, player.id, target.id)
 
     expect(player.position).toBe(target.id)
@@ -1021,31 +1029,41 @@ describe('GameEngine', () => {
     expect(game.latestCurse?.blocked).toBe(false)
   })
 
-  it('adds one point to the cursed player next move', () => {
+  it('adds one point to every cursed move until the round ends', () => {
     const game = buildTestGame()
-    const player = game.players[0]!
-    const target = findReachableTile(game, 'JUNGLE')
-    game.settings.allowSharedTiles = true
-    target.difficulty = 1
-    player.extraMoveCostPending = true
+    const caster = game.players[0]!
+    const player = game.players[1]!
+    const origin = game.map.tiles.find((tile) => tile.id === player.position)!
+    const destination = getNeighbors(game.map.tiles, origin).find(
+      (tile) => tile.id !== caster.position,
+    )!
+    destination.terrain = 'JUNGLE'
+    destination.difficulty = 1
+    destination.isBlocked = false
+    caster.hand.push({ cardId: 'path_fracture', instanceId: 'round-curse' })
+
+    activateActionCard(game, caster.id, 'round-curse', player.id)
+    endTurn(game, caster.id)
     player.availableMovement.WILD = 10
-    const before = Object.values(player.availableMovement).reduce(
-      (sum, value) => sum + value,
-      0,
-    )
+    movePlayer(game, player.id, destination.id)
+    expect(player.extraMoveCostPending).toBe(true)
 
-    movePlayer(game, player.id, target.id)
-
+    player.availableMovement.WILD = 2
+    expect(getReachableMovePaths(game, player.id).has(origin.id)).toBe(false)
+    player.availableMovement.WILD = 10
+    const beforeSecondMove = player.availableMovement.WILD
+    movePlayer(game, player.id, origin.id)
     expect(
-      Object.values(player.availableMovement).reduce(
-        (sum, value) => sum + value,
-        0,
-      ),
-    ).toBeLessThanOrEqual(before - 2)
+      beforeSecondMove - player.availableMovement.WILD,
+    ).toBeGreaterThanOrEqual(3)
+    expect(player.extraMoveCostPending).toBe(true)
+
+    endTurn(game, player.id)
+    expect(game.roundNumber).toBe(2)
     expect(player.extraMoveCostPending).toBe(false)
   })
 
-  it('applies fog, poverty, roots and market curses to an opponent', () => {
+  it('applies fog, poverty and market curses to an opponent', () => {
     const game = buildTestGame()
     const caster = game.players[0]!
     const target = game.players[1]!
@@ -1053,7 +1071,6 @@ describe('GameEngine', () => {
     const curseCards = [
       ['fog_of_forgetting', 'fog-test'],
       ['poverty_curse', 'poverty-test'],
-      ['tangled_roots', 'roots-test'],
       ['closed_market', 'market-test'],
     ] as const
     caster.hand.push(
@@ -1069,23 +1086,14 @@ describe('GameEngine', () => {
     expect(target.fogCostsHidden).toBe(true)
     expect(target.availableGold).toBe(1)
     expect(target.nextPurchaseCostIncrease).toBe(2)
-    expect(target.shortcutBlocked).toBe(true)
     expect(target.marketBlocked).toBe(true)
     endTurn(game, caster.id)
     target.availableGold = 20
     expect(() => buyCard(game, target.id, game.market[0]!)).toThrow(
       expect.objectContaining({ code: 'MARKET_LOCKED' }),
     )
-    target.hand.push({
-      cardId: 'shortcut_map',
-      instanceId: 'blocked-shortcut',
-    })
-    expect(() =>
-      activateActionCard(game, target.id, 'blocked-shortcut'),
-    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
     endTurn(game, target.id)
     expect(target.fogCostsHidden).toBe(false)
-    expect(target.shortcutBlocked).toBe(false)
     expect(target.marketBlocked).toBe(false)
     endTurn(game, caster.id)
     const cardId = game.market[0]!

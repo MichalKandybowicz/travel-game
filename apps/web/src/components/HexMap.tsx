@@ -366,6 +366,41 @@ export function HexMap({
     () => new Set(reachablePaths.keys()),
     [reachablePaths],
   )
+  const tilesByCoordinate = new Map(
+    game.map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile]),
+  )
+  const shortcutOptions =
+    isActive &&
+    localPlayer?.shortcutMoveAvailable &&
+    currentTile &&
+    !blockTargeting
+      ? game.map.tiles.flatMap((obstacle) => {
+          if (
+            cubeDistance(currentTile, obstacle) !== 1 ||
+            (!obstacle.isBlocked && obstacle.terrain !== 'MOUNTAIN')
+          ) {
+            return []
+          }
+          const landing = tilesByCoordinate.get(
+            `${2 * obstacle.q - currentTile.q},${2 * obstacle.r - currentTile.r}`,
+          )
+          if (
+            !landing ||
+            landing.terrain === 'UNKNOWN' ||
+            landing.difficulty < 0
+          )
+            return []
+          const requirements = getEffectiveMoveRequirements(
+            localPlayer,
+            currentTile,
+            landing,
+            game.map.tiles,
+          )
+          return requirements.length > 0
+            ? [{ obstacle, landing, requirements }]
+            : []
+        })
+      : []
   const inspectedReason = (() => {
     if (!inspectedTile) return ''
     if (inspectedTile.id === currentTile?.id) return 'Jesteś już na tym polu.'
@@ -389,9 +424,9 @@ export function HexMap({
       return 'Pole zajmuje inny gracz, a wspólne pola są wyłączone.'
     }
     if (
-      inspectedDistance === 1 &&
       localPlayer &&
       currentTile &&
+      inspectedRequirements.length > 0 &&
       !canAffordMove(localPlayer, currentTile, inspectedTile, game.map.tiles)
     ) {
       return 'Brakuje punktów ruchu do przejścia na to pole.'
@@ -411,6 +446,11 @@ export function HexMap({
       return ['Zbliż się do pola, aby odsłonić jego teren i koszt.']
     }
     if (inspectedTile.terrain === 'MOUNTAIN') {
+      if (localPlayer?.shortcutMoveAvailable && inspectedDistance === 1) {
+        return [
+          'Zwój pozwala przeskoczyć tę górę na pole dokładnie za nią, jeśli masz punkty ruchu na koszt pola docelowego.',
+        ]
+      }
       return ['Poszukaj drogi omijającej góry.']
     }
     if (inspectedTile.isBlocked) {
@@ -683,18 +723,26 @@ export function HexMap({
           </button>
         </div>
       </div>
-      {(localPlayer?.extraMoveCostPending ||
+      {(localPlayer?.shortcutMoveAvailable ||
+        localPlayer?.extraMoveCostPending ||
         localPlayer?.fogCostsHidden ||
         (game.temporaryBlockedHexes?.length ?? 0) > 0) && (
         <div
           className="map-curse-notices"
           aria-label="Klątwy wpływające na mapę"
         >
+          {localPlayer?.shortcutMoveAvailable && (
+            <p>
+              <strong>Zwój tajemnych przejść:</strong> kliknij sąsiednią górę
+              lub pole dokładnie za nią. Skok zużyje punkty ruchu równe kosztowi
+              pola docelowego. Możesz wykonać go raz w tej turze.
+            </p>
+          )}
           {localPlayer?.extraMoveCostPending && (
             <p>
-              <strong>Pęknięcie szlaku:</strong> następne przejście kosztuje
-              dodatkowy 1 dowolny punkt ruchu. Fioletowe +1 oznacza ten koszt
-              przy wyjściach z Twojego pola.
+              <strong>Pęknięcie szlaku:</strong> każde przejście do końca rundy
+              kosztuje dodatkowy 1 dowolny punkt ruchu. Fioletowe +1 oznacza ten
+              koszt przy wyjściach z Twojego pola.
             </p>
           )}
           {localPlayer?.fogCostsHidden && (
@@ -839,6 +887,27 @@ export function HexMap({
             </g>
           ))}
         </g>
+        {currentTile && shortcutOptions.length > 0 && (
+          <g className="map-shortcut-paths" pointerEvents="none">
+            {shortcutOptions.map(({ landing }) => {
+              const from = hexToPixel(currentTile.q, currentTile.r, HEX_SPACING)
+              const to = hexToPixel(landing.q, landing.r, HEX_SPACING)
+              return (
+                <line
+                  key={landing.id}
+                  x1={from.x}
+                  y1={from.y}
+                  x2={to.x}
+                  y2={to.y}
+                  stroke="#efb5ff"
+                  strokeWidth="2.5"
+                  strokeDasharray="4 4"
+                  opacity=".9"
+                />
+              )
+            })}
+          </g>
+        )}
         <g>
           {game.map.tiles.map((tile) => {
             const { x, y } = hexToPixel(tile.q, tile.r, HEX_SPACING)
@@ -846,6 +915,15 @@ export function HexMap({
               (player) => player.position === tile.id,
             )
             const isReachable = reachable.has(tile.id)
+            const shortcutOption = shortcutOptions.find(
+              (option) => option.obstacle.id === tile.id,
+            )
+            const shortcutLanding = shortcutOption?.landing
+            const isShortcutObstacle = Boolean(
+              shortcutLanding &&
+              reachablePaths.get(shortcutLanding.id)?.[0] ===
+                shortcutLanding.id,
+            )
             const blockDistance = currentTile
               ? cubeDistance(currentTile, tile)
               : Infinity
@@ -871,7 +949,7 @@ export function HexMap({
             return (
               <g
                 key={tile.id}
-                className={`map-tile${!blockTargeting && ((isActive && isReachable) || isAvailableStart) ? ' reachable-hex' : ''}${isBlockTarget ? ' curse-target-hex' : ''}`}
+                className={`map-tile${!blockTargeting && ((isActive && (isReachable || isShortcutObstacle)) || isAvailableStart) ? ' reachable-hex' : ''}${isBlockTarget ? ' curse-target-hex' : ''}`}
                 onClick={() => {
                   setSelectedHexId(tile.id)
                   if (isAnimatingMove) return
@@ -882,6 +960,12 @@ export function HexMap({
                   }
                   if (isActive && isReachable) {
                     void animateMovePath(tile.id)
+                  } else if (
+                    isActive &&
+                    isShortcutObstacle &&
+                    shortcutLanding
+                  ) {
+                    void animateMovePath(shortcutLanding.id)
                   } else if (isAvailableStart) {
                     onChooseStart(tile.id)
                   } else {
@@ -890,9 +974,11 @@ export function HexMap({
                 }}
               >
                 <title>
-                  {localPlayer?.fogCostsHidden
-                    ? `${terrainLabels[tile.terrain]} — koszt spowity klątwą`
-                    : tileDescription(tile)}
+                  {shortcutOption
+                    ? `Skok na ${terrainLabels[shortcutOption.landing.terrain]} — ${localPlayer?.fogCostsHidden ? 'koszt ukryty' : formatRequirements(shortcutOption.requirements)}`
+                    : localPlayer?.fogCostsHidden
+                      ? `${terrainLabels[tile.terrain]} — koszt spowity klątwą`
+                      : tileDescription(tile)}
                 </title>
                 <polygon
                   points={polygonPoints(x, y, HEX_RADIUS)}
@@ -904,7 +990,7 @@ export function HexMap({
                         ? '#f5c778'
                         : isSelected
                           ? '#fff2ca'
-                          : isReachable
+                          : isReachable || (isActive && isShortcutObstacle)
                             ? '#b7e8cc'
                             : tilePalette[tile.terrain].edge
                   }
@@ -915,7 +1001,7 @@ export function HexMap({
                         ? 3.5
                         : isSelected
                           ? 3
-                          : isReachable
+                          : isReachable || (isActive && isShortcutObstacle)
                             ? 2.5
                             : 1.25
                   }
@@ -1129,6 +1215,43 @@ export function HexMap({
             })
           })}
         </g>
+        {currentTile && shortcutOptions.length > 0 && (
+          <g className="map-shortcut-costs" pointerEvents="none">
+            {shortcutOptions.flatMap(({ landing, requirements }) => {
+              const obstaclePoint = hexToPixel(
+                (currentTile.q + landing.q) / 2,
+                (currentTile.r + landing.r) / 2,
+                HEX_SPACING,
+              )
+              const landingPoint = hexToPixel(landing.q, landing.r, HEX_SPACING)
+              const x = (obstaclePoint.x + landingPoint.x) / 2
+              const y = (obstaclePoint.y + landingPoint.y) / 2
+              const shownRequirements = localPlayer?.fogCostsHidden
+                ? [undefined]
+                : requirements
+              return shownRequirements.map((requirement, index) => {
+                const cost = edgeCost(requirement)
+                const badgeX =
+                  x + (index - (shownRequirements.length - 1) / 2) * 12
+                return (
+                  <g key={`${landing.id}-${index}`}>
+                    <circle
+                      cx={badgeX}
+                      cy={y}
+                      r={shownRequirements.length === 1 ? 7 : 5.5}
+                      fill={cost.color}
+                      stroke="#efb5ff"
+                      strokeWidth="1.4"
+                    />
+                    <text x={badgeX} y={y + 2.3} textAnchor="middle">
+                      {cost.label}
+                    </text>
+                  </g>
+                )
+              })
+            })}
+          </g>
+        )}
         {localPlayer?.extraMoveCostPending && currentTile && (
           <g className="map-curse-costs" pointerEvents="none">
             {connections

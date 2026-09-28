@@ -100,7 +100,7 @@ export function cardDescription(card: CardDefinition): string {
   if (card.type === 'ACTION') {
     const descriptions = {
       MAP_SHORTCUT:
-        'Następny ruch może przeskoczyć przez jedno zablokowane pole.',
+        'W tej turze pozwala raz przeskoczyć przez sąsiednią górę lub zablokowane pole. Kliknij przeszkodę albo pole za nią; potrzebujesz punktów ruchu na koszt pola docelowego.',
       SECOND_WIND: 'Dobierz cztery karty, a następnie odrzuć jedną z ręki.',
       MERCHANT_CARAVAN: 'Możesz kupić w tej turze drugą kartę.',
       STEAL_PLANS: 'Wybrany przeciwnik odrzuca losową kartę z ręki.',
@@ -110,7 +110,8 @@ export function cardDescription(card: CardDefinition): string {
       RESHUFFLE_HAND: 'Odrzuć pozostałe karty z ręki i dobierz 5 kart.',
       ECHO_POWER: 'Skopiuj ostatnią zagraną kartę ruchu lub złota.',
       PROTECTIVE_CIRCLE: 'Ignoruj następną klątwę wymierzoną w ciebie.',
-      PATH_FRACTURE: 'Wybrany gracz płaci o 1 więcej za następne przejście.',
+      PATH_FRACTURE:
+        'Do końca rundy każde przejście wybranego gracza kosztuje o 1 dowolny punkt ruchu więcej.',
       FOG_OF_FORGETTING:
         'Wybrany gracz nie widzi rozpoznanych kosztów do końca swojej tury.',
       POVERTY_CURSE:
