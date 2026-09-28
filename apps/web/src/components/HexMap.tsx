@@ -30,6 +30,9 @@ const tilePalette: Record<
 }
 
 const MAX_ZOOM = 24
+const MIN_ZOOM = 0.25
+const FOCUS_ZOOM_MULTIPLIER = 0.8
+const FOCUS_MIN_ZOOM = 1.1
 const HEX_SPACING = 39
 const HEX_RADIUS = 26
 const BUTTON_ZOOM_FACTOR = 1.5
@@ -56,7 +59,11 @@ const focusedView = (tile: HexTile | undefined, mapView: MapView) => {
   return {
     zoom: Math.min(
       MAX_ZOOM,
-      Math.max(1.35, mapView.width / 400, mapView.height / 340),
+      Math.max(
+        FOCUS_MIN_ZOOM,
+        (mapView.width / 400) * FOCUS_ZOOM_MULTIPLIER,
+        (mapView.height / 340) * FOCUS_ZOOM_MULTIPLIER,
+      ),
     ),
     pan: { x: point.x - mapView.centerX, y: point.y - mapView.centerY },
   }
@@ -331,7 +338,7 @@ export function HexMap({
       if (!rect.width || !rect.height) return
       setView((current) => {
         const nextZoom = Math.max(
-          0.6,
+          MIN_ZOOM,
           Math.min(
             MAX_ZOOM,
             current.zoom * (event.deltaY < 0 ? 1.12 : 1 / 1.12),
@@ -664,7 +671,7 @@ export function HexMap({
             onClick={() =>
               setView((current) => ({
                 ...current,
-                zoom: Math.max(0.6, current.zoom / BUTTON_ZOOM_FACTOR),
+                zoom: Math.max(MIN_ZOOM, current.zoom / BUTTON_ZOOM_FACTOR),
               }))
             }
           >
