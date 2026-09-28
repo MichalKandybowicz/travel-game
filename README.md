@@ -121,7 +121,7 @@ Wszystkie karty kosztują o 1 złoto mniej. Druidka, Zaklinacz fal i Kupiec pias
 Przycisk **Otwórz sklep** pokazuje okno z czterema kartami, ich cenami i aktualną ilością złota gracza. Karty, których nie można teraz kupić, są oznaczone jako niedostępne.
 
 Runy ruchu i złota mają teraz wartości **+2, +3 albo +4**. W jednej rundzie można użyć jednej runy.
-Po pierwszym wejściu do kręgu run pojawia się losowy opis wydarzenia i wybór jednej z trzech różnych, losowych run. Oferta czeka na decyzję gracza również po odświeżeniu strony. Bot wybiera jedną z oferowanych run automatycznie.
+Po pierwszym wejściu do kręgu run pojawia się losowy opis wydarzenia i wybór jednej z trzech różnych, losowych run. Podczas wyboru mapa pozostaje widoczna i można ją przesuwać oraz przybliżać, aby sprawdzić teren przed podjęciem decyzji. Oferta czeka na decyzję gracza również po odświeżeniu strony. Bot wybiera jedną z oferowanych run automatycznie.
 Karta **Zamiana losu** i runa wymiany ręki odrzucają wskazane karty i dobierają **5 kart**, także gdy przed wymianą na ręce były cztery karty.
 Po użyciu **Eliksiru odnowy** wartości i opisy kart pozostają widoczne podczas wyboru karty do odrzucenia. Odrzucenie wybiera się na ilustracji karty.
 

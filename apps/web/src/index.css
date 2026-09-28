@@ -1279,22 +1279,25 @@ select {
   backdrop-filter: blur(5px);
 }
 
-.camp-reward-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
+.game-map-choice-layout {
   display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(2, 6, 23, 0.8);
-  backdrop-filter: blur(5px);
+  min-width: 0;
+  gap: 16px;
+  scroll-margin-top: 16px;
+}
+
+.game-map-choice-layout[data-choosing-rune='true'] {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: start;
+}
+
+.game-map-choice-layout .map-panel {
+  min-width: 0;
 }
 
 .camp-reward-dialog {
-  width: min(760px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-  padding: clamp(20px, 4vw, 36px);
+  min-width: 0;
+  padding: 24px;
   border: 1px solid #d9b866;
   border-radius: 22px;
   background: #102a32;
@@ -1318,24 +1321,27 @@ select {
 
 .camp-reward-options {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 24px;
+  gap: 8px;
+  margin-top: 18px;
 }
 
 .camp-reward-options button {
-  display: flex;
+  display: grid;
   align-items: center;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 180px;
-  padding: 18px 12px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 2px 12px;
+  min-height: 76px;
+  padding: 10px 12px;
   border: 1px solid #8b7650;
   border-radius: 16px;
   background: #1b3540;
   color: #f8fafc;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
+}
+
+.camp-reward-options button .token {
+  grid-row: span 2;
 }
 
 .camp-reward-options button:hover,
@@ -1349,12 +1355,12 @@ select {
   font-size: 0.85rem;
 }
 
-@media (max-width: 620px) {
-  .camp-reward-options {
+@media (max-width: 1050px) {
+  .game-map-choice-layout[data-choosing-rune='true'] {
     grid-template-columns: 1fr;
   }
-  .camp-reward-options button {
-    min-height: 0;
+  .game-map-choice-layout[data-choosing-rune='true'] .hex-map {
+    height: clamp(240px, 42vh, 400px);
   }
 }
 

@@ -128,6 +128,7 @@ interface HexMapProps {
   game: GameState
   playerId: string | undefined
   isActive: boolean
+  focusOnPlayer: string | undefined
   canChooseStart: boolean
   onSelectHex: (hexId: string) => Promise<boolean>
   onChooseStart: (hexId: string) => void
@@ -139,6 +140,7 @@ export function HexMap({
   game,
   playerId,
   isActive,
+  focusOnPlayer,
   canChooseStart,
   onSelectHex,
   onChooseStart,
@@ -218,6 +220,13 @@ export function HexMap({
   const { zoom, pan } = view
   const focusedGameRef = useRef(game.id)
   const focusedOwnStartRef = useRef(Boolean(currentTile))
+  const focusedCampRef = useRef<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!focusOnPlayer || focusOnPlayer === focusedCampRef.current) return
+    focusedCampRef.current = focusOnPlayer
+    setView(focusedView(currentTile, mapView))
+  }, [focusOnPlayer, currentTile, mapView])
 
   useEffect(() => {
     if (focusedGameRef.current !== game.id) {

@@ -1,4 +1,5 @@
 import type { PlayerState, TokenType } from '@shared'
+import { useEffect, useRef } from 'react'
 import { tokenDescription, tokenPresentation } from '../tokenPresentation.js'
 
 const campStories = [
@@ -15,46 +16,42 @@ export function CampReward({
   onChoose: (tokenType: TokenType) => void
 }) {
   const reward = player.pendingCampReward
+  const campId = reward?.campId
+  const panelRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (campId) panelRef.current?.focus({ preventScroll: true })
+  }, [campId])
+
   if (!reward) return null
 
   return (
-    <div className="camp-reward-backdrop">
-      <section
-        className="camp-reward-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="camp-reward-title"
-        aria-describedby="camp-reward-story"
-      >
-        <small>Odkryto krąg run</small>
-        <h2 id="camp-reward-title">Wybierz jedną runę</h2>
-        <p id="camp-reward-story">
-          {campStories[reward.storyIndex] ?? campStories[0]}
-        </p>
-        <div className="camp-reward-options">
-          {reward.options.map((type, index) => {
-            const rune = tokenPresentation(type)
-            return (
-              <button
-                key={type}
-                type="button"
-                autoFocus={index === 0}
-                onClick={() => onChoose(type)}
-              >
-                <span
-                  className="token"
-                  data-tone={rune.tone}
-                  aria-hidden="true"
-                >
-                  <span className="token-icon">{rune.icon}</span>
-                </span>
-                <strong>{rune.label}</strong>
-                <span>{tokenDescription(type)}</span>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-    </div>
+    <section
+      ref={panelRef}
+      className="camp-reward-dialog"
+      tabIndex={-1}
+      aria-labelledby="camp-reward-title"
+      aria-describedby="camp-reward-story"
+    >
+      <small>Odkryto krąg run</small>
+      <h2 id="camp-reward-title">Wybierz jedną runę</h2>
+      <p id="camp-reward-story">
+        {campStories[reward.storyIndex] ?? campStories[0]}
+      </p>
+      <div className="camp-reward-options">
+        {reward.options.map((type) => {
+          const rune = tokenPresentation(type)
+          return (
+            <button key={type} type="button" onClick={() => onChoose(type)}>
+              <span className="token" data-tone={rune.tone} aria-hidden="true">
+                <span className="token-icon">{rune.icon}</span>
+              </span>
+              <strong>{rune.label}</strong>
+              <span>{tokenDescription(type)}</span>
+            </button>
+          )
+        })}
+      </div>
+    </section>
   )
 }

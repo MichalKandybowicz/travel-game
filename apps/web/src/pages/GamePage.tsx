@@ -49,6 +49,10 @@ export function GamePage() {
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
   const [pendingHexCurseCardId, setPendingHexCurseCardId] = useState<string>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
+  const mapChoiceRef = useRef<HTMLDivElement>(null)
+  const pendingCampId = game?.players.find(
+    (player) => player.id === session?.playerId,
+  )?.pendingCampReward?.campId
   const previousTurn = useRef(
     game && {
       roomCode: game.roomCode,
@@ -94,6 +98,15 @@ export function GamePage() {
     const timeout = window.setTimeout(() => setVisibleCurse(undefined), 10000)
     return () => window.clearTimeout(timeout)
   }, [game?.latestCurse])
+
+  useEffect(() => {
+    if (pendingCampId) {
+      mapChoiceRef.current?.scrollIntoView({
+        block: 'start',
+        behavior: 'smooth',
+      })
+    }
+  }, [pendingCampId])
 
   useEffect(() => {
     if (!session && !account) {
@@ -151,9 +164,6 @@ export function GamePage() {
 
   return (
     <main className="page shell journey-page game-shell">
-      {localPlayer?.pendingCampReward && (
-        <CampReward player={localPlayer} onChoose={chooseCampReward} />
-      )}
       {visibleCurse && (
         <div className="curse-popup" role="alert" aria-live="assertive">
           <div className="curse-popup-body">
@@ -451,20 +461,30 @@ export function GamePage() {
               </button>
             </div>
           )}
-          <HexMap
-            game={game}
-            playerId={session?.playerId}
-            isActive={isActive}
-            canChooseStart={isMyStartChoice}
-            onSelectHex={movePlayer}
-            onChooseStart={chooseStart}
-            blockTargeting={isActive && !!pendingHexCurseCardId}
-            onBlockHex={(hexId) => {
-              if (!pendingHexCurseCardId) return
-              playActionCard(pendingHexCurseCardId, undefined, hexId)
-              setPendingHexCurseCardId(undefined)
-            }}
-          />
+          <div
+            ref={mapChoiceRef}
+            className="game-map-choice-layout"
+            data-choosing-rune={Boolean(localPlayer?.pendingCampReward)}
+          >
+            <HexMap
+              game={game}
+              playerId={session?.playerId}
+              isActive={isActive && !localPlayer?.pendingCampReward}
+              canChooseStart={isMyStartChoice}
+              focusOnPlayer={pendingCampId}
+              onSelectHex={movePlayer}
+              onChooseStart={chooseStart}
+              blockTargeting={isActive && !!pendingHexCurseCardId}
+              onBlockHex={(hexId) => {
+                if (!pendingHexCurseCardId) return
+                playActionCard(pendingHexCurseCardId, undefined, hexId)
+                setPendingHexCurseCardId(undefined)
+              }}
+            />
+            {localPlayer?.pendingCampReward && (
+              <CampReward player={localPlayer} onChoose={chooseCampReward} />
+            )}
+          </div>
         </div>
       </section>
       <DeckPreview player={localPlayer} />
