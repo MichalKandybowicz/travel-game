@@ -1205,6 +1205,17 @@ select {
   transform-origin: center bottom;
 }
 
+.hand-card-grid .hand-card[data-pending-discard='true'] {
+  height: auto;
+  min-height: 240px;
+}
+
+.hand-card[data-pending-discard='true'] .game-card__action-effect {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
 .hand-card-grid .hand-card + .hand-card {
   margin-left: clamp(-54px, -4vw, -36px);
 }
@@ -1974,13 +1985,11 @@ select {
   color: #ffe4e6;
 }
 
-.hand-card-actions--action,
-.hand-card-actions--discard {
+.hand-card-actions--action {
   grid-template-columns: 1fr;
 }
 
-.hand-card-actions--action button,
-.hand-card-actions--discard button {
+.hand-card-actions--action button {
   width: 100%;
   grid-column: 1 / -1;
 }
@@ -2127,15 +2136,9 @@ select {
   outline-offset: 2px;
 }
 
-.hand-card-actions .sacrifice-card-action {
-  border-color: #ef8b72;
-  background: rgba(111, 35, 28, 0.62);
-  color: #ffd4c7;
-  font-size: 0.66rem;
-}
-
-.hand-card-actions .sacrifice-card-action:not(:disabled):hover {
-  background: rgba(151, 46, 34, 0.78);
+.hand-card[data-pending-discard='true'] .hand-card-actions button:disabled {
+  opacity: 0.88;
+  cursor: default;
 }
 
 .game-card__inner {
@@ -2168,6 +2171,45 @@ select {
   border: 1px solid var(--card-glow);
   border-radius: 10px;
   background: radial-gradient(circle, var(--card-glow), transparent 72%);
+}
+
+.game-card__art--discardable {
+  position: relative;
+}
+
+.game-card__art-discard {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  padding: 4px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(transparent 35%, rgba(74, 23, 23, 0.9));
+  color: #fff4e9;
+  cursor: pointer;
+}
+
+.game-card__art-discard span {
+  padding: 3px 9px;
+  border: 1px solid #ffc3ad;
+  border-radius: 999px;
+  background: #71392f;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.game-card__art-discard:not(:disabled):hover,
+.game-card__art-discard:not(:disabled):focus-visible {
+  background: linear-gradient(transparent 10%, rgba(117, 37, 31, 0.95));
+}
+
+.game-card__art-discard:focus-visible {
+  outline: 2px solid #fff4e9;
+  outline-offset: -2px;
 }
 
 .game-card__art svg {
@@ -3149,6 +3191,33 @@ select {
   font-size: 1rem;
 }
 
+.game-sound-control {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.game-sound-control span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #edc185;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.game-sound-control strong {
+  color: #f4e4c7;
+}
+
+.game-sound-control input {
+  width: 100%;
+  margin: 0;
+  accent-color: #e9b669;
+  cursor: pointer;
+}
+
 .game-current-player {
   padding: 9px 11px;
   border: 1px solid rgba(144, 220, 177, 0.37);
@@ -3534,6 +3603,7 @@ select {
   }
   .game-brand-small,
   .game-current-player,
+  .game-sound-control,
   .game-seed,
   .game-shell .top-bar button {
     grid-column: 1 / -1;

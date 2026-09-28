@@ -3,13 +3,13 @@ import type { CardDefinition, CardInstance, MarketTier } from './types.js'
 export const MARKET_CARD_COPY_LIMIT = 3
 
 export const getMarketTier = (purchaseCost: number): MarketTier => {
-  if (purchaseCost <= 5) return 1
-  if (purchaseCost <= 7) return 2
-  if (purchaseCost <= 10) return 3
+  if (purchaseCost <= 4) return 1
+  if (purchaseCost <= 6) return 2
+  if (purchaseCost <= 9) return 3
   return 4
 }
 
-// Shared cost boundaries are assigned to the lower tier at 5 and the higher tier at 10.
+// Tier boundaries follow the one-gold discount so cards keep their original tier.
 export const CARD_DEFINITIONS: CardDefinition[] = [
   {
     id: 'hidden',
@@ -18,7 +18,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 1,
     goldValue: 1,
-    purchaseCost: 3,
+    purchaseCost: 2,
   },
   {
     id: 'explorer',
@@ -27,7 +27,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 2,
     goldValue: 1,
-    purchaseCost: 2,
+    purchaseCost: 1,
   },
   {
     id: 'herbalist',
@@ -36,7 +36,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 3,
     goldValue: 1,
-    purchaseCost: 4,
+    purchaseCost: 3,
   },
   {
     id: 'scout',
@@ -45,7 +45,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 4,
     goldValue: 1,
-    purchaseCost: 6,
+    purchaseCost: 5,
   },
   {
     id: 'ranger',
@@ -54,7 +54,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 5,
     goldValue: 1,
-    purchaseCost: 8,
+    purchaseCost: 7,
   },
   {
     id: 'pathfinder',
@@ -63,7 +63,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 6,
     goldValue: 1,
-    purchaseCost: 10,
+    purchaseCost: 9,
   },
   {
     id: 'sailor',
@@ -72,7 +72,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 2,
     goldValue: 1,
-    purchaseCost: 2,
+    purchaseCost: 1,
   },
   {
     id: 'seasoned_sailor',
@@ -81,7 +81,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 3,
     goldValue: 1,
-    purchaseCost: 4,
+    purchaseCost: 3,
   },
   {
     id: 'navigator',
@@ -90,7 +90,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 3,
     goldValue: 2,
-    purchaseCost: 5,
+    purchaseCost: 4,
   },
   {
     id: 'captain',
@@ -99,7 +99,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 4,
     goldValue: 2,
-    purchaseCost: 6,
+    purchaseCost: 5,
   },
   {
     id: 'admiral',
@@ -108,7 +108,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 5,
     goldValue: 2,
-    purchaseCost: 7,
+    purchaseCost: 6,
   },
   {
     id: 'coin',
@@ -117,7 +117,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 2,
     goldValue: 2,
-    purchaseCost: 3,
+    purchaseCost: 2,
   },
   {
     id: 'wanderer_spark',
@@ -126,7 +126,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 1,
     goldValue: 1,
-    purchaseCost: 3,
+    purchaseCost: 2,
   },
   {
     id: 'dune_runner',
@@ -135,7 +135,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 3,
     goldValue: 2,
-    purchaseCost: 5,
+    purchaseCost: 4,
   },
   {
     id: 'sand_merchant',
@@ -144,7 +144,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 2,
     goldValue: 3,
-    purchaseCost: 4,
+    purchaseCost: 3,
   },
   {
     id: 'trader',
@@ -153,7 +153,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 4,
     goldValue: 2,
-    purchaseCost: 7,
+    purchaseCost: 6,
   },
   {
     id: 'treasurer',
@@ -162,7 +162,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 2,
     goldValue: 4,
-    purchaseCost: 5,
+    purchaseCost: 4,
   },
   {
     id: 'master_trader',
@@ -171,7 +171,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 3,
     goldValue: 3,
-    purchaseCost: 6,
+    purchaseCost: 5,
   },
   {
     id: 'caravan',
@@ -180,7 +180,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 4,
     goldValue: 4,
-    purchaseCost: 9,
+    purchaseCost: 8,
   },
   {
     id: 'adventurer',
@@ -189,7 +189,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 2,
     goldValue: 1,
-    purchaseCost: 5,
+    purchaseCost: 4,
   },
   {
     id: 'trailblazer',
@@ -198,7 +198,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 3,
     goldValue: 1,
-    purchaseCost: 7,
+    purchaseCost: 6,
   },
   {
     id: 'wayfarer',
@@ -207,7 +207,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 4,
     goldValue: 1,
-    purchaseCost: 9,
+    purchaseCost: 8,
   },
   {
     id: 'river_grove',
@@ -218,7 +218,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 2,
     goldValue: 1,
-    purchaseCost: 6,
+    purchaseCost: 5,
   },
   {
     id: 'flooded_forest',
@@ -229,7 +229,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 3,
     goldValue: 2,
-    purchaseCost: 11,
+    purchaseCost: 10,
   },
   {
     id: 'sunlit_grove',
@@ -240,7 +240,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'YELLOW',
     secondaryMovementValue: 2,
     goldValue: 1,
-    purchaseCost: 6,
+    purchaseCost: 5,
   },
   {
     id: 'golden_canopy',
@@ -251,7 +251,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'YELLOW',
     secondaryMovementValue: 3,
     goldValue: 2,
-    purchaseCost: 11,
+    purchaseCost: 10,
   },
   {
     id: 'desert_spring',
@@ -262,7 +262,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 2,
     goldValue: 1,
-    purchaseCost: 6,
+    purchaseCost: 5,
   },
   {
     id: 'storm_oasis',
@@ -273,7 +273,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 3,
     goldValue: 2,
-    purchaseCost: 11,
+    purchaseCost: 10,
   },
   {
     id: 'shortcut_map',
@@ -282,7 +282,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 7,
+    purchaseCost: 6,
     actionEffect: 'MAP_SHORTCUT',
     actionCategory: 'SPELL',
   },
@@ -293,7 +293,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 5,
+    purchaseCost: 4,
     actionEffect: 'SECOND_WIND',
     actionCategory: 'SPELL',
   },
@@ -304,7 +304,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 7,
+    purchaseCost: 6,
     actionEffect: 'MERCHANT_CARAVAN',
     actionCategory: 'SPELL',
   },
@@ -315,7 +315,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 8,
+    purchaseCost: 7,
     actionEffect: 'STEAL_PLANS',
     actionCategory: 'CURSE',
   },
@@ -326,7 +326,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 8,
+    purchaseCost: 7,
     actionEffect: 'GUIDE',
     actionCategory: 'SPELL',
   },
@@ -337,7 +337,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 5,
+    purchaseCost: 4,
     actionEffect: 'PHASE_WALK',
     actionCategory: 'SPELL',
   },
@@ -348,7 +348,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 6,
+    purchaseCost: 5,
     actionEffect: 'RESHUFFLE_HAND',
     actionCategory: 'SPELL',
   },
@@ -359,7 +359,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 12,
+    purchaseCost: 11,
     actionEffect: 'ECHO_POWER',
     actionCategory: 'SPELL',
   },
@@ -370,7 +370,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 6,
+    purchaseCost: 5,
     actionEffect: 'PROTECTIVE_CIRCLE',
     actionCategory: 'SPELL',
   },
@@ -381,7 +381,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 6,
+    purchaseCost: 5,
     actionEffect: 'PATH_FRACTURE',
     actionCategory: 'CURSE',
   },
@@ -392,7 +392,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 4,
+    purchaseCost: 3,
     actionEffect: 'FOG_OF_FORGETTING',
     actionCategory: 'CURSE',
   },
@@ -403,7 +403,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 6,
+    purchaseCost: 5,
     actionEffect: 'POVERTY_CURSE',
     actionCategory: 'CURSE',
   },
@@ -414,7 +414,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 5,
+    purchaseCost: 4,
     actionEffect: 'TANGLED_ROOTS',
     actionCategory: 'CURSE',
   },
@@ -425,7 +425,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 9,
+    purchaseCost: 8,
     actionEffect: 'CLOSED_MARKET',
     actionCategory: 'CURSE',
   },
@@ -436,7 +436,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 0,
-    purchaseCost: 10,
+    purchaseCost: 9,
     actionEffect: 'HEX_SEAL',
     actionCategory: 'CURSE',
   },

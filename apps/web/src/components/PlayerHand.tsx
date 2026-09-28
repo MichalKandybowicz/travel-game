@@ -139,7 +139,7 @@ export function PlayerHand({
 
       {mustDiscard && (
         <div className="pending-card-discard" role="status">
-          Drugi oddech: wybierz jedną kartę z ręki do odrzucenia.
+          Drugi oddech: kliknij ilustrację karty, którą chcesz odrzucić.
         </div>
       )}
 
@@ -168,8 +168,20 @@ export function PlayerHand({
                 data-secondary-movement={definition.secondaryMovementType}
                 data-card-type={definition.type.toLowerCase()}
                 data-action-category={definition.actionCategory?.toLowerCase()}
+                data-pending-discard={mustDiscard || undefined}
               >
-                <CardFace card={definition} compact />
+                <CardFace
+                  card={definition}
+                  compact
+                  {...(mustDiscard
+                    ? {
+                        discardAction: {
+                          onDiscard: () => onDiscardCard(card.instanceId),
+                          disabled: !isActive,
+                        },
+                      }
+                    : {})}
+                />
                 {definition.type === 'ACTION' ? (
                   <div className="hand-card-actions hand-card-actions--action">
                     <button
@@ -198,29 +210,18 @@ export function PlayerHand({
                       Użyj i usuń
                     </button>
                   </div>
-                ) : mustDiscard ? (
-                  <div className="hand-card-actions hand-card-actions--discard">
-                    <button
-                      type="button"
-                      className="sacrifice-card-action"
-                      disabled={!isActive}
-                      onClick={() => onDiscardCard(card.instanceId)}
-                    >
-                      Odrzuć tę kartę
-                    </button>
-                  </div>
                 ) : (
                   <div className="hand-card-actions">
                     <button
                       type="button"
-                      disabled={!isActive}
+                      disabled={!isActive || mustDiscard}
                       onClick={() => onPlayCard(card.instanceId, 'MOVEMENT')}
                     >
                       Ruch {cardMovementValues(definition)}
                     </button>
                     <button
                       type="button"
-                      disabled={!isActive}
+                      disabled={!isActive || mustDiscard}
                       onClick={() => onPlayCard(card.instanceId, 'GOLD')}
                     >
                       Złoto +{definition.goldValue}

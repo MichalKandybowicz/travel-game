@@ -44,15 +44,28 @@ export function CardFace({
   card,
   purchaseCost,
   compact = false,
+  discardAction,
 }: {
   card: CardDefinition
   purchaseCost?: number
   compact?: boolean
+  discardAction?: { onDiscard: () => void; disabled: boolean }
 }) {
+  const discardButton = discardAction && (
+    <button
+      type="button"
+      className="game-card__art-discard"
+      aria-label={`Odrzuć kartę ${cardLabels[card.id]?.name ?? card.name}`}
+      disabled={discardAction.disabled}
+      onClick={discardAction.onDiscard}
+    >
+      <span>Odrzuć</span>
+    </button>
+  )
   if (card.type === 'ACTION') {
     const description = cardDescription(card)
     const visibleDescription =
-      description.length > 60
+      !discardAction && description.length > 60
         ? `${description.slice(0, 57).trimEnd()}...`
         : description
     const symbols = {
@@ -80,8 +93,13 @@ export function CardFace({
         <strong className="game-card__name">
           {cardLabels[card.id]?.name ?? card.name}
         </strong>
-        <span className="game-card__art action-card-art" aria-hidden="true">
-          {card.actionEffect ? symbols[card.actionEffect] : '◆'}
+        <span
+          className={`game-card__art action-card-art${discardAction ? ' game-card__art--discardable' : ''}`}
+        >
+          <span aria-hidden="true">
+            {card.actionEffect ? symbols[card.actionEffect] : '◆'}
+          </span>
+          {discardButton}
         </span>
         <span className="game-card__action-effect" title={description}>
           {visibleDescription}
@@ -101,12 +119,13 @@ export function CardFace({
         {cardLabels[card.id]?.name ?? card.name}
       </strong>
       <span
-        className={`game-card__art${card.secondaryMovementType ? ' game-card__art--mixed' : ''}`}
+        className={`game-card__art${card.secondaryMovementType ? ' game-card__art--mixed' : ''}${discardAction ? ' game-card__art--discardable' : ''}`}
       >
         <MovementGlyph type={card.movementType} />
         {card.secondaryMovementType && (
           <MovementGlyph type={card.secondaryMovementType} />
         )}
+        {discardButton}
       </span>
       {!compact && (
         <>

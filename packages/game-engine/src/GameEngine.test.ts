@@ -22,7 +22,7 @@ import {
   removePlayer,
   serializePublicGameState,
   useActionCard as activateActionCard,
-  useToken,
+  useToken as activateToken,
 } from './GameEngine.js'
 import { buildStartingDeck } from './Deck.js'
 
@@ -510,33 +510,33 @@ describe('GameEngine', () => {
     ).toBe(true)
   })
 
-  it('prices movement by value and caps every card at twelve gold', () => {
+  it('prices movement by value and caps every card at eleven gold', () => {
     expect(CARD_BY_ID.dune_runner).toMatchObject({
       movementType: 'YELLOW',
       movementValue: 3,
       goldValue: 2,
-      purchaseCost: 5,
+      purchaseCost: 4,
     })
     expect(CARD_BY_ID.sand_merchant).toMatchObject({
       movementType: 'YELLOW',
       movementValue: 2,
       goldValue: 3,
-      purchaseCost: 4,
+      purchaseCost: 3,
     })
     expect(MARKET_CARD_IDS).toEqual(
       expect.arrayContaining(['dune_runner', 'sand_merchant']),
     )
-    expect(CARD_BY_ID.pathfinder!.purchaseCost).toBe(10)
-    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(11)
-    expect(CARD_BY_ID.echo_power!.purchaseCost).toBe(12)
-    expect(getMarketTier(5)).toBe(1)
-    expect(getMarketTier(6)).toBe(2)
-    expect(getMarketTier(8)).toBe(3)
-    expect(getMarketTier(10)).toBe(3)
-    expect(getMarketTier(11)).toBe(4)
+    expect(CARD_BY_ID.pathfinder!.purchaseCost).toBe(9)
+    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(10)
+    expect(CARD_BY_ID.echo_power!.purchaseCost).toBe(11)
+    expect(getMarketTier(4)).toBe(1)
+    expect(getMarketTier(5)).toBe(2)
+    expect(getMarketTier(7)).toBe(3)
+    expect(getMarketTier(9)).toBe(3)
+    expect(getMarketTier(10)).toBe(4)
     expect(
       Object.values(CARD_BY_ID).every(
-        (card) => card.purchaseCost > 0 && card.purchaseCost <= 12,
+        (card) => card.purchaseCost > 0 && card.purchaseCost <= 11,
       ),
     ).toBe(true)
 
@@ -618,7 +618,7 @@ describe('GameEngine', () => {
     }
     const giveRefreshToken = (instanceId: string) => {
       player.tokens!.push({ instanceId, type: 'REFRESH_MARKET' })
-      useToken(game, player.id, instanceId)
+      activateToken(game, player.id, instanceId)
     }
 
     game.cardPurchaseCounts = {}
@@ -694,7 +694,7 @@ describe('GameEngine', () => {
     ).toMatchObject({ terrain: 'WATER', difficulty: 3 })
   })
 
-  it('uses second wind once, draws two and requires one discard', () => {
+  it('uses second wind once, draws four and requires one discard', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const handSize = player.hand.length
@@ -706,14 +706,14 @@ describe('GameEngine', () => {
     activateActionCard(game, player.id, 'second-wind-test')
 
     expect(player.removedCards.at(-1)?.cardId).toBe('second_wind')
-    expect(player.hand).toHaveLength(handSize + 2)
+    expect(player.hand).toHaveLength(handSize + 4)
     expect(player.pendingDiscardCount).toBe(1)
     expect(() => endTurn(game, player.id)).toThrow(
       expect.objectContaining({ code: 'INVALID_ACTION' }),
     )
     discardCard(game, player.id, player.hand[0]!.instanceId)
     expect(player.pendingDiscardCount).toBe(0)
-    expect(player.hand).toHaveLength(handSize + 1)
+    expect(player.hand).toHaveLength(handSize + 3)
   })
 
   it('allows a second market purchase after using merchant caravan', () => {
@@ -864,7 +864,7 @@ describe('GameEngine', () => {
     player.tokens!.push({ instanceId: 'swap-hand-test', type: 'SWAP_HAND' })
     player.hand.pop()
 
-    useToken(game, player.id, 'swap-hand-test')
+    activateToken(game, player.id, 'swap-hand-test')
 
     expect(player.hand).toHaveLength(5)
     expect(player.tokens).toEqual([])
@@ -1080,7 +1080,7 @@ describe('GameEngine', () => {
     caster.availableGold = 10
     opponent.availableGold = 10
 
-    useToken(game, caster.id, 'market-curse')
+    activateToken(game, caster.id, 'market-curse')
 
     expect(game.marketLockedUntilPlayerId).toBe(caster.id)
     expect(game.latestCurse).toMatchObject({
@@ -1119,7 +1119,7 @@ describe('GameEngine', () => {
       type: 'CURSE_SKIP_LEADER',
     })
 
-    useToken(game, caster.id, 'skip-curse')
+    activateToken(game, caster.id, 'skip-curse')
     expect(leader.skipNextTurn).toBe(true)
     expect(game.latestCurse?.targetPlayerId).toBe(leader.id)
 
@@ -1143,7 +1143,7 @@ describe('GameEngine', () => {
       type: 'CURSE_REMOVE_CARD',
     })
 
-    useToken(game, caster.id, 'remove-curse', opponent.id)
+    activateToken(game, caster.id, 'remove-curse', opponent.id)
 
     expect(opponent.hand).toEqual(handBefore)
     expect(opponent.drawPile.length + opponent.discardPile.length).toBe(
@@ -1160,18 +1160,18 @@ describe('GameEngine', () => {
       { instanceId: 'gold-token', type: 'GOLD_4' },
     )
 
-    useToken(game, player.id, 'green-token')
+    activateToken(game, player.id, 'green-token')
 
     expect(player.availableMovement.GREEN).toBe(3)
     expect(player.tokens!.map((token) => token.instanceId)).toEqual([
       'gold-token',
     ])
-    expect(() => useToken(game, player.id, 'gold-token')).toThrow(
+    expect(() => activateToken(game, player.id, 'gold-token')).toThrow(
       expect.objectContaining({ code: 'TOKEN_LIMIT' }),
     )
     endTurn(game, 'p1')
     endTurn(game, 'p2')
-    useToken(game, player.id, 'gold-token')
+    activateToken(game, player.id, 'gold-token')
     expect(player.availableGold).toBe(4)
     expect(player.tokens).toEqual([])
   })

@@ -14,6 +14,13 @@ import { PlayerEffects } from '../components/PlayerEffects.js'
 import { cardLabels } from '../labels.js'
 import { tokenDescription, tokenPresentation } from '../tokenPresentation.js'
 import { CampReward } from '../components/CampReward.js'
+import {
+  getTurnSoundVolume,
+  playCurseSound,
+  playTurnSound,
+  prepareTurnSound,
+  setTurnSoundVolume,
+} from '../turnSound.js'
 
 export function GamePage() {
   const navigate = useNavigate()
@@ -38,14 +45,51 @@ export function GamePage() {
   const leaveFinishedGame = useGameStore((state) => state.leaveFinishedGame)
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const [leaving, setLeaving] = useState(false)
+  const [soundVolume, setSoundVolume] = useState(getTurnSoundVolume)
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
   const [pendingHexCurseCardId, setPendingHexCurseCardId] = useState<string>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
+  const previousTurn = useRef(
+    game && {
+      roomCode: game.roomCode,
+      turnNumber: game.turnNumber,
+      status: game.status,
+    },
+  )
+
+  useEffect(() => {
+    window.addEventListener('pointerdown', prepareTurnSound)
+    window.addEventListener('keydown', prepareTurnSound)
+    return () => {
+      window.removeEventListener('pointerdown', prepareTurnSound)
+      window.removeEventListener('keydown', prepareTurnSound)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!game) return
+    const previous = previousTurn.current
+    if (
+      previous?.roomCode === game.roomCode &&
+      game.status === 'ACTIVE' &&
+      game.currentPlayerId === session?.playerId &&
+      (previous.status === 'CHOOSING_START' ||
+        game.turnNumber > previous.turnNumber)
+    ) {
+      playTurnSound()
+    }
+    previousTurn.current = {
+      roomCode: game.roomCode,
+      turnNumber: game.turnNumber,
+      status: game.status,
+    }
+  }, [game, session?.playerId])
 
   useEffect(() => {
     const curse = game?.latestCurse
     if (!curse || curse.instanceId === seenCurseId.current) return
     seenCurseId.current = curse.instanceId
+    playCurseSound()
     setVisibleCurse(curse)
     const timeout = window.setTimeout(() => setVisibleCurse(undefined), 10000)
     return () => window.clearTimeout(timeout)
@@ -227,6 +271,23 @@ export function GamePage() {
               {isChoosingStart ? 'Wybór startu' : `Tura ${game.turnNumber}`}
             </strong>
           </div>
+          <label className="game-sound-control">
+            <span>
+              GŁOŚNOŚĆ DŹWIĘKU <strong>{soundVolume}%</strong>
+            </span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={soundVolume}
+              aria-label="Głośność dźwięku końca tury"
+              onChange={(event) => {
+                const value = Number(event.target.value)
+                setSoundVolume(value)
+                setTurnSoundVolume(value)
+              }}
+            />
+          </label>
           {game.status === 'FINISHED' ? (
             <div className="game-current-player">
               <small>STATUS</small>
