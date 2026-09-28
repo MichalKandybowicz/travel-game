@@ -127,6 +127,58 @@ const placeWaterBodies = (
   const available = (tile: HexTile) =>
     !tile.isBlocked && !protectedIds.has(tile.id) && !water.has(tile.id)
 
+  // A river begins beside a mountain and ends on the outside edge of the map.
+  // Find a short, continuous channel before filling the remaining water as lakes.
+  const riverSources = random.shuffle(
+    tiles.filter(
+      (tile) =>
+        available(tile) &&
+        neighborsOf(tile).length === 6 &&
+        neighborsOf(tile).some((neighbor) => neighbor.terrain === 'MOUNTAIN'),
+    ),
+  )
+  const riverBudget = Math.min(target, Math.max(2, Math.round(target * 0.55)))
+  const riverCount = Math.max(1, Math.ceil(target / 18))
+  let riversPlaced = 0
+  for (const source of riverSources) {
+    if (riversPlaced >= riverCount || water.size >= riverBudget) break
+    if (!available(source)) continue
+    const queue = [source]
+    const previous = new Map<string, HexTile | null>([[source.id, null]])
+    let mouth: HexTile | undefined
+    for (let index = 0; index < queue.length; index += 1) {
+      const tile = queue[index]!
+      if (tile.id !== source.id && neighborsOf(tile).length < 6) {
+        mouth = tile
+        break
+      }
+      for (const neighbor of random.shuffle(neighborsOf(tile))) {
+        if (!available(neighbor) || previous.has(neighbor.id)) continue
+        previous.set(neighbor.id, tile)
+        queue.push(neighbor)
+      }
+    }
+    if (!mouth) continue
+    const path: HexTile[] = []
+    for (
+      let tile: HexTile | null = mouth;
+      tile;
+      tile = previous.get(tile.id) ?? null
+    ) {
+      path.push(tile)
+    }
+    if (
+      path.length > target - water.size ||
+      path.length > riverBudget - water.size
+    )
+      continue
+    for (const tile of path) {
+      water.add(tile.id)
+      tile.terrain = 'WATER'
+    }
+    riversPlaced += 1
+  }
+
   while (water.size < target) {
     const remaining = target - water.size
     const candidates = tiles.filter(
@@ -143,22 +195,31 @@ const placeWaterBodies = (
     )
     const body = [seed]
     water.add(seed.id)
-    const river = random.next() < 0.5
     const bodySize = Math.min(remaining, random.int(6, 16))
     while (body.length < bodySize) {
-      const tip = body[body.length - 1]!
-      const frontier = river
-        ? neighborsOf(tip).filter(available)
-        : [
-            ...new Map(
-              body
-                .flatMap(neighborsOf)
-                .filter(available)
-                .map((tile) => [tile.id, tile]),
-            ).values(),
-          ]
+      const frontier = [
+        ...new Map(
+          body
+            .flatMap(neighborsOf)
+            .filter(available)
+            .map((tile) => [tile.id, tile]),
+        ).values(),
+      ]
       if (frontier.length === 0) break
-      const next = random.pick(frontier)
+      const mostConnected = Math.max(
+        ...frontier.map(
+          (tile) =>
+            neighborsOf(tile).filter((neighbor) => body.includes(neighbor))
+              .length,
+        ),
+      )
+      const next = random.pick(
+        frontier.filter(
+          (tile) =>
+            neighborsOf(tile).filter((neighbor) => body.includes(neighbor))
+              .length === mostConnected,
+        ),
+      )
       water.add(next.id)
       body.push(next)
     }
@@ -168,7 +229,6 @@ const placeWaterBodies = (
 
 const placeCamps = (
   tiles: HexTile[],
-  routes: Set<string>,
   petalCount: number,
   countMinPerPetal: number,
   countMaxPerPetal: number,
@@ -177,32 +237,72 @@ const placeCamps = (
   const camps: HexTile[] = []
   for (let petalId = 0; petalId < petalCount; petalId += 1) {
     const campCount = random.int(countMinPerPetal, countMaxPerPetal)
-    const candidates = random.shuffle(
-      tiles.filter(
-        (tile) =>
-          tile.petalId === petalId &&
-          !tile.isBlocked &&
-          tile.terrain !== 'WATER' &&
-          tile.terrain !== 'START' &&
-          tile.terrain !== 'GOAL',
-      ),
+    const petalTiles = tiles.filter((tile) => tile.petalId === petalId)
+    const center = {
+      q: petalTiles.reduce((sum, tile) => sum + tile.q, 0) / petalTiles.length,
+      r: petalTiles.reduce((sum, tile) => sum + tile.r, 0) / petalTiles.length,
+    }
+    const petalRadius = Math.max(
+      ...petalTiles.map((tile) => axialDistance(tile, center)),
     )
-    for (let index = 0; index < campCount; index += 1) {
-      const available = candidates.filter(
-        (tile) => !camps.some((camp) => camp.id === tile.id),
-      )
-      const eligible =
-        [3, 2, 1]
-          .map((minimumDistance) =>
-            available.filter((tile) =>
-              camps.every(
-                (camp) => axialDistance(tile, camp) >= minimumDistance,
-              ),
-            ),
+    const maximumCampRadius = petalRadius - Math.ceil(petalRadius / 4)
+    const candidates = random
+      .shuffle(
+        petalTiles.filter((tile) => {
+          const distanceFromCenter = axialDistance(tile, center)
+          return (
+            distanceFromCenter >= 1 &&
+            distanceFromCenter <= maximumCampRadius &&
+            !tile.isBlocked &&
+            tile.terrain !== 'WATER' &&
+            tile.terrain !== 'START' &&
+            tile.terrain !== 'GOAL'
           )
-          .find((entries) => entries.length > 0) ?? []
-      const camp = eligible.find((tile) => routes.has(tile.id)) ?? eligible[0]
-      if (!camp) break
+        }),
+      )
+      .sort(
+        (left, right) =>
+          axialDistance(left, center) - axialDistance(right, center),
+      )
+    const eligible = candidates.filter((tile) =>
+      camps.every((camp) => axialDistance(tile, camp) >= 4),
+    )
+    const farthest = Math.max(
+      0,
+      ...eligible.map((tile) => axialDistance(tile, center)),
+    )
+    let chosen: HexTile[] = []
+    for (let count = campCount; count > 0 && chosen.length === 0; count -= 1) {
+      for (
+        let radius = 0;
+        radius <= farthest && chosen.length === 0;
+        radius += 1
+      ) {
+        const nearby = eligible.filter(
+          (tile) => axialDistance(tile, center) <= radius,
+        )
+        const search = (
+          selection: HexTile[],
+          from: number,
+        ): HexTile[] | undefined => {
+          if (selection.length === count) return selection
+          for (
+            let index = from;
+            index <= nearby.length - (count - selection.length);
+            index += 1
+          ) {
+            const tile = nearby[index]!
+            if (selection.every((camp) => axialDistance(tile, camp) >= 4)) {
+              const found = search([...selection, tile], index + 1)
+              if (found) return found
+            }
+          }
+          return undefined
+        }
+        chosen = search([], 0) ?? []
+      }
+    }
+    for (const camp of chosen) {
       camp.terrain = 'CAMP'
       camp.specialType = 'CAMP'
       camps.push(camp)
@@ -248,7 +348,6 @@ export const applyTerrain = (
   goalTile.terrain = 'GOAL'
   placeCamps(
     tiles,
-    routes,
     settings.petalCount ?? 1,
     settings.campCountMinPerPetal ?? 1,
     settings.campCountMaxPerPetal ?? 1,

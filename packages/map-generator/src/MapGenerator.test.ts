@@ -231,6 +231,68 @@ describe('generateMap', () => {
     expect(campCounts).toEqual([2, 2, 2])
   })
 
+  it('places rune circles outside the center and at least a quarter radius from the edge', () => {
+    const map = generateMap({
+      ...settings,
+      petalCount: 3,
+      campCountMinPerPetal: 2,
+      campCountMaxPerPetal: 2,
+    })
+    const camps = map.tiles.filter((tile) => tile.terrain === 'CAMP')
+    for (const camp of camps) {
+      const petalTiles = map.tiles.filter(
+        (tile) => tile.petalId === camp.petalId,
+      )
+      const center = {
+        q:
+          petalTiles.reduce((sum, tile) => sum + tile.q, 0) / petalTiles.length,
+        r:
+          petalTiles.reduce((sum, tile) => sum + tile.r, 0) / petalTiles.length,
+      }
+      const petalRadius = Math.max(
+        ...petalTiles.map((tile) => axialDistance(tile, center)),
+      )
+      expect(axialDistance(camp, center)).toBeGreaterThanOrEqual(1)
+      expect(petalRadius - axialDistance(camp, center)).toBeGreaterThanOrEqual(
+        Math.ceil(petalRadius / 4),
+      )
+      for (const other of camps.filter((tile) => tile.id !== camp.id)) {
+        expect(axialDistance(camp, other)).toBeGreaterThanOrEqual(4)
+      }
+    }
+  })
+
+  it('connects mountain foothills to the outer map edge with water', () => {
+    const map = generateMap({ ...settings, petalCount: 3 })
+    const water = map.tiles.filter((tile) => tile.terrain === 'WATER')
+    const visited = new Set<string>()
+    const components: (typeof water)[] = []
+    for (const tile of water) {
+      if (visited.has(tile.id)) continue
+      const component = [tile]
+      visited.add(tile.id)
+      for (let index = 0; index < component.length; index += 1) {
+        for (const neighbor of getNeighbors(map.tiles, component[index]!)) {
+          if (neighbor.terrain !== 'WATER' || visited.has(neighbor.id)) continue
+          visited.add(neighbor.id)
+          component.push(neighbor)
+        }
+      }
+      components.push(component)
+    }
+    expect(
+      components.some(
+        (component) =>
+          component.some((tile) =>
+            getNeighbors(map.tiles, tile).some(
+              (neighbor) => neighbor.terrain === 'MOUNTAIN',
+            ),
+          ) &&
+          component.some((tile) => getNeighbors(map.tiles, tile).length < 6),
+      ),
+    ).toBe(true)
+  })
+
   it('uses terrain cost ranges and creates spaced camps, mountain groups and water bodies', () => {
     const ranges = {
       JUNGLE: [1, 4],
@@ -266,7 +328,7 @@ describe('generateMap', () => {
         for (let right = left + 1; right < camps.length; right += 1) {
           expect(
             axialDistance(camps[left]!, camps[right]!),
-          ).toBeGreaterThanOrEqual(3)
+          ).toBeGreaterThanOrEqual(4)
         }
       }
       for (const terrain of ['MOUNTAIN', 'WATER'] as const) {

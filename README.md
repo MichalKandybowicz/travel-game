@@ -123,7 +123,7 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 | Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z czterech pól początkowych, wybieranych przed pierwszą turą. |
 | Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                                     |
 
-Generator tworzy góry w połączonych grupach po 3–5 pól, a wodę w połączonych jeziorach lub rzekach. Dąży do jednego kręgu run na płatek mapy. Kręgi run dzielą co najmniej 3 pola odległości liczonej po heksach. Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
+Generator tworzy góry w połączonych grupach po 3–5 pól. Rzeki biegną od pól sąsiadujących z górami do zewnętrznej krawędzi mapy, a pozostała woda tworzy zwarte jeziora. Kręgi run nie zajmują środkowego pola płatka i leżą co najmniej ¼ promienia płatka od jego krawędzi; między każdą parą są co najmniej 3 pełne heksy (odległość co najmniej 4). Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 
 Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Gracz od razu dobiera karty do stanu **5 na ręce**, więc ma nową rękę także podczas tur przeciwników i może stracić kartę wskutek klątwy. Na początku gry również dobiera 5 kart. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
