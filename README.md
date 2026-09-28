@@ -91,7 +91,11 @@ Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wej
 
 Mapę można przesuwać przeciąganiem myszą, a przybliżać i oddalać kółkiem myszy. Przyciski kierunkowe i skali pozostają dostępne.
 
+Kliknięcie pola, na które nie można teraz wejść, otwiera informacje o terenie, znanym koszcie pola i koszcie przejścia z aktualnej pozycji, powodzie niedostępności oraz możliwych działaniach. Nieodkryte typy i koszty pozostają ukryte również w tym oknie.
+
 Cała krawędź pierwszego płatka przeciwna do sąsiedniego płatka stanowi **pola startowe** — dostępnych jest od 5 do 9 miejsc, zależnie od wybranego rozmiaru. Po uruchomieniu gry gracze widzą swoją początkową rękę i wybierają wolne pola kolejno, w kolejności z poczekalni. Przed wyborem widoczność typów i kosztów jest liczona od każdego dostępnego pola startowego według ustawionych zasięgów; pozostałe pola nie odsłaniają się automatycznie. Można kliknąć pole na mapie lub przycisk nad nią. Ostatni wybierający wykonuje pierwszą turę; dalsza kolejność tur jest odwrotna do kolejności wyboru pól.
+
+Licznik **Runda** zmienia się dopiero po turze wszystkich graczy. **Ruch X z Y** pokazuje, który gracz wykonuje teraz swoją turę w bieżącej rundzie.
 
 Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
 

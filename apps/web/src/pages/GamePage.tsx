@@ -140,6 +140,8 @@ export function GamePage() {
   const isChoosingStart = game.status === 'CHOOSING_START'
   const isMyStartChoice =
     connected && isChoosingStart && game.currentPlayerId === session?.playerId
+  const moveInRound =
+    game.players.findIndex((player) => player.id === game.currentPlayerId) + 1
   const startIds = game.map.startHexIds ?? [game.map.startHexId]
   const curseName = visibleCurse?.cardId
     ? (cardLabels[visibleCurse.cardId]?.name ??
@@ -235,8 +237,8 @@ export function GamePage() {
                 : `Zwycięzca: ${winner?.name ?? 'nieznany gracz'}`}
             </h1>
             <p>
-              {winner?.name ?? 'Gracz'} dotarł do celu w turze {game.turnNumber}
-              .
+              {winner?.name ?? 'Gracz'} dotarł do celu w rundzie{' '}
+              {game.roundNumber ?? 1}.
             </p>
           </div>
           <div className="game-result-actions">
@@ -278,8 +280,15 @@ export function GamePage() {
           <div className="game-turn-line">
             <small>ETAP WYPRAWY</small>
             <strong>
-              {isChoosingStart ? 'Wybór startu' : `Tura ${game.turnNumber}`}
+              {isChoosingStart
+                ? 'Wybór startu'
+                : `Runda ${game.roundNumber ?? 1}`}
             </strong>
+            {!isChoosingStart && game.status === 'ACTIVE' && (
+              <span>
+                Ruch {moveInRound} z {game.players.length}
+              </span>
+            )}
           </div>
           <label className="game-sound-control">
             <span>

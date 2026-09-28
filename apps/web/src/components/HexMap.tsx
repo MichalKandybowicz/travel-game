@@ -1,4 +1,6 @@
 import {
+  canAffordMove,
+  getEffectiveMoveRequirements,
   getReachableMovePaths,
   getMoveRequirements,
   getTerrainCost,
@@ -6,7 +8,7 @@ import {
 } from '@game-engine'
 import type { GameState, HexTile } from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { movementLabels, terrainLabels } from '../labels.js'
+import { movementLabels, movementUnitLabel, terrainLabels } from '../labels.js'
 import { playerColor, playerSymbol } from '../playerColors.js'
 import { PlayerBadge } from './PlayerBadge.js'
 import { PlayerSymbol } from './PlayerSymbol.js'
@@ -148,6 +150,7 @@ export function HexMap({
   onBlockHex,
 }: HexMapProps) {
   const [selectedHexId, setSelectedHexId] = useState<string>()
+  const [inspectedHexId, setInspectedHexId] = useState<string>()
   const [animatedPlayerPosition, setAnimatedPlayerPosition] = useState<{
     x: number
     y: number
@@ -157,6 +160,7 @@ export function HexMap({
   const latestGameRef = useRef(game)
   latestGameRef.current = game
   const svgRef = useRef<SVGSVGElement>(null)
+  const tileInfoDialogRef = useRef<HTMLDialogElement>(null)
   const dragRef = useRef<{
     pointerId: number
     startX: number
@@ -171,6 +175,50 @@ export function HexMap({
   const currentTile = game.map.tiles.find(
     (tile) => tile.id === localPlayer?.position,
   )
+  const inspectedTile = game.map.tiles.find(
+    (tile) => tile.id === inspectedHexId,
+  )
+  const inspectedOccupants = game.players.filter(
+    (player) => player.position === inspectedHexId,
+  )
+  const inspectedDistance =
+    currentTile && inspectedTile
+      ? cubeDistance(currentTile, inspectedTile)
+      : undefined
+  const inspectedCostHidden =
+    inspectedTile?.terrain === 'UNKNOWN' ||
+    (inspectedTile?.difficulty ?? -1) < 0 ||
+    Boolean(localPlayer?.fogCostsHidden)
+  const inspectedRequirements =
+    localPlayer && currentTile && inspectedTile && !inspectedCostHidden
+      ? getEffectiveMoveRequirements(
+          localPlayer,
+          currentTile,
+          inspectedTile,
+          game.map.tiles,
+        )
+      : []
+  const inspectedTerrainCost = inspectedTile
+    ? getTerrainCost(inspectedTile.terrain, inspectedTile.difficulty)
+    : 'BLOCKED'
+  const inspectedKnownBlocked = Boolean(
+    inspectedTile &&
+    inspectedTile.terrain !== 'UNKNOWN' &&
+    (inspectedTile.isBlocked || inspectedTerrainCost === 'BLOCKED'),
+  )
+  const formatRequirements = (requirements: MoveRequirement[]): string =>
+    requirements
+      .map((requirement) =>
+        movementUnitLabel(
+          requirement.type === 'ANY' ? 'WILD' : requirement.type,
+          requirement.amount,
+        ),
+      )
+      .join(' + ')
+  const openTileInfo = (hexId: string) => {
+    setInspectedHexId(hexId)
+    if (!tileInfoDialogRef.current?.open) tileInfoDialogRef.current?.showModal()
+  }
   const startTile = game.map.tiles.find(
     (tile) =>
       tile.id ===
@@ -296,6 +344,77 @@ export function HexMap({
     () => new Set(reachablePaths.keys()),
     [reachablePaths],
   )
+  const inspectedReason = (() => {
+    if (!inspectedTile) return ''
+    if (inspectedTile.id === currentTile?.id) return 'Jesteś już na tym polu.'
+    if (game.status === 'CHOOSING_START') {
+      return 'Na początku gry można wybrać tylko wolne pole startowe.'
+    }
+    if (game.status === 'FINISHED') return 'Gra już się zakończyła.'
+    if (localPlayer?.pendingCampReward) return 'Najpierw wybierz runę.'
+    if (!isActive) return 'Poczekaj na swoją turę, aby wykonać ruch.'
+    if (inspectedTile.terrain === 'UNKNOWN') {
+      return 'Pole pozostaje nieodkryte. Zbliż się, aby poznać teren i koszt.'
+    }
+    if (inspectedTile.isBlocked || inspectedTerrainCost === 'BLOCKED') {
+      return 'Pole jest zablokowane i nie można na nie wejść.'
+    }
+    if (
+      game.settings.allowSharedTiles === false &&
+      !localPlayer?.sharedTileAccessAvailable &&
+      inspectedOccupants.some((player) => player.id !== playerId)
+    ) {
+      return 'Pole zajmuje inny gracz, a wspólne pola są wyłączone.'
+    }
+    if (
+      inspectedDistance === 1 &&
+      localPlayer &&
+      currentTile &&
+      !canAffordMove(localPlayer, currentTile, inspectedTile, game.map.tiles)
+    ) {
+      return 'Brakuje punktów ruchu do przejścia na to pole.'
+    }
+    if (inspectedDistance && inspectedDistance > 1) {
+      return 'Nie masz teraz dostępnej trasy do tego pola.'
+    }
+    return 'Na to pole nie można teraz wejść.'
+  })()
+  const inspectedActions = (() => {
+    if (!inspectedTile) return []
+    if (game.status === 'FINISHED') return ['Rozgrywka jest zakończona.']
+    if (game.status === 'CHOOSING_START') {
+      return ['Wybierz jedno z wolnych pól startowych.']
+    }
+    if (inspectedTile.terrain === 'UNKNOWN') {
+      return ['Zbliż się do pola, aby odsłonić jego teren i koszt.']
+    }
+    if (inspectedTile.terrain === 'MOUNTAIN') {
+      return ['Poszukaj drogi omijającej góry.']
+    }
+    if (inspectedTile.isBlocked) {
+      return ['Wybierz inną trasę lub poczekaj na wygaśnięcie blokady.']
+    }
+    if (
+      game.settings.allowSharedTiles === false &&
+      !localPlayer?.sharedTileAccessAvailable &&
+      inspectedOccupants.length > 0
+    ) {
+      return ['Poczekaj, aż gracz opuści pole, albo wybierz inną trasę.']
+    }
+    const actions = [
+      'Zagraj kartę na ruch, użyj runy lub zbliż się przez sąsiednie pola.',
+    ]
+    if (
+      inspectedTile.terrain === 'CAMP' &&
+      !localPlayer?.claimedCampIds?.includes(inspectedTile.id)
+    ) {
+      actions.push('Przy pierwszym wejściu wybierzesz jedną z trzech run.')
+    }
+    if (inspectedTile.terrain === 'GOAL') {
+      actions.push('Wejście na portal kończy grę zwycięstwem.')
+    }
+    return actions
+  })()
 
   useEffect(
     () => () => {
@@ -678,12 +797,15 @@ export function HexMap({
                   if (isAnimatingMove) return
                   if (blockTargeting) {
                     if (isBlockTarget) onBlockHex(tile.id)
+                    else openTileInfo(tile.id)
                     return
                   }
                   if (isActive && isReachable) {
                     void animateMovePath(tile.id)
                   } else if (isAvailableStart) {
                     onChooseStart(tile.id)
+                  } else {
+                    openTileInfo(tile.id)
                   }
                 }}
               >
@@ -960,6 +1082,93 @@ export function HexMap({
           </g>
         )}
       </svg>
+      <dialog
+        ref={tileInfoDialogRef}
+        className="tile-info-dialog"
+        aria-labelledby="tile-info-title"
+        onClose={() => setInspectedHexId(undefined)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            event.currentTarget.close()
+          }
+        }}
+      >
+        {inspectedTile && (
+          <div className="tile-info-content">
+            <header>
+              <div>
+                <small>Informacje o polu</small>
+                <h2 id="tile-info-title">
+                  {terrainLabels[inspectedTile.terrain]}
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Zamknij informacje o polu"
+                onClick={() => tileInfoDialogRef.current?.close()}
+              >
+                ×
+              </button>
+            </header>
+            <p>{terrainRules[inspectedTile.terrain]}</p>
+            <dl>
+              <div>
+                <dt>Koszt pola</dt>
+                <dd>
+                  {inspectedKnownBlocked
+                    ? 'Wejście niemożliwe'
+                    : inspectedCostHidden
+                      ? 'Nieznany'
+                      : inspectedTerrainCost === 'BLOCKED'
+                        ? 'Wejście niemożliwe'
+                        : movementUnitLabel(
+                            inspectedTerrainCost === 'ANY'
+                              ? 'WILD'
+                              : inspectedTerrainCost,
+                            Math.max(1, inspectedTile.difficulty),
+                          )}
+                </dd>
+              </div>
+              <div>
+                <dt>Przejście z Twojego pola</dt>
+                <dd>
+                  {inspectedDistance === 0
+                    ? 'Jesteś na tym polu'
+                    : inspectedKnownBlocked
+                      ? 'Przejście niedostępne'
+                      : inspectedCostHidden
+                        ? 'Koszt nieznany'
+                        : inspectedRequirements.length > 0
+                          ? formatRequirements(inspectedRequirements)
+                          : inspectedDistance === 1
+                            ? 'Przejście niedostępne'
+                            : 'Sprawdź po zbliżeniu się do pola'}
+                </dd>
+              </div>
+              {inspectedOccupants.length > 0 && (
+                <div>
+                  <dt>Gracze na polu</dt>
+                  <dd>
+                    {inspectedOccupants.map((player) => player.name).join(', ')}
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <div className="tile-info-status">
+              <strong>Dlaczego nie można teraz wejść?</strong>
+              <p>{inspectedReason}</p>
+            </div>
+            <div className="tile-info-actions">
+              <strong>Możliwe działania</strong>
+              <ul>
+                {inspectedActions.map((action) => (
+                  <li key={action}>{action}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </dialog>
       <div className="player-location-legend" aria-label="Pozycje graczy">
         {game.players.map((player, index) => (
           <span key={player.id} className="player-location-item">

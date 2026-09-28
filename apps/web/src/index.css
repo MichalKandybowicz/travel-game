@@ -1088,6 +1088,10 @@ select {
   cursor: grabbing;
 }
 
+.map-tile {
+  cursor: pointer;
+}
+
 .hex-difficulty {
   fill: #f8fafc;
   font-size: 8px;
@@ -1307,6 +1311,105 @@ select {
 .market-dialog::backdrop {
   background: rgba(2, 6, 23, 0.78);
   backdrop-filter: blur(5px);
+}
+
+.tile-info-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(85vh, 720px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid #b7d6bf;
+  border-radius: 18px;
+  background: #102a32;
+  color: #f8fafc;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+}
+
+.tile-info-dialog::backdrop {
+  background: rgba(2, 6, 23, 0.7);
+}
+
+.tile-info-content {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+}
+
+.tile-info-content header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tile-info-content header small {
+  color: #edc185;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tile-info-content h2,
+.tile-info-content p,
+.tile-info-content dl,
+.tile-info-content ul {
+  margin: 0;
+}
+
+.tile-info-content h2 {
+  margin-top: 4px;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.tile-info-content header button {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(216, 230, 216, 0.35);
+  border-radius: 9px;
+  background: #1a3b42;
+  color: #f8fafc;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.tile-info-content > p,
+.tile-info-actions li {
+  color: #c9d9d0;
+  line-height: 1.45;
+}
+
+.tile-info-content dl {
+  display: grid;
+  gap: 8px;
+}
+
+.tile-info-content dl > div,
+.tile-info-status,
+.tile-info-actions {
+  padding: 10px 12px;
+  border: 1px solid rgba(215, 228, 210, 0.18);
+  border-radius: 10px;
+  background: rgba(9, 28, 33, 0.55);
+}
+
+.tile-info-content dt {
+  color: #edc185;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.tile-info-content dd {
+  margin: 3px 0 0;
+}
+
+.tile-info-status p {
+  margin-top: 5px;
+}
+
+.tile-info-actions ul {
+  padding-left: 19px;
+  margin-top: 6px;
 }
 
 .game-map-choice-layout {
@@ -3226,6 +3329,11 @@ select {
 .game-turn-line strong,
 .game-current-player strong {
   font-size: 1rem;
+}
+
+.game-turn-line > span {
+  color: #c9d9d0;
+  font-size: 0.73rem;
 }
 
 .game-sound-control {

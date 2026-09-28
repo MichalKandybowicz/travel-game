@@ -181,12 +181,19 @@ describe('GameEngine', () => {
       'p1',
     ])
     expect(game.currentPlayerId).toBe('p4')
+    expect(game.roundNumber).toBe(1)
     endTurn(game, 'p4')
     expect(game.currentPlayerId).toBe('p3')
+    expect(game.roundNumber).toBe(1)
     endTurn(game, 'p3')
     expect(game.currentPlayerId).toBe('p2')
+    expect(game.roundNumber).toBe(1)
     endTurn(game, 'p2')
     expect(game.currentPlayerId).toBe('p1')
+    expect(game.roundNumber).toBe(1)
+    endTurn(game, 'p1')
+    expect(game.currentPlayerId).toBe('p4')
+    expect(game.roundNumber).toBe(2)
   })
 
   it('shows starting visibility from every slot and keeps the opening hand visible', () => {
