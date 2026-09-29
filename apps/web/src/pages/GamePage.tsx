@@ -33,6 +33,7 @@ export function GamePage() {
   const clearError = useGameStore((state) => state.clearError)
   const reconnect = useGameStore((state) => state.reconnectToRoom)
   const playCard = useGameStore((state) => state.playCard)
+  const undoCardPlay = useGameStore((state) => state.undoCardPlay)
   const movePlayer = useGameStore((state) => state.movePlayer)
   const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
@@ -345,6 +346,15 @@ export function GamePage() {
               )}
               {game.settings.fogMode === 'NONE' && (
                 <small className="game-seed">Ziarno: {game.seed}</small>
+              )}
+              {game.status === 'ACTIVE' && (
+                <button
+                  type="button"
+                  disabled={!isActive || !localPlayer?.canUndoCardPlay}
+                  onClick={undoCardPlay}
+                >
+                  Cofnij zagranie karty
+                </button>
               )}
               {game.status !== 'FINISHED' && (
                 <button

@@ -13,6 +13,7 @@ import {
   endTurn,
   movePlayer,
   playCard,
+  undoCardPlay,
   useActionCard as activateActionCard,
   discardCard,
   removePlayer,
@@ -1723,6 +1724,39 @@ io.on('connection', (socket) => {
       })
       await emitRoom(io, room)
       scheduleBotTurns(io, room)
+    } catch (caught) {
+      sendError(socket.id, io, caught as GameError)
+    }
+  })
+
+  socket.on(EVENTS.gameUndoCardPlay, async (payload: unknown) => {
+    const parsed = roomCodeSchema.safeParse(payload)
+    if (!parsed.success) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: parsed.error.message,
+      })
+      return
+    }
+    const room = roomStore.get(parsed.data.roomCode)
+    if (!room?.gameState) {
+      sendError(socket.id, io, {
+        code: 'GAME_NOT_STARTED',
+        message: 'Game has not started.',
+      })
+      return
+    }
+    try {
+      if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+        sendError(socket.id, io, {
+          code: 'PLAYER_NOT_FOUND',
+          message: 'Socket is not authorized for this player.',
+        })
+        return
+      }
+      undoCardPlay(room.gameState, parsed.data.playerId)
+      logGameAction(room, parsed.data.playerId, 'undo_card_play')
+      await emitRoom(io, room)
     } catch (caught) {
       sendError(socket.id, io, caught as GameError)
     }

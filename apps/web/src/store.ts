@@ -108,6 +108,7 @@ interface GameStore {
     mode: CardPlayMode,
     sacrifice?: boolean,
   ) => void
+  undoCardPlay: () => void
   useActionCard: (
     cardInstanceId: string,
     targetPlayerId?: string,
@@ -372,6 +373,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cardInstanceId,
       mode,
       sacrifice,
+    })
+  },
+  undoCardPlay: () => {
+    const { session } = get()
+    if (!session) return
+    getSocket().emit(EVENTS.gameUndoCardPlay, {
+      roomCode: session.roomCode,
+      playerId: session.playerId,
     })
   },
   useActionCard: (cardInstanceId, targetPlayerId, targetHexId) => {

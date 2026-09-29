@@ -20,6 +20,7 @@ import {
   getMoveRequirements,
   movePlayer,
   playCard,
+  undoCardPlay,
   removePlayer,
   serializePublicGameState,
   useActionCard as activateActionCard,
@@ -1384,6 +1385,112 @@ describe('GameEngine', () => {
       'coin-test',
       'explorer-test',
     ])
+  })
+
+  it('undoes the latest card play and restores the hand, points and round history', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const originalHand = [...player.hand]
+    const first = originalHand[0]!
+    const second = originalHand[1]!
+
+    playCard(game, player.id, first.instanceId, 'MOVEMENT')
+    const movementAfterFirst = { ...player.availableMovement }
+    playCard(game, player.id, second.instanceId, 'GOLD')
+
+    expect(
+      serializePublicGameState(game, player.id).players[0]!.canUndoCardPlay,
+    ).toBe(true)
+    expect(
+      serializePublicGameState(game, player.id).undoableCardPlays,
+    ).toBeUndefined()
+    undoCardPlay(game, player.id)
+    expect(player.hand.map((card) => card.instanceId)).toEqual(
+      originalHand.slice(1).map((card) => card.instanceId),
+    )
+    expect(player.availableGold).toBe(0)
+    expect(player.availableMovement).toEqual(movementAfterFirst)
+    expect(game.roundPlayedCards.map((card) => card.instanceId)).toEqual([
+      first.instanceId,
+    ])
+
+    undoCardPlay(game, player.id)
+    expect(player.hand).toEqual(originalHand)
+    expect(player.availableMovement).toEqual({
+      GREEN: 0,
+      BLUE: 0,
+      YELLOW: 0,
+      WILD: 0,
+    })
+    expect(player.playedCards).toEqual([])
+    expect(game.roundPlayedCards).toEqual([])
+    expect(
+      serializePublicGameState(game, player.id).players[0]!.canUndoCardPlay,
+    ).toBe(false)
+    expect(() => undoCardPlay(game, player.id)).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+  })
+
+  it('restores a sacrificed card and its cooldown when its play is undone', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const card = player.hand[0]!
+
+    playCard(game, player.id, card.instanceId, 'GOLD', true)
+    undoCardPlay(game, player.id)
+
+    expect(player.hand[0]).toEqual(card)
+    expect(player.removedCards).not.toContainEqual(card)
+    expect(player.availableGold).toBe(0)
+    expect(player.hasSacrificedCardThisTurn).toBe(false)
+    expect(player.sacrificeCooldownTurns).toBe(0)
+  })
+
+  it('keeps undo after a failed move, but loses it after a successful move', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const card = player.hand.find(
+      (entry) => CARD_BY_ID[entry.cardId]?.movementType === 'GREEN',
+    )!
+    playCard(game, player.id, card.instanceId, 'MOVEMENT')
+    expect(() => movePlayer(game, player.id, game.map.goalHexId)).toThrow()
+    expect(game.undoableCardPlays?.[player.id]).toHaveLength(1)
+
+    const current = game.map.tiles.find((tile) => tile.id === player.position)!
+    const target = getNeighbors(game.map.tiles, current).find(
+      (tile) =>
+        !game.players.some(
+          (other) => other.id !== player.id && other.position === tile.id,
+        ),
+    )!
+    target.terrain = 'JUNGLE'
+    target.isBlocked = false
+    target.difficulty = 1
+    movePlayer(game, player.id, target.id)
+    expect(() => undoCardPlay(game, player.id)).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+  })
+
+  it('loses earlier undo after a purchase but can undo a later card play', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const first = player.hand[0]!
+    const second = player.hand[1]!
+    playCard(game, player.id, first.instanceId, 'GOLD')
+    player.availableGold = CARD_BY_ID[game.market[0]!]!.purchaseCost
+    buyCard(game, player.id, game.market[0]!)
+
+    expect(() => undoCardPlay(game, player.id)).toThrow(
+      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    )
+    playCard(game, player.id, second.instanceId, 'GOLD')
+    undoCardPlay(game, player.id)
+    expect(player.hand).toContainEqual(second)
+    expect(game.roundPlayedCards.map((play) => play.instanceId)).toContain(
+      first.instanceId,
+    )
   })
 
   it('doubles a sacrificed card and blocks another sacrifice for five own turns', () => {

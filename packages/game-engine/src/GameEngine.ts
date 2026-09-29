@@ -38,6 +38,13 @@ const createMovementPool = (): MovementPool => ({
   WILD: 0,
 })
 
+const clearUndoableCardPlays = (
+  gameState: GameState,
+  playerId: string,
+): void => {
+  delete gameState.undoableCardPlays?.[playerId]
+}
+
 const addCardMovement = (
   player: PlayerState,
   card: CardDefinition,
@@ -839,6 +846,16 @@ export const playCard = (
       'A card cannot be sacrificed while the five-turn cooldown is active.',
     )
   }
+  gameState.undoableCardPlays ??= {}
+  gameState.undoableCardPlays[playerId] ??= []
+  gameState.undoableCardPlays[playerId].push({
+    cardInstanceId,
+    handIndex: cardIndex,
+    mode,
+    sacrificed: sacrifice,
+    previousSacrificeCooldown: player.sacrificeCooldownTurns ?? 0,
+    previousHasSacrificedCard: player.hasSacrificedCardThisTurn ?? false,
+  })
   player.hand.splice(cardIndex, 1)
   if (sacrifice) {
     player.removedCards.push(card!)
@@ -861,6 +878,65 @@ export const playCard = (
   } else {
     addCardMovement(player, cardDefinition, multiplier)
   }
+  return gameState
+}
+
+export const undoCardPlay = (
+  gameState: GameState,
+  playerId: string,
+): GameState => {
+  ensureTurn(gameState, playerId)
+  const player = findPlayer(gameState, playerId)
+  const undoStack = gameState.undoableCardPlays?.[playerId]
+  if (!undoStack?.length) {
+    return error('INVALID_ACTION', 'There is no card play to undo.')
+  }
+  const undo = undoStack[undoStack.length - 1]!
+  const pile = undo.sacrificed ? player.removedCards : player.playedCards
+  const cardIndex = pile.findIndex(
+    (card) => card.instanceId === undo.cardInstanceId,
+  )
+  const card = pile[cardIndex]
+  const definition = card ? CARD_BY_ID[card.cardId] : undefined
+  if (!card || !definition) {
+    return error('INVALID_ACTION', 'The played card can no longer be undone.')
+  }
+  const multiplier = undo.sacrificed ? 2 : 1
+  if (undo.mode === 'GOLD') {
+    const amount = definition.goldValue * multiplier
+    if (player.availableGold < amount) {
+      error('INVALID_ACTION', 'The card gold has already been spent.')
+    }
+    player.availableGold -= amount
+  } else {
+    const movement = createMovementPool()
+    movement[definition.movementType] += definition.movementValue * multiplier
+    if (definition.secondaryMovementType && definition.secondaryMovementValue) {
+      movement[definition.secondaryMovementType] +=
+        definition.secondaryMovementValue * multiplier
+    }
+    for (const type of ['GREEN', 'BLUE', 'YELLOW', 'WILD'] as const) {
+      if (player.availableMovement[type] < movement[type]) {
+        error('INVALID_ACTION', 'The card movement has already been spent.')
+      }
+    }
+    for (const type of ['GREEN', 'BLUE', 'YELLOW', 'WILD'] as const) {
+      player.availableMovement[type] -= movement[type]
+    }
+  }
+  pile.splice(cardIndex, 1)
+  player.hand.splice(Math.min(undo.handIndex, player.hand.length), 0, card)
+  if (undo.sacrificed) {
+    player.sacrificeCooldownTurns = undo.previousSacrificeCooldown
+    player.hasSacrificedCardThisTurn = undo.previousHasSacrificedCard
+  }
+  const historyIndex = gameState.roundPlayedCards.findIndex(
+    (play) =>
+      play.playerId === playerId && play.instanceId === undo.cardInstanceId,
+  )
+  if (historyIndex >= 0) gameState.roundPlayedCards.splice(historyIndex, 1)
+  undoStack.pop()
+  if (undoStack.length === 0) clearUndoableCardPlays(gameState, playerId)
   return gameState
 }
 
@@ -998,6 +1074,7 @@ export const useActionCard = (
         } else {
           addCardMovement(player, echoedCard, multiplier)
         }
+        clearUndoableCardPlays(gameState, playerId)
         break
       }
       case 'PROTECTIVE_CIRCLE':
@@ -1151,6 +1228,8 @@ export const movePlayer = (
     gameState.status = 'FINISHED'
     gameState.winnerId = playerId
   }
+
+  clearUndoableCardPlays(gameState, playerId)
 
   return gameState
 }
@@ -1337,6 +1416,7 @@ export const buyCard = (
   const marketCardIndex = gameState.market.indexOf(cardId)
   gameState.market.splice(marketCardIndex, 1)
   replenishMarket(gameState)
+  clearUndoableCardPlays(gameState, playerId)
   return gameState
 }
 
@@ -1360,6 +1440,7 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   }
   player.availableMovement = createMovementPool()
   player.availableGold = 0
+  clearUndoableCardPlays(gameState, playerId)
   player.hasBoughtThisTurn = false
   player.purchasesThisTurn = 0
   if (
@@ -1465,6 +1546,7 @@ export const removePlayer = (
   gameState.players = gameState.players.filter(
     (player) => player !== leavingPlayer,
   )
+  clearUndoableCardPlays(gameState, playerId)
   gameState.roundPlayedCards = gameState.roundPlayedCards.filter(
     (entry) => entry.playerId !== playerId,
   )
@@ -1491,6 +1573,8 @@ export const serializePublicGameState = (
   gameState: GameState,
   viewerPlayerId: string,
 ): GameState => {
+  const { undoableCardPlays, ...publicGameState } = gameState
+  void undoableCardPlays
   const viewer = findPlayer(gameState, viewerPlayerId)
   const currentTile = findTile(
     gameState.map,
@@ -1569,7 +1653,7 @@ export const serializePublicGameState = (
       .map((tile) => tile.id),
   )
   return {
-    ...gameState,
+    ...publicGameState,
     temporaryBlockedHexes: (gameState.temporaryBlockedHexes ?? []).filter(
       (block) => visibleIds.has(block.hexId),
     ),
@@ -1611,6 +1695,8 @@ export const serializePublicGameState = (
       if (player.id === viewerPlayerId) {
         return {
           ...player,
+          canUndoCardPlay:
+            (gameState.undoableCardPlays?.[viewerPlayerId]?.length ?? 0) > 0,
           ...(Number.isFinite(remainingRouteCost)
             ? { remainingRouteCost }
             : {}),

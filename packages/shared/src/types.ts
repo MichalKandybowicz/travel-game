@@ -163,6 +163,15 @@ export interface PlayedCardRecord {
   sacrificed?: boolean
 }
 
+export interface UndoableCardPlay {
+  cardInstanceId: string
+  handIndex: number
+  mode: CardPlayMode
+  sacrificed: boolean
+  previousSacrificeCooldown: number
+  previousHasSacrificedCard: boolean
+}
+
 export interface CurseEvent {
   instanceId: string
   playerId: string
@@ -181,6 +190,7 @@ export interface PlayerState {
   color?: PlayerColor
   symbol?: PlayerSymbol
   position: string
+  canUndoCardPlay?: boolean
   drawPile: CardInstance[]
   hand: CardInstance[]
   discardPile: CardInstance[]
@@ -239,6 +249,7 @@ export interface GameState {
   marketPurchasedThisRound?: boolean
   marketLockedUntilPlayerId?: string
   roundPlayedCards: PlayedCardRecord[]
+  undoableCardPlays?: Record<string, UndoableCardPlay[]>
   latestCurse?: CurseEvent
   temporaryBlockedHexes?: { hexId: string; casterPlayerId: string }[]
   winnerId?: string
