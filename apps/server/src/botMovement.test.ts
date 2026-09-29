@@ -16,7 +16,9 @@ import {
   cardMovementFor,
   chooseBotStart,
   findBotTurnRoute,
+  findBotTurnRouteIgnoringTemporaryBlocks,
   findBotRoute,
+  isBotStepTemporarilyBlocked,
   nextPlannedBotStep,
 } from './botMovement.js'
 
@@ -225,5 +227,80 @@ describe('bot movement planning', () => {
 
     expect(route.map((entry) => entry.id)).toEqual([start.id, goal.id])
     expect(nextPlannedBotStep(route, start.id)).toBe(goal)
+  })
+
+  it('waits for an opponent blocking the preferred route instead of replanning through it', () => {
+    const start = tile('start', 0, 'START')
+    const forward = tile('forward', 1, 'JUNGLE')
+    const goal = { ...tile('goal', 2, 'GOAL'), difficulty: 0 }
+    const player = {
+      id: 'bot',
+      name: 'Bot',
+      position: start.id,
+      hand: [],
+      drawPile: [],
+      discardPile: [],
+      removedCards: [],
+      playedCards: [],
+      availableMovement: { GREEN: 0, BLUE: 0, YELLOW: 0, WILD: 0 },
+      availableGold: 0,
+      isReady: true,
+      connected: true,
+    } satisfies PlayerState
+    const opponent = { id: 'human', position: forward.id } as PlayerState
+    const game = {
+      map: { tiles: [start, forward, goal], goalHexId: goal.id },
+      settings: { allowSharedTiles: false },
+      players: [player, opponent],
+    } as GameState
+
+    expect(findBotTurnRoute(game, player)).toEqual([start])
+    expect(
+      nextPlannedBotStep(
+        findBotTurnRouteIgnoringTemporaryBlocks(game, player),
+        start.id,
+      )?.id,
+    ).toBe(forward.id)
+    expect(isBotStepTemporarilyBlocked(game, player, forward.id)).toBe(true)
+  })
+
+  it('treats a temporary hex seal as waitable but keeps permanent blocks impassable', () => {
+    const start = tile('start', 0, 'START')
+    const forward = { ...tile('forward', 1, 'JUNGLE'), isBlocked: true }
+    const goal = { ...tile('goal', 2, 'GOAL'), difficulty: 0 }
+    const player = {
+      id: 'bot',
+      name: 'Bot',
+      position: start.id,
+      hand: [],
+      drawPile: [],
+      discardPile: [],
+      removedCards: [],
+      playedCards: [],
+      availableMovement: { GREEN: 0, BLUE: 0, YELLOW: 0, WILD: 0 },
+      availableGold: 0,
+      isReady: true,
+      connected: true,
+    } satisfies PlayerState
+    const game = {
+      map: { tiles: [start, forward, goal], goalHexId: goal.id },
+      settings: { allowSharedTiles: true },
+      players: [player],
+      temporaryBlockedHexes: [{ hexId: forward.id, casterPlayerId: 'human' }],
+    } as unknown as GameState
+
+    expect(
+      nextPlannedBotStep(
+        findBotTurnRouteIgnoringTemporaryBlocks(game, player),
+        start.id,
+      )?.id,
+    ).toBe(forward.id)
+    expect(isBotStepTemporarilyBlocked(game, player, forward.id)).toBe(true)
+
+    game.temporaryBlockedHexes = []
+    expect(findBotTurnRouteIgnoringTemporaryBlocks(game, player)).toEqual([
+      start,
+    ])
+    expect(isBotStepTemporarilyBlocked(game, player, forward.id)).toBe(false)
   })
 })

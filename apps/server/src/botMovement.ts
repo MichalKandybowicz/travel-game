@@ -228,6 +228,7 @@ const planBotRoute = (
         neighbor.isBlocked ||
         neighbor.terrain === 'MOUNTAIN' ||
         (game.settings.allowSharedTiles === false &&
+          !player.sharedTileAccessAvailable &&
           game.players.some(
             (other) => other.id !== player.id && other.position === neighbor.id,
           ))
@@ -285,6 +286,43 @@ export const findBotTurnRoute = (
 ): HexTile[] => {
   const currentTile = game.map.tiles.find((tile) => tile.id === player.position)
   return currentTile ? [currentTile, ...findBotRoute(game, player)] : []
+}
+
+export const isBotStepTemporarilyBlocked = (
+  game: GameState,
+  player: PlayerState,
+  hexId: string,
+): boolean =>
+  Boolean(
+    game.temporaryBlockedHexes?.some((block) => block.hexId === hexId) ||
+    (game.settings.allowSharedTiles === false &&
+      game.players.some(
+        (other) => other.id !== player.id && other.position === hexId,
+      )),
+  )
+
+export const findBotTurnRouteIgnoringTemporaryBlocks = (
+  game: GameState,
+  player: PlayerState,
+): HexTile[] => {
+  const temporaryBlockIds = new Set(
+    game.temporaryBlockedHexes?.map((block) => block.hexId) ?? [],
+  )
+  return findBotTurnRoute(
+    {
+      ...game,
+      map: {
+        ...game.map,
+        tiles: game.map.tiles.map((tile) =>
+          temporaryBlockIds.has(tile.id) ? { ...tile, isBlocked: false } : tile,
+        ),
+      },
+      players: game.players.map((entry) =>
+        entry.id === player.id ? entry : { ...entry, position: '' },
+      ),
+    },
+    player,
+  )
 }
 
 export const nextPlannedBotStep = (

@@ -68,7 +68,8 @@ import {
   cardMovementFor,
   chooseBotSealHex,
   chooseBotStart,
-  findBotTurnRoute,
+  findBotTurnRouteIgnoringTemporaryBlocks,
+  isBotStepTemporarilyBlocked,
   nextPlannedBotStep,
 } from './botMovement.js'
 import {
@@ -447,7 +448,10 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         plannedTurn = {
           playerId: bot.id,
           turnNumber: game.turnNumber,
-          route: findBotTurnRoute(knowledge, botKnowledge),
+          route: findBotTurnRouteIgnoringTemporaryBlocks(
+            knowledge,
+            botKnowledge,
+          ),
         }
       }
       const target = nextPlannedBotStep(plannedTurn.route, player.position)
@@ -508,6 +512,61 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
           await emitRoom(io, room)
           continue
         }
+      }
+      if (isBotStepTemporarilyBlocked(game, player, target.id)) {
+        const canBuy =
+          !player.hasBoughtThisTurn &&
+          !game.marketLockedUntilPlayerId &&
+          !player.marketBlocked
+        const purchase = canBuy
+          ? chooseBotPurchase(game, player, currentTile, target)
+          : undefined
+        const purchaseCost = purchase
+          ? purchase.purchaseCost + (player.nextPurchaseCostIncrease ?? 0)
+          : undefined
+        if (purchase && purchaseCost !== undefined) {
+          if (player.availableGold >= purchaseCost) {
+            buyCard(game, bot.id, purchase.id)
+            logGameAction(room, bot.id, 'buy_card', {
+              cardId: purchase.id,
+              purchaseCost,
+              reason: 'route_temporarily_blocked',
+            })
+            await emitRoom(io, room)
+            continue
+          }
+          const goldCard = player.hand
+            .map((card) => ({ card, definition: CARD_BY_ID[card.cardId] }))
+            .filter(
+              (
+                entry,
+              ): entry is { card: CardInstance; definition: CardDefinition } =>
+                Boolean(entry.definition?.goldValue),
+            )
+            .sort(
+              (left, right) =>
+                cardPlanScore(left.definition, currentTile, target) -
+                  cardPlanScore(right.definition, currentTile, target) ||
+                right.definition.goldValue - left.definition.goldValue,
+            )[0]?.card
+          if (goldCard) {
+            playCard(game, bot.id, goldCard.instanceId, 'GOLD')
+            logGameAction(room, bot.id, 'play_card', {
+              cardId: goldCard.cardId,
+              mode: 'GOLD',
+              reason: 'route_temporarily_blocked',
+            })
+            await emitRoom(io, room)
+            continue
+          }
+        }
+        endTurn(game, bot.id)
+        logGameAction(room, bot.id, 'end_turn', {
+          reason: 'route_temporarily_blocked',
+          targetHexId: target.id,
+        })
+        await emitRoom(io, room)
+        continue
       }
       const legalMove = canAffordMove(player, currentTile, target)
 
