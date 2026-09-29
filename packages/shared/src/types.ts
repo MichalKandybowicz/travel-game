@@ -111,6 +111,7 @@ export interface GameMap {
   startHexId: string
   startHexIds?: string[]
   goalHexId: string
+  goalHexIds?: string[] | undefined
   stats: MapAnalysis
 }
 

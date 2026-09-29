@@ -6,14 +6,15 @@ import type {
 import { axialDistance, getNeighborCoordinates, hexKey } from './HexGrid.js'
 import { SeededRandom } from './SeededRandom.js'
 
-type CostTerrain = 'JUNGLE' | 'WATER' | 'DESERT' | 'RUBBLE' | 'CAMP'
+type CostTerrain = 'JUNGLE' | 'WATER' | 'DESERT' | 'RUBBLE' | 'CAMP' | 'GOAL'
 
 const costRanges: Record<CostTerrain, readonly [number, number]> = {
   JUNGLE: [1, 4],
   WATER: [1, 3],
   DESERT: [1, 4],
   RUBBLE: [2, 4],
-  CAMP: [1, 5],
+  CAMP: [1, 3],
+  GOAL: [5, 8],
 }
 
 const pickCost = (
@@ -35,7 +36,7 @@ const pickCost = (
 const pickLandTerrain = (
   random: SeededRandom,
   settings: MapSettings,
-): Exclude<CostTerrain, 'WATER' | 'CAMP'> => {
+): Exclude<CostTerrain, 'WATER' | 'CAMP' | 'GOAL'> => {
   const desertWeight = Math.max(
     0.12,
     1 - settings.jungleDensity - settings.waterDensity - 0.12,
@@ -316,11 +317,11 @@ export const applyTerrain = (
   settings: MapSettings,
   random: SeededRandom,
   startIds: string[],
-  goalId: string,
+  goalIds: string[],
 ): HexTile[] => {
   const tiles = grid.map((tile) => ({ ...tile }))
   const neighborsOf = buildNeighborLookup(tiles)
-  const protectedIds = new Set([...startIds, goalId])
+  const protectedIds = new Set([...startIds, ...goalIds])
 
   placeMountainGroups(
     tiles,
@@ -343,9 +344,9 @@ export const applyTerrain = (
   )
 
   const startTiles = tiles.filter((tile) => startIds.includes(tile.id))
-  const goalTile = tiles.find((tile) => tile.id === goalId)!
+  const goalTiles = tiles.filter((tile) => goalIds.includes(tile.id))
   for (const startTile of startTiles) startTile.terrain = 'START'
-  goalTile.terrain = 'GOAL'
+  for (const goalTile of goalTiles) goalTile.terrain = 'GOAL'
   placeCamps(
     tiles,
     settings.petalCount ?? 1,
@@ -364,7 +365,6 @@ export const applyTerrain = (
     }
   }
   for (const startTile of startTiles) startTile.difficulty = 0
-  goalTile.difficulty = 0
   for (const startTile of startTiles) {
     for (const tile of neighborsOf(startTile)) {
       if (!tile.isBlocked) tile.difficulty = Math.min(tile.difficulty, 2)

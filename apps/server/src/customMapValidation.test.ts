@@ -74,4 +74,20 @@ describe('custom map starts', () => {
     ]
     expect(normalizeCustomMap(map)).toBeUndefined()
   })
+
+  it('keeps three reachable portals and normalizes their costs', () => {
+    const map = makeMap()
+    map.goalHexIds = map.tiles.slice(-3).map((tile) => tile.id)
+    const normalized = normalizeCustomMap(map)
+
+    expect(normalized?.goalHexIds).toEqual(map.goalHexIds)
+    expect(
+      normalized?.tiles.filter((tile) => tile.terrain === 'GOAL'),
+    ).toHaveLength(3)
+    expect(
+      normalized?.tiles
+        .filter((tile) => tile.terrain === 'GOAL')
+        .every((tile) => tile.difficulty >= 5 && tile.difficulty <= 8),
+    ).toBe(true)
+  })
 })

@@ -480,7 +480,12 @@ export const routeCostToGoal = (
     )
     pending.delete(currentId)
     const currentCost = distances.get(currentId)!
-    if (currentId === gameState.map.goalHexId) return currentCost
+    if (
+      (gameState.map.goalHexIds ?? [gameState.map.goalHexId]).includes(
+        currentId,
+      )
+    )
+      return currentCost
     const currentTile = gameState.map.tiles.find(
       (tile) => tile.id === currentId,
     )
@@ -1676,6 +1681,13 @@ export const serializePublicGameState = (
             goalHexId: visibleIds.has(gameState.map.goalHexId)
               ? gameState.map.goalHexId
               : '',
+            ...(gameState.map.goalHexIds
+              ? {
+                  goalHexIds: gameState.map.goalHexIds.filter((id) =>
+                    visibleIds.has(id),
+                  ),
+                }
+              : {}),
             stats: {
               shortestPathLength: 0,
               routeCount: 0,

@@ -37,7 +37,12 @@ const buildGraph = (tiles: HexTile[]): Map<string, Edge[]> => {
   )
   return new Map(
     tiles.map((tile) => {
-      if (tile.isBlocked || tile.terrain === 'MOUNTAIN') return [tile.id, []]
+      if (
+        tile.isBlocked ||
+        tile.terrain === 'MOUNTAIN' ||
+        tile.terrain === 'GOAL'
+      )
+        return [tile.id, []]
       const edges = getNeighborCoordinates(tile.q, tile.r)
         .map(({ q, r }) => byCoordinate.get(hexKey(q, r)))
         .filter((neighbor): neighbor is HexTile => Boolean(neighbor))
@@ -139,8 +144,14 @@ export const findDiverseFastestRoutes = (
   minimumDifference = 0.8,
 ): MapRoute[] => {
   const graph = buildGraph(map.tiles)
-  if (!graph.has(startId) || !graph.has(map.goalHexId)) return []
-  const first = shortestRoute(graph, startId, map.goalHexId, new Map())
+  const goalIds = map.goalHexIds ?? [map.goalHexId]
+  if (!graph.has(startId) || !goalIds.some((id) => graph.has(id))) return []
+  const bestRoute = (penalties: Map<string, number>): MapRoute | undefined =>
+    goalIds
+      .map((goalId) => shortestRoute(graph, startId, goalId, penalties))
+      .filter((route): route is MapRoute => Boolean(route))
+      .sort((left, right) => left.cost - right.cost)[0]
+  const first = bestRoute(new Map())
   if (!first || first.tileIds.length < 2) return []
   const routes = [first]
   for (let index = 1; index < count; index += 1) {
@@ -153,7 +164,7 @@ export const findDiverseFastestRoutes = (
           penalties.set(edge, (penalties.get(edge) ?? 0) + penalty)
         }
       }
-      const candidate = shortestRoute(graph, startId, map.goalHexId, penalties)
+      const candidate = bestRoute(penalties)
       if (
         candidate &&
         routes.every(

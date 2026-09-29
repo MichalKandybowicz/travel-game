@@ -20,9 +20,9 @@ const buildReachableFromGoal = (
   map: GameMap,
   neighborsOf: NeighborLookup,
 ): Set<string> => {
-  const goal = map.tiles.find((tile) => tile.id === map.goalHexId)!
-  const queue: HexTile[] = [goal]
-  const visited = new Set<string>([goal.id])
+  const goalIds = new Set(map.goalHexIds ?? [map.goalHexId])
+  const queue = map.tiles.filter((tile) => goalIds.has(tile.id))
+  const visited = new Set(queue.map((tile) => tile.id))
   let queueIndex = 0
 
   while (queueIndex < queue.length) {
@@ -42,7 +42,7 @@ const buildReachableFromGoal = (
 
 const bfsDistance = (map: GameMap, neighborsOf: NeighborLookup): number => {
   const start = map.tiles.find((tile) => tile.id === map.startHexId)!
-  const goal = map.tiles.find((tile) => tile.id === map.goalHexId)!
+  const goalIds = new Set(map.goalHexIds ?? [map.goalHexId])
   const queue: Array<{ tile: HexTile; distance: number }> = [
     { tile: start, distance: 0 },
   ]
@@ -52,7 +52,7 @@ const bfsDistance = (map: GameMap, neighborsOf: NeighborLookup): number => {
   while (queueIndex < queue.length) {
     const current = queue[queueIndex]!
     queueIndex += 1
-    if (current.tile.id === goal.id) {
+    if (goalIds.has(current.tile.id)) {
       return current.distance
     }
     for (const neighbor of neighborsOf(current.tile)) {

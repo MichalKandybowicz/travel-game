@@ -91,6 +91,7 @@ export const buildBotKnowledge = (
       ...visible.map,
       startHexId: game.map.startHexId,
       ...(game.map.startHexIds ? { startHexIds: game.map.startHexIds } : {}),
+      ...(game.map.goalHexIds ? { goalHexIds: game.map.goalHexIds } : {}),
       tiles: game.map.tiles.map(({ id, q, r, petalId }) => {
         const known = visibleTiles.get(id)
         return known?.terrain !== undefined && known.terrain !== 'UNKNOWN'
@@ -127,7 +128,9 @@ const planBotRoute = (
   const start = byId.get(startId)
   if (!start) return undefined
 
-  const knownGoal = byId.get(game.map.goalHexId)
+  const knownGoals = (game.map.goalHexIds ?? [game.map.goalHexId])
+    .map((id) => byId.get(id))
+    .filter((tile): tile is HexTile => Boolean(tile))
   const lastPetalId = Math.max(...tiles.map((tile) => tile.petalId ?? 0))
   const firstPetal = tiles.filter((tile) => (tile.petalId ?? 0) === 0)
   const firstCenter = {
@@ -152,13 +155,14 @@ const planBotRoute = (
   const farthest = Math.max(
     ...lastPetal.map((tile) => axialDistance(tile, reference)),
   )
-  const goals = knownGoal
-    ? [knownGoal]
-    : lastPetal.filter(
-        (tile) =>
-          tile.id !== start.id &&
-          axialDistance(tile, reference) >= farthest - 0.001,
-      )
+  const goals =
+    knownGoals.length > 0
+      ? knownGoals
+      : lastPetal.filter(
+          (tile) =>
+            tile.id !== start.id &&
+            axialDistance(tile, reference) >= farthest - 0.001,
+        )
   if (goals.length === 0) return undefined
 
   const supply = { GREEN: 0, BLUE: 0, YELLOW: 0, WILD: 0 }

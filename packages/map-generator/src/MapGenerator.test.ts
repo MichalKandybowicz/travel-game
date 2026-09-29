@@ -139,6 +139,17 @@ describe('generateMap', () => {
 
     expect(analysis.shortestPathLength).toBeGreaterThan(0)
     expect(analysis.routeCount).toBeGreaterThanOrEqual(2)
+    const visited = new Set([map.startHexId])
+    const queue = [map.tiles.find((tile) => tile.id === map.startHexId)!]
+    for (let index = 0; index < queue.length; index += 1) {
+      for (const neighbor of getNeighbors(map.tiles, queue[index]!)) {
+        if (neighbor.isBlocked || visited.has(neighbor.id)) continue
+        visited.add(neighbor.id)
+        queue.push(neighbor)
+      }
+    }
+    expect(map.goalHexIds).toHaveLength(3)
+    expect(map.goalHexIds!.every((id) => visited.has(id))).toBe(true)
   })
 
   it('connects the requested number of distinct petals', () => {
@@ -196,6 +207,22 @@ describe('generateMap', () => {
       expect(map.tiles.find((tile) => tile.id === map.goalHexId)?.petalId).toBe(
         petalCount - 1,
       )
+      const portals = map.tiles.filter((tile) => tile.terrain === 'GOAL')
+      expect(portals).toHaveLength(3)
+      expect(new Set(map.goalHexIds).size).toBe(3)
+      expect(map.goalHexIds).toContain(map.goalHexId)
+      expect(portals.every((tile) => tile.petalId === petalCount - 1)).toBe(
+        true,
+      )
+      expect(
+        [
+          portals.every((tile) => tile.q === portals[0]!.q),
+          portals.every((tile) => tile.r === portals[0]!.r),
+          portals.every(
+            (tile) => tile.q + tile.r === portals[0]!.q + portals[0]!.r,
+          ),
+        ].some(Boolean),
+      ).toBe(true)
       if (petalCount >= 3) {
         const centers = [0, 1, 2].map((petalId) => {
           const tiles = map.tiles.filter((tile) => tile.petalId === petalId)
@@ -299,7 +326,8 @@ describe('generateMap', () => {
       WATER: [1, 3],
       DESERT: [1, 4],
       RUBBLE: [2, 4],
-      CAMP: [1, 5],
+      CAMP: [1, 3],
+      GOAL: [5, 8],
     } as const
     for (const [mapSize, petalCount] of [
       ['SMALL', 3],

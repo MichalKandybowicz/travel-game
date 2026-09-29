@@ -1,5 +1,6 @@
 import type { GameMap, MapSettings } from '../../shared/src/index.js'
 import { analyzeMap } from './MapAnalyzer.js'
+import { getNeighbors } from './HexGrid.js'
 
 export interface MapValidationResult {
   valid: boolean
@@ -12,6 +13,33 @@ export const validateMap = (
 ): MapValidationResult => {
   const analysis = analyzeMap(map)
   const reasons: string[] = []
+  const goalIds = map.goalHexIds ?? [map.goalHexId]
+  const start = map.tiles.find((tile) => tile.id === map.startHexId)
+  const reachable = new Set(start ? [start.id] : [])
+  const queue = start ? [start] : []
+  for (let index = 0; index < queue.length; index += 1) {
+    for (const neighbor of getNeighbors(map.tiles, queue[index]!)) {
+      if (
+        neighbor.isBlocked ||
+        neighbor.terrain === 'MOUNTAIN' ||
+        reachable.has(neighbor.id)
+      )
+        continue
+      reachable.add(neighbor.id)
+      queue.push(neighbor)
+    }
+  }
+  if (
+    new Set(goalIds).size !== goalIds.length ||
+    !goalIds.includes(map.goalHexId) ||
+    goalIds.some(
+      (id) =>
+        !reachable.has(id) ||
+        map.tiles.find((tile) => tile.id === id)?.terrain !== 'GOAL',
+    )
+  ) {
+    reasons.push('Not every GOAL is reachable from START.')
+  }
   const minRoutes = settings.routeCount >= 2 ? 2 : 1
   const minPathLengthBySize = {
     SMALL: 5,

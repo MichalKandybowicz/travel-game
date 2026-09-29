@@ -60,7 +60,7 @@ const hexTileSchema = z.object({
   q: z.number().int(),
   r: z.number().int(),
   terrain: terrainSchema,
-  difficulty: z.number().int().min(0).max(5),
+  difficulty: z.number().int().min(0).max(8),
   isBlocked: z.boolean(),
   petalId: z.number().int().min(0).optional(),
   specialType: z.enum(['CHOKEPOINT', 'LOOP', 'CAMP']).optional(),
@@ -85,6 +85,7 @@ export const customMapPayloadSchema = z.object({
     startHexId: z.string().min(1),
     startHexIds: z.array(z.string()).min(4).max(1500),
     goalHexId: z.string().min(1),
+    goalHexIds: z.array(z.string().min(1)).min(1).max(3).optional(),
     stats: mapAnalysisSchema,
   }),
 })

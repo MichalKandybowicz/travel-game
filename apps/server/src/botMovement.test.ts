@@ -229,6 +229,39 @@ describe('bot movement planning', () => {
     expect(nextPlannedBotStep(route, start.id)).toBe(goal)
   })
 
+  it('plans toward the closest of several final portals', () => {
+    const start = tile('start', 0, 'START')
+    const near = { ...tile('near', 1, 'GOAL'), difficulty: 5 }
+    const far = { ...tile('far', 2, 'GOAL'), difficulty: 5 }
+    const player = {
+      id: 'bot',
+      name: 'Bot',
+      position: start.id,
+      hand: [],
+      drawPile: [],
+      discardPile: [],
+      removedCards: [],
+      playedCards: [],
+      availableMovement: { GREEN: 0, BLUE: 0, YELLOW: 0, WILD: 0 },
+      availableGold: 0,
+      isReady: true,
+      connected: true,
+    } satisfies PlayerState
+    const game = {
+      map: {
+        tiles: [start, near, far],
+        goalHexId: far.id,
+        goalHexIds: [far.id, near.id],
+      },
+      settings: { allowSharedTiles: true },
+      players: [player],
+    } as unknown as GameState
+
+    expect(
+      nextPlannedBotStep(findBotTurnRoute(game, player), start.id)?.id,
+    ).toBe(near.id)
+  })
+
   it('waits for an opponent blocking the preferred route instead of replanning through it', () => {
     const start = tile('start', 0, 'START')
     const forward = tile('forward', 1, 'JUNGLE')

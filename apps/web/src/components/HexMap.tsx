@@ -87,9 +87,9 @@ const terrainRules: Record<HexTile['terrain'], string> = {
   WATER: 'Koszt wejścia 1–3: niebieskie lub uniwersalne punkty.',
   DESERT: 'Koszt wejścia 1–4: żółte lub uniwersalne punkty.',
   RUBBLE: 'Koszt wejścia 2–4: punkty dowolnego koloru.',
-  CAMP: 'Koszt wejścia 1–5: punkty dowolnego koloru.',
+  CAMP: 'Koszt pola 1–3: punkty dowolnego koloru.',
   MOUNTAIN: 'Pole zablokowane; nie można na nie wejść.',
-  GOAL: 'Wejście kosztuje 1 punkt dowolnego koloru i kończy grę zwycięstwem.',
+  GOAL: 'Koszt pola 5–8: punkty dowolnego koloru. Wejście kończy grę zwycięstwem.',
 }
 
 const hexToPixel = (q: number, r: number, size: number) => {

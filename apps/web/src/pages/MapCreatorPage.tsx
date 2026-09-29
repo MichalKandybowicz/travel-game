@@ -140,21 +140,26 @@ export function MapCreatorPage() {
     setRoutePreview(null)
     setMap((current) => {
       let startHexIds = [...(current.startHexIds ?? [])]
-      let goalHexId = current.goalHexId
+      let goalHexIds = [...(current.goalHexIds ?? [current.goalHexId])]
       if (tool === 'SET_START') {
         if (startHexIds.includes(tileId) && startHexIds.length > 1) {
           startHexIds = startHexIds.filter((id) => id !== tileId)
-        } else if (tileId !== goalHexId) {
+        } else if (!goalHexIds.includes(tileId)) {
           startHexIds.push(tileId)
         }
       } else if (tool === 'SET_GOAL' && !startHexIds.includes(tileId)) {
-        goalHexId = tileId
+        if (!goalHexIds.includes(tileId)) {
+          goalHexIds = [
+            ...goalHexIds.slice(goalHexIds.length >= 3 ? 1 : 0),
+            tileId,
+          ]
+        }
       }
       const tiles = current.tiles.map((tile) => {
         if (tool === 'SET_START' || tool === 'SET_GOAL') {
           const endpoint: TerrainType = startHexIds.includes(tile.id)
             ? 'START'
-            : tile.id === goalHexId
+            : goalHexIds.includes(tile.id)
               ? 'GOAL'
               : tile.terrain === 'START' || tile.terrain === 'GOAL'
                 ? 'RUBBLE'
@@ -163,21 +168,40 @@ export function MapCreatorPage() {
             ...tile,
             terrain: endpoint,
             difficulty:
-              endpoint === 'START' || endpoint === 'GOAL' ? 1 : tile.difficulty,
+              endpoint === 'START'
+                ? 1
+                : endpoint === 'GOAL'
+                  ? tool === 'SET_GOAL' &&
+                    tile.id === tileId &&
+                    tile.terrain === 'GOAL'
+                    ? tile.difficulty < 5 || tile.difficulty >= 8
+                      ? 5
+                      : tile.difficulty + 1
+                    : tile.terrain === 'GOAL'
+                      ? Math.max(5, Math.min(8, tile.difficulty))
+                      : 5
+                  : tile.terrain === 'GOAL' && endpoint === 'RUBBLE'
+                    ? 3
+                    : tile.difficulty,
             isBlocked: endpoint === 'MOUNTAIN',
           }
         }
         if (
           tile.id !== tileId ||
           startHexIds.includes(tile.id) ||
-          tile.id === goalHexId
+          goalHexIds.includes(tile.id)
         ) {
           return tile
         }
         return {
           ...tile,
           terrain: tool,
-          difficulty: tool === 'MOUNTAIN' ? 0 : difficulty,
+          difficulty:
+            tool === 'MOUNTAIN'
+              ? 0
+              : tool === 'CAMP'
+                ? Math.min(difficulty, 3)
+                : difficulty,
           isBlocked: tool === 'MOUNTAIN',
         }
       })
@@ -186,7 +210,8 @@ export function MapCreatorPage() {
         tiles,
         startHexIds,
         startHexId: startHexIds[0] ?? '',
-        goalHexId,
+        goalHexId: goalHexIds[0] ?? '',
+        goalHexIds,
       }
       return { ...next, stats: analyzeMap(next) }
     })
@@ -322,7 +347,11 @@ export function MapCreatorPage() {
                 key={terrain}
                 type="button"
                 aria-pressed={tool === terrain}
-                onClick={() => setTool(terrain)}
+                onClick={() => {
+                  setTool(terrain)
+                  if (terrain === 'CAMP')
+                    setDifficulty((value) => Math.min(value, 3))
+                }}
               >
                 {terrainLabels[terrain]}
               </button>
@@ -339,9 +368,14 @@ export function MapCreatorPage() {
               aria-pressed={tool === 'SET_GOAL'}
               onClick={() => setTool('SET_GOAL')}
             >
-              Portal
+              Portale ({map.goalHexIds?.length ?? 1}/3)
             </button>
           </div>
+          {tool === 'SET_GOAL' && (
+            <small>
+              Kliknij portal ponownie, aby zmienić jego koszt od 5 do 8.
+            </small>
+          )}
           {tool !== 'SET_START' &&
             tool !== 'SET_GOAL' &&
             tool !== 'MOUNTAIN' && (
@@ -350,7 +384,7 @@ export function MapCreatorPage() {
                 <input
                   type="range"
                   min="1"
-                  max="5"
+                  max={tool === 'CAMP' ? 3 : 5}
                   value={difficulty}
                   onChange={(event) =>
                     setDifficulty(Number(event.target.value))
@@ -572,7 +606,7 @@ export function MapCreatorPage() {
                   <g transform={`translate(${x} ${y - 3})`}>
                     <TerrainIcon terrain={tile.terrain} scale={1.05} />
                   </g>
-                  {!['START', 'GOAL', 'MOUNTAIN'].includes(tile.terrain) && (
+                  {!['START', 'MOUNTAIN'].includes(tile.terrain) && (
                     <text x={x} y={y + 17} textAnchor="middle">
                       {tile.difficulty}
                     </text>

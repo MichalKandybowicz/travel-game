@@ -95,4 +95,18 @@ describe('findDiverseFastestRoutes', () => {
 
     expect(findDiverseFastestRoutes(map, 'start')).toEqual([])
   })
+
+  it('ends a route at the cheapest of several portals', () => {
+    const map = mapWith([
+      tile('start', 0, 0, 'START', 0),
+      tile('near', 1, 0, 'GOAL', 5),
+      tile('goal', 2, 0, 'GOAL', 5),
+    ])
+    map.goalHexIds = ['goal', 'near']
+
+    expect(findDiverseFastestRoutes(map, 'start')[0]?.tileIds).toEqual([
+      'start',
+      'near',
+    ])
+  })
 })

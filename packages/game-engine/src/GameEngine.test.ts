@@ -400,7 +400,7 @@ describe('GameEngine', () => {
     expect(player.position).toBe(target.id)
   })
 
-  it('requires movement points to enter the zero-difficulty goal', () => {
+  it('requires movement points to enter a portal', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const goal = game.map.tiles.find((tile) => tile.id === game.map.goalHexId)!
@@ -415,6 +415,30 @@ describe('GameEngine', () => {
     expect(game.status).toBe('FINISHED')
     expect(game.winnerId).toBe('p1')
     expect(serializePublicGameState(game, 'p2').winnerId).toBe('p1')
+  })
+
+  it('wins at any of the three portals and pays that portal cost', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const portalId = game.map.goalHexIds!.find(
+      (id) => id !== game.map.goalHexId,
+    )!
+    const portal = game.map.tiles.find((tile) => tile.id === portalId)!
+    const start = game.map.tiles.find((tile) => tile.id === player.position)!
+    portal.q = start.q + 1
+    portal.r = start.r
+    portal.difficulty = 8
+    player.availableMovement.WILD = 7
+
+    expect(() => movePlayer(game, player.id, portal.id)).toThrow(
+      expect.objectContaining({ code: 'NOT_ENOUGH_MOVEMENT' }),
+    )
+    player.availableMovement.WILD = 8
+    movePlayer(game, player.id, portal.id)
+
+    expect(player.availableMovement.WILD).toBe(0)
+    expect(game.status).toBe('FINISHED')
+    expect(game.winnerId).toBe(player.id)
   })
 
   it('finds every destination reachable with the movement pool and returns a walkable path', () => {

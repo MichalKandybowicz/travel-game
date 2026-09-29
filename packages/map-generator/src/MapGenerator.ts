@@ -11,7 +11,7 @@ import {
   HEX_DIRECTIONS,
 } from './HexGrid.js'
 import { analyzeMap } from './MapAnalyzer.js'
-import { createRouteSet } from './PathGenerator.js'
+import { createRouteSet, tracePath } from './PathGenerator.js'
 import { SeededRandom } from './SeededRandom.js'
 import { applyTerrain } from './TerrainGenerator.js'
 import { validateMap } from './MapValidator.js'
@@ -27,7 +27,7 @@ const getEndpointTiles = (
   radius: number,
   centers: Array<{ q: number; r: number }>,
   random: SeededRandom,
-): { starts: HexTile[]; goal: HexTile } => {
+): { starts: HexTile[]; goals: HexTile[] } => {
   const firstPetal = grid.filter((tile) => tile.petalId === 0)
   const center = centers[0]!
   const sides = [
@@ -64,28 +64,43 @@ const getEndpointTiles = (
   const starts = sideTiles
   if (starts.length !== radius + 1)
     throw new Error('Unable to determine the full START edge.')
-  if (centers.length === 1) {
-    const goal = grid.find((tile) => tile.q === radius && tile.r === 0)
-    if (!goal) throw new Error('Unable to determine GOAL tile.')
-    return { starts, goal }
-  }
-  const chooseOuterTile = (
-    petalId: number,
-    otherCenter: { q: number; r: number },
-  ): HexTile => {
-    const candidates = grid.filter((tile) => tile.petalId === petalId)
-    const farthest = Math.max(
-      ...candidates.map((tile) => axialDistance(tile, otherCenter)),
-    )
-    return random.pick(
-      candidates.filter(
-        (tile) => axialDistance(tile, otherCenter) === farthest,
-      ),
-    )
-  }
+  const lastPetalId = centers.length - 1
+  const lastCenter = centers[lastPetalId]!
+  const lastPetal = grid.filter((tile) => tile.petalId === lastPetalId)
+  const goalSides = [
+    lastPetal.filter((tile) => tile.q === lastCenter.q + radius),
+    lastPetal.filter((tile) => tile.q === lastCenter.q - radius),
+    lastPetal.filter((tile) => tile.r === lastCenter.r + radius),
+    lastPetal.filter((tile) => tile.r === lastCenter.r - radius),
+    lastPetal.filter(
+      (tile) => tile.q + tile.r === lastCenter.q + lastCenter.r + radius,
+    ),
+    lastPetal.filter(
+      (tile) => tile.q + tile.r === lastCenter.q + lastCenter.r - radius,
+    ),
+  ]
+  const goalSideScores = goalSides.map((side) =>
+    side.reduce((sum, tile) => sum + axialDistance(tile, centers[0]!), 0),
+  )
+  const farthestSideScore = Math.max(...goalSideScores)
+  const goalSide =
+    centers.length === 1
+      ? goalSides[contactSide]!
+      : random.pick(
+          goalSides.filter(
+            (_, index) => goalSideScores[index] === farthestSideScore,
+          ),
+        )
+  const ordered = [...goalSide].sort((a, b) => a.q - b.q || a.r - b.r)
+  if (ordered.length < 3)
+    throw new Error('Unable to determine three GOAL tiles.')
   return {
     starts,
-    goal: chooseOuterTile(centers.length - 1, centers[0]!),
+    goals: [
+      ordered[0]!,
+      ordered[Math.floor((ordered.length - 1) / 2)]!,
+      ordered.at(-1)!,
+    ],
   }
 }
 
@@ -157,7 +172,8 @@ export const generateMap = (settings: MapSettings): GameMap => {
       settings.petalCount ?? 1,
       random,
     )
-    const { starts, goal } = getEndpointTiles(grid, radius, centers, random)
+    const { starts, goals } = getEndpointTiles(grid, radius, centers, random)
+    const goal = goals[1]!
     const routes = createRouteSet(
       starts[0]!,
       goal,
@@ -166,13 +182,18 @@ export const generateMap = (settings: MapSettings): GameMap => {
       random,
     )
     for (const start of starts.slice(1)) routes.add(start.id)
+    for (const extraGoal of goals) {
+      for (const tile of tracePath(goal, extraGoal, grid, random)) {
+        routes.add(tile.id)
+      }
+    }
     const tiles = applyTerrain(
       grid,
       routes,
       settings,
       random,
       starts.map((start) => start.id),
-      goal.id,
+      goals.map((entry) => entry.id),
     )
     const provisionalMap: GameMap = {
       tiles,
@@ -180,6 +201,7 @@ export const generateMap = (settings: MapSettings): GameMap => {
       startHexId: starts[0]!.id,
       startHexIds: starts.map((start) => start.id),
       goalHexId: goal.id,
+      goalHexIds: goals.map((entry) => entry.id),
       stats: {
         shortestPathLength: 0,
         routeCount: 0,
