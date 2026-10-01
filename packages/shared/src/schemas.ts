@@ -144,7 +144,7 @@ export const roomReorderPlayersSchema = z.object({
     .length(5)
     .transform((value) => value.toUpperCase()),
   playerId: z.string(),
-  orderedPlayerIds: z.array(z.string()).min(1).max(4),
+  orderedPlayerIds: z.array(z.string()).min(1).max(1500),
 })
 
 export const roomBotSchema = z.object({

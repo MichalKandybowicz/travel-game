@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { createHexGrid } from '../../../packages/map-generator/src/index.js'
-import { customMapPayloadSchema } from '../../../packages/shared/src/index.js'
+import {
+  customMapPayloadSchema,
+  getMaximumPlayers,
+  roomReorderPlayersSchema,
+} from '../../../packages/shared/src/index.js'
 import type {
   GameMap,
   MapSettings,
@@ -52,6 +56,14 @@ describe('custom map starts', () => {
     ).toBe(true)
     const normalized = normalizeCustomMap(map)
     expect(normalized?.startHexIds).toHaveLength(10)
+    expect(getMaximumPlayers(settings, normalized)).toBe(10)
+    expect(
+      roomReorderPlayersSchema.safeParse({
+        roomCode: 'ABCDE',
+        playerId: 'host',
+        orderedPlayerIds: Array.from({ length: 10 }, (_, index) => `p${index}`),
+      }).success,
+    ).toBe(true)
     expect(
       normalized?.tiles.filter((tile) => tile.terrain === 'START'),
     ).toHaveLength(10)

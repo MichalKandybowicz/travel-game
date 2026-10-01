@@ -110,18 +110,18 @@ Cała krawędź pierwszego płatka przeciwna do sąsiedniego płatka stanowi **p
 
 Licznik **Runda** zmienia się dopiero po turze wszystkich graczy. **Ruch X z Y** pokazuje, który gracz wykonuje teraz swoją turę w bieżącej rundzie.
 
-Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry.
+Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry. Limit graczy i botów odpowiada liczbie pól startowych aktualnej mapy. Zmiana mapy lub rozmiaru nie może zmniejszyć liczby startów poniżej liczby osób w pokoju.
 
-| Teren     | Koszt wejścia                                  | Efekt                                                               |
-| --------- | ---------------------------------------------- | ------------------------------------------------------------------- |
-| Dżungla   | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                            |
-| Woda      | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                            |
-| Pustynia  | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                            |
-| Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                            |
-| Krąg run  | 1–5 punktów dowolnego koloru                   | Przy pierwszym wejściu wybierasz jedną z trzech losowych run.       |
-| Góry      | Nie można wejść                                | Pole zablokowane.                                                   |
-| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z czterech pól początkowych, wybieranych przed pierwszą turą. |
-| Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                                     |
+| Teren     | Koszt wejścia                                  | Efekt                                                         |
+| --------- | ---------------------------------------------- | ------------------------------------------------------------- |
+| Dżungla   | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                      |
+| Woda      | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                      |
+| Pustynia  | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                      |
+| Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                      |
+| Krąg run  | 1–5 punktów dowolnego koloru                   | Przy pierwszym wejściu wybierasz jedną z trzech losowych run. |
+| Góry      | Nie można wejść                                | Pole zablokowane.                                             |
+| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z pól początkowych, wybieranych przed pierwszą turą.    |
+| Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                               |
 
 Generator tworzy góry w połączonych grupach po 3–5 pól. Rzeki biegną od pól sąsiadujących z górami do zewnętrznej krawędzi mapy, a pozostała woda tworzy zwarte jeziora. Kręgi run nie zajmują środkowego pola płatka i leżą co najmniej ¼ promienia płatka od jego krawędzi; między każdą parą są co najmniej 3 pełne heksy (odległość co najmniej 4). Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 

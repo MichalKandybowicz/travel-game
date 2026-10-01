@@ -198,6 +198,32 @@ describe('GameEngine', () => {
     expect(game.roundNumber).toBe(2)
   })
 
+  it('lets five players choose separate starts on a map with five slots', () => {
+    const players = Array.from({ length: 5 }, (_, index) => ({
+      id: `p${index + 1}`,
+      name: `Player ${index + 1}`,
+    }))
+    const game = createGameState(
+      'ABCDE',
+      { ...settings, segmentEdgeLength: 5 },
+      players,
+    )
+
+    expect(game.map.startHexIds).toHaveLength(5)
+    for (const [index, player] of players.entries()) {
+      chooseStart(game, player.id, game.map.startHexIds![index]!)
+    }
+    expect(game.status).toBe('ACTIVE')
+    expect(new Set(game.players.map((player) => player.position)).size).toBe(5)
+
+    expect(() =>
+      createGameState('ABCDE', { ...settings, segmentEdgeLength: 5 }, [
+        ...players,
+        { id: 'p6', name: 'Player 6' },
+      ]),
+    ).toThrow(expect.objectContaining({ code: 'INVALID_ACTION' }))
+  })
+
   it('shows starting visibility from every slot and keeps the opening hand visible', () => {
     const game = createGameState(
       'ABCDE',

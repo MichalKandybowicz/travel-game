@@ -544,6 +544,9 @@ export const createGameState = (
   customMap?: GameMap,
 ): GameState => {
   const map = customMap ? structuredClone(customMap) : generateMap(settings)
+  if (players.length > (map.startHexIds?.length ?? 1)) {
+    error('INVALID_ACTION', 'There are more players than starting positions.')
+  }
   const gamePlayers: PlayerState[] = players.map((player, index) => {
     const drawPile = buildStartingDeck(
       player.id,

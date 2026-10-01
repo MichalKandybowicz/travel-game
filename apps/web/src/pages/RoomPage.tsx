@@ -5,7 +5,12 @@ import { errorLabels } from '../labels.js'
 import { MapShapePreview } from '../components/MapShapePreview.js'
 import { PlayerBadge } from '../components/PlayerBadge.js'
 import { PlayerSymbol } from '../components/PlayerSymbol.js'
-import { PLAYER_COLORS, PLAYER_SYMBOLS, type CustomMap } from '@shared'
+import {
+  PLAYER_COLORS,
+  PLAYER_SYMBOLS,
+  getMaximumPlayers,
+  type CustomMap,
+} from '@shared'
 import { loadCustomMaps } from '../customMaps.js'
 import {
   playerColor,
@@ -68,6 +73,7 @@ export function RoomPage() {
   const customMaps =
     customMapsState.accountId === account?.id ? customMapsState.maps : []
   const playerCount = room?.players.length ?? 0
+  const maximumPlayers = getMaximumPlayers(settings, room?.customMap)
   const myIndex =
     room?.players.findIndex((player) => player.id === session?.playerId) ?? -1
   const me = myIndex >= 0 ? room?.players[myIndex] : undefined
@@ -75,8 +81,8 @@ export function RoomPage() {
   const mySymbol = playerSymbol(Math.max(0, myIndex), me?.symbol)
 
   const canStart = useMemo(
-    () => Boolean(isHost && playerCount >= 2),
-    [isHost, playerCount],
+    () => Boolean(isHost && playerCount >= 2 && playerCount <= maximumPlayers),
+    [isHost, playerCount, maximumPlayers],
   )
   const movePlayerInOrder = (index: number, offset: -1 | 1) => {
     if (!room || !isHost) return
@@ -266,14 +272,17 @@ export function RoomPage() {
             <div>
               <small className="panel-kicker">UCZESTNICY</small>
               <h2>
-                Gracze <span>{playerCount}/4</span>
+                Gracze{' '}
+                <span>
+                  {playerCount}/{maximumPlayers}
+                </span>
               </h2>
             </div>
             {isHost && room?.status === 'LOBBY' && (
               <button
                 type="button"
                 className="lobby-add-bot"
-                disabled={playerCount >= 4}
+                disabled={playerCount >= maximumPlayers}
                 onClick={addBot}
               >
                 + Dodaj bota

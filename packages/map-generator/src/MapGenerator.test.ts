@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { GameMap, MapSettings } from '../../shared/src/index.js'
-import { mapSettingsSchema } from '../../shared/src/index.js'
+import { getMaximumPlayers, mapSettingsSchema } from '../../shared/src/index.js'
 import { analyzeMap, countDistinctRoutesFromStart } from './MapAnalyzer.js'
 import { generateMap } from './MapGenerator.js'
 import { axialDistance, getNeighbors, HEX_DIRECTIONS } from './HexGrid.js'
@@ -86,6 +86,9 @@ describe('generateMap', () => {
         map.tiles.find((tile) => tile.id === id)!,
       )
       expect(starts).toHaveLength(segmentEdgeLength)
+      expect(getMaximumPlayers({ ...settings, segmentEdgeLength })).toBe(
+        starts.length,
+      )
       expect(new Set(starts.map((tile) => tile.id)).size).toBe(
         segmentEdgeLength,
       )

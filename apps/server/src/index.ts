@@ -27,6 +27,7 @@ import {
   TOKEN_BY_TYPE,
   PLAYER_COLORS,
   PLAYER_SYMBOLS,
+  getMaximumPlayers,
   roomCodeSchema,
   roomCreateSchema,
   roomJoinSchema,
@@ -88,7 +89,6 @@ const storage = await connectStorage(
 const roomStore = new Map<string, RoomRecord>(
   (await storage.loadRooms()).map((room) => [room.roomCode, room]),
 )
-const MAX_PLAYERS_PER_ROOM = 4
 const shapeCache = new WeakMap<
   RoomRecord,
   { settingsKey: string; shape: NonNullable<RoomState['mapShape']> }
@@ -1134,7 +1134,9 @@ io.on('connection', (socket) => {
         })
         return
       }
-      if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
+      if (
+        room.players.length >= getMaximumPlayers(room.settings, room.customMap)
+      ) {
         sendError(socket.id, io, {
           code: 'ROOM_FULL',
           message: 'This room already has the maximum number of players.',
@@ -1294,11 +1296,19 @@ io.on('connection', (socket) => {
       })
       return
     }
-    room.settings = normalizeLobbyFogSettings({
+    const nextSettings = normalizeLobbyFogSettings({
       ...parsed.data.settings,
       difficulty: 'NORMAL',
       routeCount: 1,
     })
+    if (room.players.length > getMaximumPlayers(nextSettings, room.customMap)) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'The selected map has fewer starting positions than players.',
+      })
+      return
+    }
+    room.settings = nextSettings
     room.seed = parsed.data.settings.seed
     await emitRoom(io, room)
   })
@@ -1353,6 +1363,16 @@ io.on('connection', (socket) => {
       sendError(socket.id, io, {
         code: 'INVALID_ACTION',
         message: 'The selected custom map was not found.',
+      })
+      return
+    }
+
+    if (
+      room.players.length > getMaximumPlayers(room.settings, customMap?.map)
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'The selected map has fewer starting positions than players.',
       })
       return
     }
@@ -1533,7 +1553,9 @@ io.on('connection', (socket) => {
       })
       return
     }
-    if (room.players.length >= MAX_PLAYERS_PER_ROOM) {
+    if (
+      room.players.length >= getMaximumPlayers(room.settings, room.customMap)
+    ) {
       sendError(socket.id, io, {
         code: 'ROOM_FULL',
         message: 'This room already has the maximum number of players.',
@@ -1633,6 +1655,15 @@ io.on('connection', (socket) => {
       sendError(socket.id, io, {
         code: 'GAME_ALREADY_STARTED',
         message: 'This room has already started a game.',
+      })
+      return
+    }
+    if (
+      room.players.length > getMaximumPlayers(room.settings, room.customMap)
+    ) {
+      sendError(socket.id, io, {
+        code: 'INVALID_ACTION',
+        message: 'The selected map has fewer starting positions than players.',
       })
       return
     }

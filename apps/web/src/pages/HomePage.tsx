@@ -75,7 +75,9 @@ export function HomePage() {
               TRAVEL<span className="home-brand-accent">GAME</span>
             </span>
           </Link>
-          <span className="home-nav-note">Magiczny wyścig dla 2–4 graczy</span>
+          <span className="home-nav-note">
+            Magiczny wyścig dla 2 graczy i więcej
+          </span>
           <button
             type="button"
             className="home-account-trigger"
