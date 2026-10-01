@@ -1408,9 +1408,9 @@ export const buyCard = (
   purchaseCounts[cardId] = (purchaseCounts[cardId] ?? 0) + 1
   const nextCard = createCardInstance(
     cardId,
-    `${playerId}-buy-${gameState.turnNumber}-${player.discardPile.length}`,
+    `${playerId}-buy-${gameState.turnNumber}-${player.purchasesThisTurn ?? (player.hasBoughtThisTurn ? 1 : 0)}`,
   )
-  player.discardPile.push(nextCard)
+  player.hand.push(nextCard)
   player.purchasesThisTurn =
     (player.purchasesThisTurn ?? (player.hasBoughtThisTurn ? 1 : 0)) + 1
   player.hasBoughtThisTurn = true

@@ -494,18 +494,41 @@ describe('GameEngine', () => {
     const player = game.players[0]!
     const cardId = game.market[0]!
     const cost = CARD_BY_ID[cardId]!.purchaseCost
+    const handSize = player.hand.length
+    const discardSize = player.discardPile.length
     player.availableGold = cost
     player.availableMovement.YELLOW = 0
 
     buyCard(game, 'p1', cardId)
 
-    expect(player.discardPile.at(-1)?.cardId).toBe(cardId)
+    const purchased = player.hand.at(-1)!
+    expect(purchased.cardId).toBe(cardId)
+    expect(player.hand).toHaveLength(handSize + 1)
+    expect(player.discardPile).toHaveLength(discardSize)
     expect(player.availableGold).toBe(0)
     expect(player.availableMovement.YELLOW).toBe(0)
     player.availableGold = 10
     expect(() => buyCard(game, 'p1', game.market[0]!)).toThrow(
       expect.objectContaining({ code: 'PURCHASE_LIMIT' }),
     )
+
+    playCard(game, player.id, purchased.instanceId, 'GOLD')
+    expect(player.hand).toHaveLength(handSize)
+    expect(player.playedCards).toContainEqual(purchased)
+  })
+
+  it('gives separate instance ids to two purchases added directly to hand', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    player.extraPurchaseAvailable = true
+    player.availableGold = 100
+
+    buyCard(game, player.id, game.market[0]!)
+    const first = player.hand.at(-1)!
+    buyCard(game, player.id, game.market[0]!)
+    const second = player.hand.at(-1)!
+
+    expect(first.instanceId).not.toBe(second.instanceId)
   })
 
   it('starts with four random offers and replenishes them after each purchase', () => {
@@ -619,7 +642,7 @@ describe('GameEngine', () => {
     ]
     game.players[0]!.availableGold = 5
     buyCard(game, 'p1', 'dune_runner')
-    expect(game.players[0]!.discardPile.at(-1)?.cardId).toBe('dune_runner')
+    expect(game.players[0]!.hand.at(-1)?.cardId).toBe('dune_runner')
   })
 
   it('stops replenishing a card after three purchases in one game', () => {

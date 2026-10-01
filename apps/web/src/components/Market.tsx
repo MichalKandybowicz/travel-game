@@ -1,9 +1,5 @@
 import { useRef } from 'react'
-import {
-  CARD_BY_ID,
-  getMarketTier,
-  MARKET_CARD_COPY_LIMIT,
-} from '@shared'
+import { CARD_BY_ID, getMarketTier, MARKET_CARD_COPY_LIMIT } from '@shared'
 import type { GameState, PlayerState } from '@shared'
 import { cardDescription } from '../labels.js'
 import { CardFace } from './CardFace.js'
@@ -83,7 +79,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                   ? `Klątwa ubóstwa podnosi cenę następnego zakupu o ${cursePriceIncrease} złota. Efekt zniknie po zakupie.`
                   : hasBoughtThisTurn
                     ? 'Zakup w tej turze został wykorzystany.'
-                    : 'Możesz kupić jedną kartę w swojej turze. Oferta uzupełni się po zakupie.'}
+                    : 'Możesz kupić jedną kartę w swojej turze. Kupiona karta trafi od razu na rękę. Oferta uzupełni się po zakupie.'}
             </p>
           </div>
           <div
@@ -117,7 +113,8 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                   }}
                 >
                   <span className="market-card-tier">
-                    Tier {tier} · kupiono {copiesPurchased}/{MARKET_CARD_COPY_LIMIT}
+                    Tier {tier} · kupiono {copiesPurchased}/
+                    {MARKET_CARD_COPY_LIMIT}
                   </span>
                   <CardFace card={card} purchaseCost={effectiveCost} />
                   <span className="market-card-status">

@@ -125,7 +125,7 @@ Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na po
 
 Generator tworzy góry w połączonych grupach po 3–5 pól. Rzeki biegną od pól sąsiadujących z górami do zewnętrznej krawędzi mapy, a pozostała woda tworzy zwarte jeziora. Kręgi run nie zajmują środkowego pola płatka i leżą co najmniej ¼ promienia płatka od jego krawędzi; między każdą parą są co najmniej 3 pełne heksy (odległość co najmniej 4). Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 
-Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta trafia na stos odrzuconych. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Gracz od razu dobiera karty do stanu **5 na ręce**, więc ma nową rękę także podczas tur przeciwników i może stracić kartę wskutek klątwy. Na początku gry również dobiera 5 kart. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
+Zakup karty na rynku wymaga tylko złota. W jednej turze można kupić **jedną kartę**. Kupiona karta od razu trafia na rękę i można ją zagrać jeszcze w tej samej turze. Po zakończeniu tury zagrane karty trafiają na stos odrzuconych, a **niezagrane pozostają na ręce**. Gracz od razu dobiera karty do stanu **5 na ręce**, więc ma nową rękę także podczas tur przeciwników i może stracić kartę wskutek klątwy. Na początku gry również dobiera 5 kart. Niewykorzystane punkty ruchu i złoto przepadają po zakończeniu tury.
 
 Talia startowa zawiera **4 Odkrywców** (zielone), **3 Monety** (żółte), **2 Żeglarzy** (niebieskie) i **1 Iskrę wędrowca** (uniwersalna: 1 ruchu albo 1 złoto), łącznie 10 kart. Na początku gracz dobiera 5 kart.
 
