@@ -30,6 +30,8 @@ export const tokenPresentation = (
       return { icon: '+1', label: 'Dobierz dodatkową kartę', tone: 'utility' }
     case 'REFRESH_MARKET':
       return { icon: '⟳', label: 'Przelosuj sklep', tone: 'market' }
+    case 'CURSE_SHIELD':
+      return { icon: '⬡', label: 'Ochrona przed klątwą', tone: 'utility' }
     case 'CURSE_REMOVE_CARD':
       return {
         icon: '−1',
@@ -60,6 +62,8 @@ export const tokenDescription = (type: TokenType): string => {
       return 'Dobiera jedną dodatkową kartę do ręki.'
     case 'REFRESH_MARKET':
       return 'Wymienia wszystkie dostępne karty w sklepie na nowe.'
+    case 'CURSE_SHIELD':
+      return 'Ignoruje następną klątwę wymierzoną w ciebie.'
     case 'CURSE_REMOVE_CARD':
       return 'Trwale usuwa losową kartę z talii dobierania lub stosu kart odrzuconych wskazanego rywala.'
     case 'CURSE_SKIP_LEADER':

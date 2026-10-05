@@ -6,6 +6,7 @@ export type TokenEffect =
   | { kind: 'SWAP_HAND' }
   | { kind: 'DRAW_CARD' }
   | { kind: 'REFRESH_MARKET' }
+  | { kind: 'CURSE_SHIELD' }
   | { kind: 'CURSE_REMOVE_CARD' }
   | { kind: 'CURSE_SKIP_LEADER' }
   | { kind: 'CURSE_MARKET' }
@@ -17,20 +18,12 @@ export interface TokenDefinition {
 
 export const TOKEN_DEFINITIONS: readonly TokenDefinition[] = [
   {
-    type: 'GREEN_2',
-    effect: { kind: 'MOVEMENT', movementType: 'GREEN', value: 2 },
-  },
-  {
     type: 'GREEN_3',
     effect: { kind: 'MOVEMENT', movementType: 'GREEN', value: 3 },
   },
   {
     type: 'GREEN_4',
     effect: { kind: 'MOVEMENT', movementType: 'GREEN', value: 4 },
-  },
-  {
-    type: 'BLUE_2',
-    effect: { kind: 'MOVEMENT', movementType: 'BLUE', value: 2 },
   },
   {
     type: 'BLUE_3',
@@ -41,20 +34,12 @@ export const TOKEN_DEFINITIONS: readonly TokenDefinition[] = [
     effect: { kind: 'MOVEMENT', movementType: 'BLUE', value: 4 },
   },
   {
-    type: 'YELLOW_2',
-    effect: { kind: 'MOVEMENT', movementType: 'YELLOW', value: 2 },
-  },
-  {
     type: 'YELLOW_3',
     effect: { kind: 'MOVEMENT', movementType: 'YELLOW', value: 3 },
   },
   {
     type: 'YELLOW_4',
     effect: { kind: 'MOVEMENT', movementType: 'YELLOW', value: 4 },
-  },
-  {
-    type: 'WILD_2',
-    effect: { kind: 'MOVEMENT', movementType: 'WILD', value: 2 },
   },
   {
     type: 'WILD_3',
@@ -67,16 +52,16 @@ export const TOKEN_DEFINITIONS: readonly TokenDefinition[] = [
   { type: 'GOLD_2', effect: { kind: 'GOLD', value: 2 } },
   { type: 'GOLD_3', effect: { kind: 'GOLD', value: 3 } },
   { type: 'GOLD_4', effect: { kind: 'GOLD', value: 4 } },
-  { type: 'SWAP_HAND', effect: { kind: 'SWAP_HAND' } },
   { type: 'DRAW_CARD', effect: { kind: 'DRAW_CARD' } },
   { type: 'REFRESH_MARKET', effect: { kind: 'REFRESH_MARKET' } },
+  { type: 'CURSE_SHIELD', effect: { kind: 'CURSE_SHIELD' } },
   { type: 'CURSE_REMOVE_CARD', effect: { kind: 'CURSE_REMOVE_CARD' } },
   { type: 'CURSE_SKIP_LEADER', effect: { kind: 'CURSE_SKIP_LEADER' } },
   { type: 'CURSE_MARKET', effect: { kind: 'CURSE_MARKET' } },
 ]
 
-// Saved games can still contain old +1 runes. They now grant +2, while new
-// runes are drawn only from TOKEN_DEFINITIONS.
+// Saved games can still contain removed runes, while new runes are drawn only
+// from TOKEN_DEFINITIONS.
 const legacyTokenDefinitions: TokenDefinition[] = [
   {
     type: 'GREEN_1',
@@ -95,6 +80,23 @@ const legacyTokenDefinitions: TokenDefinition[] = [
     effect: { kind: 'MOVEMENT', movementType: 'WILD', value: 2 },
   },
   { type: 'GOLD_1', effect: { kind: 'GOLD', value: 2 } },
+  {
+    type: 'GREEN_2',
+    effect: { kind: 'MOVEMENT', movementType: 'GREEN', value: 2 },
+  },
+  {
+    type: 'BLUE_2',
+    effect: { kind: 'MOVEMENT', movementType: 'BLUE', value: 2 },
+  },
+  {
+    type: 'YELLOW_2',
+    effect: { kind: 'MOVEMENT', movementType: 'YELLOW', value: 2 },
+  },
+  {
+    type: 'WILD_2',
+    effect: { kind: 'MOVEMENT', movementType: 'WILD', value: 2 },
+  },
+  { type: 'SWAP_HAND', effect: { kind: 'SWAP_HAND' } },
 ]
 
 export const TOKEN_BY_TYPE = Object.fromEntries(

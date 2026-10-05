@@ -939,16 +939,31 @@ describe('GameEngine', () => {
     })
   })
 
-  it('draws five cards after using the hand swap rune', () => {
+  it('blocks the next curse after using the curse shield rune', () => {
     const game = buildTestGame()
-    const player = game.players[0]!
-    player.tokens!.push({ instanceId: 'swap-hand-test', type: 'SWAP_HAND' })
-    player.hand.pop()
+    const target = game.players[0]!
+    const caster = game.players[1]!
+    target.tokens!.push({
+      instanceId: 'shield-rune-test',
+      type: 'CURSE_SHIELD',
+    })
+    caster.hand.push({
+      cardId: 'path_fracture',
+      instanceId: 'blocked-rune-curse',
+    })
 
-    activateToken(game, player.id, 'swap-hand-test')
+    activateToken(game, target.id, 'shield-rune-test')
+    expect(target.curseShieldAvailable).toBe(true)
 
-    expect(player.hand).toHaveLength(5)
-    expect(player.tokens).toEqual([])
+    endTurn(game, target.id)
+    activateActionCard(game, caster.id, 'blocked-rune-curse', target.id)
+
+    expect(target.extraMoveCostPending).toBe(false)
+    expect(target.curseShieldAvailable).toBe(false)
+    expect(game.latestCurse).toMatchObject({
+      cardId: 'path_fracture',
+      blocked: true,
+    })
   })
 
   it('doubles the next movement card with echo power', () => {
@@ -1327,15 +1342,30 @@ describe('GameEngine', () => {
     expect(player.tokens).toEqual([])
   })
 
-  it('draws only runes worth two, three or four resources', () => {
-    const values = TOKEN_DEFINITIONS.flatMap((token) =>
+  it('does not draw +2 movement runes or the hand swap rune', () => {
+    const movementValues = TOKEN_DEFINITIONS.flatMap((token) =>
+      token.effect.kind === 'MOVEMENT' ? [token.effect.value] : [],
+    )
+    const resourceValues = TOKEN_DEFINITIONS.flatMap((token) =>
       token.effect.kind === 'MOVEMENT' || token.effect.kind === 'GOLD'
         ? [token.effect.value]
         : [],
     )
 
-    expect(new Set(values)).toEqual(new Set([2, 3, 4]))
-    expect(values).toHaveLength(15)
+    expect(new Set(movementValues)).toEqual(new Set([3, 4]))
+    expect(new Set(resourceValues)).toEqual(new Set([2, 3, 4]))
+    expect(TOKEN_DEFINITIONS.map((token) => token.type)).not.toEqual(
+      expect.arrayContaining([
+        'GREEN_2',
+        'BLUE_2',
+        'YELLOW_2',
+        'WILD_2',
+        'SWAP_HAND',
+      ]),
+    )
+    expect(TOKEN_DEFINITIONS.map((token) => token.type)).toContain(
+      'CURSE_SHIELD',
+    )
   })
 
   it('grants movement without gold when new cards are played for movement', () => {

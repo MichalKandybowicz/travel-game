@@ -340,10 +340,6 @@ const chooseBotToken = (
   if (!canMoveWithCards) {
     const drawToken = player.tokens.find((token) => token.type === 'DRAW_CARD')
     if (drawToken) return { tokenInstanceId: drawToken.instanceId }
-    const swapToken = player.tokens.find((token) => token.type === 'SWAP_HAND')
-    if (swapToken && player.hand.length > 0) {
-      return { tokenInstanceId: swapToken.instanceId }
-    }
   }
 
   if (!chooseBotPurchase(game, player, from, target)) {

@@ -34,6 +34,7 @@ export type TokenType =
   | 'SWAP_HAND'
   | 'DRAW_CARD'
   | 'REFRESH_MARKET'
+  | 'CURSE_SHIELD'
   | 'CURSE_REMOVE_CARD'
   | 'CURSE_SKIP_LEADER'
   | 'CURSE_MARKET'

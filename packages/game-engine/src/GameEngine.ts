@@ -1335,6 +1335,9 @@ export const useToken = (
       refreshMarket(gameState, `token:${token.instanceId}`)
       gameState.marketPurchasedThisRound = true
       break
+    case 'CURSE_SHIELD':
+      player.curseShieldAvailable = true
+      break
     case 'CURSE_REMOVE_CARD': {
       if (!targetPlayerId || targetPlayerId === playerId) {
         return error('INVALID_ACTION', 'Choose an opponent for this curse.')
