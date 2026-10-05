@@ -464,7 +464,7 @@ describe('GameEngine', () => {
     expect(movementTypes.filter((type) => type === 'WILD')).toHaveLength(1)
     expect(CARD_BY_ID.wanderer_spark).toMatchObject({
       movementType: 'WILD',
-      movementValue: 1,
+      movementValue: 2,
       goldValue: 1,
     })
     expect(
@@ -737,7 +737,7 @@ describe('GameEngine', () => {
 
     expect(game.market).toHaveLength(4)
     expect(
-      game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 4),
+      game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 6),
     ).toBe(true)
     expect(game.market).toEqual(sameSeedGame.market)
     expect(
@@ -765,7 +765,7 @@ describe('GameEngine', () => {
           .length,
       ).toBeLessThanOrEqual(1)
       expect(
-        game.market.some((offer) => CARD_BY_ID[offer]!.purchaseCost <= 6),
+        game.market.some((offer) => CARD_BY_ID[offer]!.purchaseCost <= 7),
       ).toBe(true)
       endTurn(game, 'p1')
       endTurn(game, 'p2')
@@ -786,39 +786,39 @@ describe('GameEngine', () => {
       game.market.some(
         (cardId) =>
           CARD_BY_ID[cardId]?.type === 'MOVEMENT' &&
-          CARD_BY_ID[cardId]!.purchaseCost <= 4,
+          CARD_BY_ID[cardId]!.purchaseCost <= 6,
       ),
     ).toBe(true)
   })
 
-  it('prices movement by value and caps every card at nine gold', () => {
+  it('prices movement by value and caps every card at ten gold', () => {
     expect(CARD_BY_ID.dune_runner).toMatchObject({
       movementType: 'YELLOW',
-      movementValue: 3,
-      goldValue: 3,
-      purchaseCost: 5,
+      movementValue: 4,
+      goldValue: 4,
+      purchaseCost: 6,
     })
     expect(MARKET_CARD_IDS).toContain('dune_runner')
     expect(MARKET_CARD_IDS).not.toContain('sand_merchant')
     expect(CARD_BY_ID.pathfinder).toMatchObject({
       movementType: 'GREEN',
-      movementValue: 6,
-      purchaseCost: 8,
+      movementValue: 7,
+      purchaseCost: 9,
     })
     expect(CARD_BY_ID.wayfarer).toMatchObject({
       movementType: 'WILD',
-      movementValue: 4,
-      purchaseCost: 8,
+      movementValue: 5,
+      purchaseCost: 10,
     })
-    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(8)
+    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(10)
     expect(CARD_BY_ID.echo_power!.purchaseCost).toBe(5)
     expect(getMarketTier(2)).toBe(1)
     expect(getMarketTier(4)).toBe(2)
     expect(getMarketTier(6)).toBe(3)
-    expect(getMarketTier(9)).toBe(4)
+    expect(getMarketTier(10)).toBe(4)
     expect(
       Object.values(CARD_BY_ID).every(
-        (card) => card.purchaseCost > 0 && card.purchaseCost <= 9,
+        (card) => card.purchaseCost > 0 && card.purchaseCost <= 10,
       ),
     ).toBe(true)
 
@@ -827,7 +827,7 @@ describe('GameEngine', () => {
       'dune_runner',
       ...game.market.filter((cardId) => cardId !== 'dune_runner').slice(0, 3),
     ]
-    game.players[0]!.availableGold = 5
+    game.players[0]!.availableGold = 6
     buyCard(game, 'p1', 'dune_runner')
     expect(game.players[0]!.hand.at(-1)?.cardId).toBe('dune_runner')
   })
@@ -879,7 +879,7 @@ describe('GameEngine', () => {
         .length,
     ).toBeLessThanOrEqual(1)
     expect(
-      game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 4),
+      game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 5),
     ).toBe(true)
   })
 
@@ -899,7 +899,7 @@ describe('GameEngine', () => {
         seenCosts.add(CARD_BY_ID[cardId]!.purchaseCost)
       }
       expect(
-        game.market.filter((id) => CARD_BY_ID[id]!.purchaseCost <= 6).length,
+        game.market.filter((id) => CARD_BY_ID[id]!.purchaseCost <= 7).length,
       ).toBeGreaterThanOrEqual(2)
       expect(
         game.market.filter((id) => CARD_BY_ID[id]?.type === 'ACTION').length,
@@ -907,7 +907,7 @@ describe('GameEngine', () => {
       game.roundNumber = (game.roundNumber ?? 1) + 1
     }
 
-    expect([...seenCosts].some((cost) => cost >= 7)).toBe(true)
+    expect([...seenCosts].some((cost) => cost >= 8)).toBe(true)
     expect([...seenCosts].some((cost) => cost <= 4)).toBe(true)
   })
 
@@ -1598,14 +1598,14 @@ describe('GameEngine', () => {
     playCard(game, player.id, 'sunlit-grove-test', 'MOVEMENT')
     playCard(game, player.id, 'desert-spring-test', 'MOVEMENT')
     expect(player.availableMovement).toMatchObject({
-      GREEN: 4,
-      BLUE: 4,
-      YELLOW: 4,
+      GREEN: 6,
+      BLUE: 6,
+      YELLOW: 6,
     })
 
     playCard(game, player.id, 'flooded-forest-test', 'GOLD')
-    expect(player.availableMovement.GREEN).toBe(4)
-    expect(player.availableMovement.BLUE).toBe(4)
+    expect(player.availableMovement.GREEN).toBe(6)
+    expect(player.availableMovement.BLUE).toBe(6)
     expect(player.availableGold).toBe(1)
   })
 
@@ -1620,8 +1620,8 @@ describe('GameEngine', () => {
     activateActionCard(game, player.id, 'mixed-echo')
     playCard(game, player.id, 'mixed-sacrifice', 'MOVEMENT')
 
-    expect(player.availableMovement.YELLOW).toBe(6)
-    expect(player.availableMovement.BLUE).toBe(6)
+    expect(player.availableMovement.YELLOW).toBe(8)
+    expect(player.availableMovement.BLUE).toBe(8)
   })
 
   it('exchanges cards for the gold value in their definitions', () => {

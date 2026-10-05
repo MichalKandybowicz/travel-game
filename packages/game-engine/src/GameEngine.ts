@@ -940,13 +940,13 @@ const getPurchaseCounts = (gameState: GameState): Record<string, number> => {
 
 const MARKET_SPECIAL_CHANCE = 0.3
 const MIN_AFFORDABLE_MARKET_OFFERS = 2
-const AFFORDABLE_MARKET_COST = 6
+const AFFORDABLE_MARKET_COST = 7
 const MARKET_COST_BUCKETS = [
   { min: 1, max: 2, weight: 40 },
   { min: 3, max: 4, weight: 30 },
   { min: 5, max: 6, weight: 18 },
   { min: 7, max: 8, weight: 9 },
-  { min: 9, max: 9, weight: 3 },
+  { min: 9, max: 10, weight: 3 },
 ]
 
 const isMarketSpecial = (cardId: string): boolean => {
