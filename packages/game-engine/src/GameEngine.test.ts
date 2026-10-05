@@ -689,12 +689,11 @@ describe('GameEngine', () => {
       game.market.forEach((offer) => seenOffers.add(offer))
 
       expect(game.market).toHaveLength(4)
+      expect(new Set(game.market).size).toBe(game.market.length)
       expect(
         game.market.every(
-          (offer, _, market) =>
-            market.filter((entry) => entry === offer).length +
-              (game.cardPurchaseCounts?.[offer] ?? 0) <=
-            MARKET_CARD_COPY_LIMIT,
+          (offer) =>
+            (game.cardPurchaseCounts?.[offer] ?? 0) < MARKET_CARD_COPY_LIMIT,
         ),
       ).toBe(true)
       expect(
@@ -789,6 +788,19 @@ describe('GameEngine', () => {
     }
 
     expect(game.market).not.toContain('herbalist')
+  })
+
+  it('does not keep duplicate cards in the market at the same time', () => {
+    const game = buildTestGame()
+    game.market = ['herbalist', 'herbalist', 'admiral', 'dune_runner']
+    game.marketOfferExpiresAtTurns = game.market.map(() => game.turnNumber + 4)
+
+    const player = game.players[0]!
+    player.availableGold = CARD_BY_ID.herbalist!.purchaseCost
+    buyCard(game, player.id, 'herbalist')
+
+    expect(game.market).toHaveLength(4)
+    expect(new Set(game.market).size).toBe(game.market.length)
   })
 
   it('keeps at most one spell or curse in the market', () => {

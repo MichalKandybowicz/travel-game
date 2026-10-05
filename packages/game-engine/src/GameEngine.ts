@@ -917,6 +917,7 @@ const createMarketOffers = (
     const retainedCount = (retainedCounts.get(cardId) ?? 0) + 1
     retainedCounts.set(cardId, retainedCount)
     if (
+      offers.includes(cardId) ||
       (isMarketSpecial(cardId) &&
         offers.some((offer) => isMarketSpecial(offer))) ||
       (purchaseCounts[cardId] ?? 0) + retainedCount > MARKET_CARD_COPY_LIMIT
@@ -937,14 +938,12 @@ const createMarketOffers = (
     maxCost = Infinity,
   ): string[] =>
     MARKET_CARD_IDS.flatMap((cardId) => {
-      const remaining =
-        MARKET_CARD_COPY_LIMIT -
-        (purchaseCounts[cardId] ?? 0) -
-        (marketCounts.get(cardId) ?? 0)
+      if (marketCounts.has(cardId)) return []
+      const remaining = MARKET_CARD_COPY_LIMIT - (purchaseCounts[cardId] ?? 0)
       return remaining > 0 &&
         CARD_BY_ID[cardId]!.purchaseCost <= maxCost &&
         (allowSpecial || !isMarketSpecial(cardId))
-        ? Array.from({ length: Math.max(0, remaining) }, () => cardId)
+        ? [cardId]
         : []
     })
 
