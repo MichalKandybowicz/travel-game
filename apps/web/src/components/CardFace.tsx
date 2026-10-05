@@ -67,7 +67,6 @@ export function CardFace({
     const symbols = {
       MAP_SHORTCUT: '↝',
       SECOND_WIND: '↻',
-      MERCHANT_CARAVAN: 'Ⅱ',
       STEAL_PLANS: '⌁',
       GUIDE: '◇',
       PHASE_WALK: '◉',

@@ -3,13 +3,12 @@ import type { CardDefinition, CardInstance, MarketTier } from './types.js'
 export const MARKET_CARD_COPY_LIMIT = 3
 
 export const getMarketTier = (purchaseCost: number): MarketTier => {
-  if (purchaseCost <= 4) return 1
-  if (purchaseCost <= 6) return 2
-  if (purchaseCost <= 9) return 3
+  if (purchaseCost <= 2) return 1
+  if (purchaseCost <= 4) return 2
+  if (purchaseCost <= 6) return 3
   return 4
 }
 
-// Tier boundaries follow the one-gold discount so cards keep their original tier.
 export const CARD_DEFINITIONS: CardDefinition[] = [
   {
     id: 'hidden',
@@ -27,7 +26,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 2,
     goldValue: 1,
-    purchaseCost: 1,
+    purchaseCost: 4,
   },
   {
     id: 'herbalist',
@@ -36,7 +35,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 3,
     goldValue: 1,
-    purchaseCost: 3,
+    purchaseCost: 5,
   },
   {
     id: 'scout',
@@ -45,7 +44,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 4,
     goldValue: 1,
-    purchaseCost: 5,
+    purchaseCost: 6,
   },
   {
     id: 'ranger',
@@ -63,7 +62,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'GREEN',
     movementValue: 6,
     goldValue: 1,
-    purchaseCost: 9,
+    purchaseCost: 8,
   },
   {
     id: 'sailor',
@@ -72,7 +71,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 2,
     goldValue: 1,
-    purchaseCost: 1,
+    purchaseCost: 4,
   },
   {
     id: 'seasoned_sailor',
@@ -81,16 +80,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'BLUE',
     movementValue: 3,
     goldValue: 1,
-    purchaseCost: 3,
-  },
-  {
-    id: 'navigator',
-    name: 'Navigator',
-    type: 'MOVEMENT',
-    movementType: 'BLUE',
-    movementValue: 3,
-    goldValue: 2,
-    purchaseCost: 4,
+    purchaseCost: 5,
   },
   {
     id: 'captain',
@@ -98,8 +88,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     type: 'MOVEMENT',
     movementType: 'BLUE',
     movementValue: 4,
-    goldValue: 2,
-    purchaseCost: 5,
+    goldValue: 1,
+    purchaseCost: 6,
   },
   {
     id: 'admiral',
@@ -107,8 +97,17 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     type: 'MOVEMENT',
     movementType: 'BLUE',
     movementValue: 5,
-    goldValue: 2,
-    purchaseCost: 6,
+    goldValue: 1,
+    purchaseCost: 7,
+  },
+  {
+    id: 'navigator',
+    name: 'Navigator',
+    type: 'MOVEMENT',
+    movementType: 'BLUE',
+    movementValue: 6,
+    goldValue: 1,
+    purchaseCost: 5,
   },
   {
     id: 'coin',
@@ -117,7 +116,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'YELLOW',
     movementValue: 2,
     goldValue: 2,
-    purchaseCost: 2,
+    purchaseCost: 4,
   },
   {
     id: 'wanderer_spark',
@@ -134,17 +133,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     type: 'MOVEMENT',
     movementType: 'YELLOW',
     movementValue: 3,
-    goldValue: 2,
-    purchaseCost: 4,
-  },
-  {
-    id: 'sand_merchant',
-    name: 'Sand Merchant',
-    type: 'MOVEMENT',
-    movementType: 'YELLOW',
-    movementValue: 2,
     goldValue: 3,
-    purchaseCost: 3,
+    purchaseCost: 5,
   },
   {
     id: 'trader',
@@ -152,35 +142,17 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     type: 'MOVEMENT',
     movementType: 'YELLOW',
     movementValue: 4,
-    goldValue: 2,
-    purchaseCost: 6,
-  },
-  {
-    id: 'treasurer',
-    name: 'Treasurer',
-    type: 'MOVEMENT',
-    movementType: 'YELLOW',
-    movementValue: 2,
     goldValue: 4,
-    purchaseCost: 4,
-  },
-  {
-    id: 'master_trader',
-    name: 'Master Trader',
-    type: 'MOVEMENT',
-    movementType: 'YELLOW',
-    movementValue: 3,
-    goldValue: 3,
-    purchaseCost: 5,
+    purchaseCost: 6,
   },
   {
     id: 'caravan',
     name: 'Caravan',
     type: 'MOVEMENT',
     movementType: 'YELLOW',
-    movementValue: 4,
-    goldValue: 4,
-    purchaseCost: 8,
+    movementValue: 5,
+    goldValue: 5,
+    purchaseCost: 7,
   },
   {
     id: 'adventurer',
@@ -218,7 +190,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 2,
     goldValue: 1,
-    purchaseCost: 5,
+    purchaseCost: 6,
   },
   {
     id: 'flooded_forest',
@@ -228,8 +200,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementValue: 3,
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 3,
-    goldValue: 2,
-    purchaseCost: 10,
+    goldValue: 1,
+    purchaseCost: 8,
   },
   {
     id: 'sunlit_grove',
@@ -239,8 +211,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementValue: 2,
     secondaryMovementType: 'YELLOW',
     secondaryMovementValue: 2,
-    goldValue: 1,
-    purchaseCost: 5,
+    goldValue: 2,
+    purchaseCost: 6,
   },
   {
     id: 'golden_canopy',
@@ -250,8 +222,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementValue: 3,
     secondaryMovementType: 'YELLOW',
     secondaryMovementValue: 3,
-    goldValue: 2,
-    purchaseCost: 10,
+    goldValue: 3,
+    purchaseCost: 8,
   },
   {
     id: 'desert_spring',
@@ -261,8 +233,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementValue: 2,
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 2,
-    goldValue: 1,
-    purchaseCost: 5,
+    goldValue: 2,
+    purchaseCost: 6,
   },
   {
     id: 'storm_oasis',
@@ -272,8 +244,8 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementValue: 3,
     secondaryMovementType: 'BLUE',
     secondaryMovementValue: 3,
-    goldValue: 2,
-    purchaseCost: 10,
+    goldValue: 3,
+    purchaseCost: 8,
   },
   {
     id: 'shortcut_map',
@@ -295,17 +267,6 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     goldValue: 1,
     purchaseCost: 4,
     actionEffect: 'SECOND_WIND',
-    actionCategory: 'SPELL',
-  },
-  {
-    id: 'merchant_caravan',
-    name: 'Merchant Caravan',
-    type: 'ACTION',
-    movementType: 'WILD',
-    movementValue: 0,
-    goldValue: 1,
-    purchaseCost: 6,
-    actionEffect: 'MERCHANT_CARAVAN',
     actionCategory: 'SPELL',
   },
   {
@@ -348,9 +309,9 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 1,
-    purchaseCost: 5,
+    purchaseCost: 8,
     actionEffect: 'RESHUFFLE_HAND',
-    actionCategory: 'SPELL',
+    actionCategory: 'CURSE',
   },
   {
     id: 'echo_power',
@@ -359,7 +320,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 1,
-    purchaseCost: 11,
+    purchaseCost: 5,
     actionEffect: 'ECHO_POWER',
     actionCategory: 'SPELL',
   },
@@ -425,7 +386,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 1,
-    purchaseCost: 8,
+    purchaseCost: 6,
     actionEffect: 'CLOSED_MARKET',
     actionCategory: 'CURSE',
   },
@@ -436,7 +397,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 1,
-    purchaseCost: 9,
+    purchaseCost: 7,
     actionEffect: 'HEX_SEAL',
     actionCategory: 'CURSE',
   },
@@ -459,14 +420,10 @@ export const MARKET_CARD_IDS = [
   'ranger',
   'pathfinder',
   'seasoned_sailor',
-  'navigator',
   'captain',
   'admiral',
   'dune_runner',
-  'sand_merchant',
   'trader',
-  'treasurer',
-  'master_trader',
   'caravan',
   'adventurer',
   'trailblazer',
@@ -479,7 +436,6 @@ export const MARKET_CARD_IDS = [
   'storm_oasis',
   'shortcut_map',
   'second_wind',
-  'merchant_caravan',
   'steal_plans',
   'guide',
   'phase_walk',

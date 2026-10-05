@@ -44,7 +44,6 @@ export type MarketTier = 1 | 2 | 3 | 4
 export type ActionCardEffect =
   | 'MAP_SHORTCUT'
   | 'SECOND_WIND'
-  | 'MERCHANT_CARAVAN'
   | 'STEAL_PLANS'
   | 'GUIDE'
   | 'PHASE_WALK'
@@ -162,6 +161,7 @@ export interface PlayedCardRecord {
   cardId: string
   mode: CardPlayMode
   sacrificed?: boolean
+  echoed?: boolean
 }
 
 export interface UndoableCardPlay {
@@ -169,8 +169,10 @@ export interface UndoableCardPlay {
   handIndex: number
   mode: CardPlayMode
   sacrificed: boolean
+  echoed?: boolean
   previousSacrificeCooldown: number
   previousHasSacrificedCard: boolean
+  previousEchoPowerAvailable?: boolean
 }
 
 export interface CurseEvent {
@@ -208,6 +210,8 @@ export interface PlayerState {
   shortcutMoveAvailable?: boolean
   guidedMoveAvailable?: boolean
   sharedTileAccessAvailable?: boolean
+  sharedTileAccessTurns?: number
+  echoPowerAvailable?: boolean
   curseShieldAvailable?: boolean
   extraMoveCostPending?: boolean
   fogCostsHidden?: boolean

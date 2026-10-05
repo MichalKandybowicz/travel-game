@@ -16,7 +16,6 @@ import type {
 } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
-  getMarketTier,
   MARKET_CARD_COPY_LIMIT,
   MARKET_CARD_IDS,
   TOKEN_BY_TYPE,
@@ -574,6 +573,8 @@ export const createGameState = (
       shortcutMoveAvailable: false,
       guidedMoveAvailable: false,
       sharedTileAccessAvailable: false,
+      sharedTileAccessTurns: 0,
+      echoPowerAvailable: false,
       curseShieldAvailable: false,
       extraMoveCostPending: false,
       fogCostsHidden: false,
@@ -677,24 +678,44 @@ const getPurchaseCounts = (gameState: GameState): Record<string, number> => {
   return gameState.cardPurchaseCounts
 }
 
-const getUnlockedMarketTier = (
-  purchaseCounts: Record<string, number>,
-): number => {
-  const purchasedByTier = [0, 0, 0, 0, 0]
-  const stockByTier = [0, 0, 0, 0, 0]
-  for (const cardId of MARKET_CARD_IDS) {
-    const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
-    purchasedByTier[tier]! += purchaseCounts[cardId] ?? 0
-    stockByTier[tier]! += MARKET_CARD_COPY_LIMIT
+const MARKET_SPECIAL_CHANCE = 0.3
+const MIN_AFFORDABLE_MARKET_OFFERS = 2
+const AFFORDABLE_MARKET_COST = 6
+const MARKET_COST_BUCKETS = [
+  { min: 1, max: 2, weight: 40 },
+  { min: 3, max: 4, weight: 30 },
+  { min: 5, max: 6, weight: 18 },
+  { min: 7, max: 8, weight: 9 },
+  { min: 9, max: 9, weight: 3 },
+]
+
+const isMarketSpecial = (cardId: string): boolean => {
+  const card = CARD_BY_ID[cardId]
+  return card?.actionCategory === 'SPELL' || card?.actionCategory === 'CURSE'
+}
+
+const weightedMarketPick = (
+  random: SeededRandom,
+  cardIds: string[],
+): string | undefined => {
+  const availableBuckets = MARKET_COST_BUCKETS.map((bucket) => ({
+    ...bucket,
+    cards: cardIds.filter((cardId) => {
+      const cost = CARD_BY_ID[cardId]!.purchaseCost
+      return cost >= bucket.min && cost <= bucket.max
+    }),
+  })).filter((bucket) => bucket.cards.length > 0)
+
+  if (availableBuckets.length === 0) return undefined
+
+  let roll =
+    random.next() *
+    availableBuckets.reduce((total, bucket) => total + bucket.weight, 0)
+  for (const bucket of availableBuckets) {
+    roll -= bucket.weight
+    if (roll <= 0) return random.pick(bucket.cards)
   }
-  if (
-    purchasedByTier[1]! + purchasedByTier[2]! <
-    Math.ceil((stockByTier[1]! + stockByTier[2]!) / 2)
-  ) {
-    return 2
-  }
-  if (purchasedByTier[3]! < Math.ceil(stockByTier[3]! / 2)) return 3
-  return 4
+  return random.pick(availableBuckets.at(-1)!.cards)
 }
 
 const createMarketOffers = (
@@ -703,21 +724,17 @@ const createMarketOffers = (
   reason: string,
 ): string[] => {
   const purchaseCounts = getPurchaseCounts(gameState)
-  const unlockedTier = getUnlockedMarketTier(purchaseCounts)
-  const isSpecial = (cardId: string): boolean =>
-    CARD_BY_ID[cardId]?.type === 'ACTION'
   const random = new SeededRandom(
     `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
   )
   const retainedCounts = new Map<string, number>()
   const offers: string[] = []
   for (const cardId of gameState.market) {
-    const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
     const retainedCount = (retainedCounts.get(cardId) ?? 0) + 1
     retainedCounts.set(cardId, retainedCount)
     if (
-      tier > unlockedTier ||
-      (isSpecial(cardId) && offers.some((offer) => isSpecial(offer))) ||
+      (isMarketSpecial(cardId) &&
+        offers.some((offer) => isMarketSpecial(offer))) ||
       (purchaseCounts[cardId] ?? 0) + retainedCount > MARKET_CARD_COPY_LIMIT
     ) {
       continue
@@ -728,80 +745,80 @@ const createMarketOffers = (
   for (const cardId of offers) {
     marketCounts.set(cardId, (marketCounts.get(cardId) ?? 0) + 1)
   }
-  const available = random.shuffle(
+  const availableCards = (
+    allowSpecial: boolean,
+    maxCost = Infinity,
+  ): string[] =>
     MARKET_CARD_IDS.flatMap((cardId) => {
-      const tier = getMarketTier(CARD_BY_ID[cardId]!.purchaseCost)
       const remaining =
         MARKET_CARD_COPY_LIMIT -
         (purchaseCounts[cardId] ?? 0) -
         (marketCounts.get(cardId) ?? 0)
-      return tier <= unlockedTier
+      return remaining > 0 &&
+        CARD_BY_ID[cardId]!.purchaseCost <= maxCost &&
+        (allowSpecial || !isMarketSpecial(cardId))
         ? Array.from({ length: Math.max(0, remaining) }, () => cardId)
         : []
-    }),
-  )
-  const protectedTiers = new Set<number>()
-
-  for (const tier of [...new Set([1, 2, unlockedTier])]) {
-    if (
-      offers.some(
-        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier,
-      )
-    ) {
-      protectedTiers.add(tier)
-      continue
-    }
-    const availableIndex = available.findIndex((cardId) => {
-      return (
-        getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === tier &&
-        (!isSpecial(cardId) || !offers.some((offer) => isSpecial(offer)))
-      )
     })
-    if (availableIndex >= 0) {
-      if (offers.length >= amount) {
-        let removableIndex = -1
-        for (let index = offers.length - 1; index >= 0; index -= 1) {
-          if (
-            !protectedTiers.has(
-              getMarketTier(CARD_BY_ID[offers[index]!]!.purchaseCost),
-            )
-          ) {
-            removableIndex = index
-            break
-          }
-        }
-        if (removableIndex >= 0) offers.splice(removableIndex, 1)
-      }
-    }
-    if (availableIndex >= 0 && offers.length < amount) {
-      offers.push(available.splice(availableIndex, 1)[0]!)
-      protectedTiers.add(tier)
-    }
+
+  const addOffer = (cardId: string): void => {
+    offers.push(cardId)
+    marketCounts.set(cardId, (marketCounts.get(cardId) ?? 0) + 1)
+  }
+  const removeOfferAt = (index: number): void => {
+    const [removed] = offers.splice(index, 1)
+    if (!removed) return
+    const nextCount = (marketCounts.get(removed) ?? 1) - 1
+    if (nextCount > 0) marketCounts.set(removed, nextCount)
+    else marketCounts.delete(removed)
   }
 
-  while (offers.length > amount) {
-    let removableIndex = -1
-    for (let index = offers.length - 1; index >= 0; index -= 1) {
+  if (
+    offers.length < amount &&
+    !offers.some((cardId) => isMarketSpecial(cardId)) &&
+    random.next() < MARKET_SPECIAL_CHANCE
+  ) {
+    const specialOffer = weightedMarketPick(
+      random,
+      availableCards(true).filter(isMarketSpecial),
+    )
+    if (specialOffer) addOffer(specialOffer)
+  }
+
+  while (offers.length < amount) {
+    const nextOffer = weightedMarketPick(random, availableCards(false))
+    if (!nextOffer) break
+    addOffer(nextOffer)
+  }
+
+  while (
+    offers.filter(
+      (cardId) => CARD_BY_ID[cardId]!.purchaseCost <= AFFORDABLE_MARKET_COST,
+    ).length < MIN_AFFORDABLE_MARKET_OFFERS
+  ) {
+    const affordableOffer = weightedMarketPick(
+      random,
+      availableCards(false, AFFORDABLE_MARKET_COST),
+    )
+    if (!affordableOffer) break
+
+    let replacementIndex = -1
+    for (let index = 0; index < offers.length; index += 1) {
+      const current = offers[index]!
+      if (CARD_BY_ID[current]!.purchaseCost <= AFFORDABLE_MARKET_COST) continue
       if (
-        !protectedTiers.has(
-          getMarketTier(CARD_BY_ID[offers[index]!]!.purchaseCost),
-        )
+        replacementIndex < 0 ||
+        CARD_BY_ID[current]!.purchaseCost >
+          CARD_BY_ID[offers[replacementIndex]!]!.purchaseCost
       ) {
-        removableIndex = index
-        break
+        replacementIndex = index
       }
     }
-    if (removableIndex < 0) break
-    offers.splice(removableIndex, 1)
+    if (replacementIndex < 0) break
+    removeOfferAt(replacementIndex)
+    addOffer(affordableOffer)
   }
 
-  while (offers.length < amount && available.length > 0) {
-    const nextIndex = available.findIndex((cardId) => {
-      return !isSpecial(cardId) || !offers.some((offer) => isSpecial(offer))
-    })
-    if (nextIndex < 0) break
-    offers.push(available.splice(nextIndex, 1)[0]!)
-  }
   gameState.marketDrawPile = []
   return offers
 }
@@ -856,13 +873,17 @@ export const playCard = (
   }
   gameState.undoableCardPlays ??= {}
   gameState.undoableCardPlays[playerId] ??= []
+  const echoed =
+    cardDefinition.type === 'MOVEMENT' && player.echoPowerAvailable === true
   gameState.undoableCardPlays[playerId].push({
     cardInstanceId,
     handIndex: cardIndex,
     mode,
     sacrificed: sacrifice,
+    ...(echoed ? { echoed: true } : {}),
     previousSacrificeCooldown: player.sacrificeCooldownTurns ?? 0,
     previousHasSacrificedCard: player.hasSacrificedCardThisTurn ?? false,
+    previousEchoPowerAvailable: player.echoPowerAvailable ?? false,
   })
   player.hand.splice(cardIndex, 1)
   if (sacrifice) {
@@ -879,13 +900,15 @@ export const playCard = (
     cardId: cardDefinition.id,
     mode,
     ...(sacrifice ? { sacrificed: true } : {}),
+    ...(echoed ? { echoed: true } : {}),
   })
-  const multiplier = sacrifice ? 2 : 1
+  const multiplier = (sacrifice ? 2 : 1) * (echoed ? 2 : 1)
   if (mode === 'GOLD') {
     player.availableGold += cardDefinition.goldValue * multiplier
   } else {
     addCardMovement(player, cardDefinition, multiplier)
   }
+  if (echoed) player.echoPowerAvailable = false
   return gameState
 }
 
@@ -909,7 +932,7 @@ export const undoCardPlay = (
   if (!card || !definition) {
     return error('INVALID_ACTION', 'The played card can no longer be undone.')
   }
-  const multiplier = undo.sacrificed ? 2 : 1
+  const multiplier = (undo.sacrificed ? 2 : 1) * (undo.echoed ? 2 : 1)
   if (undo.mode === 'GOLD') {
     const amount = definition.goldValue * multiplier
     if (player.availableGold < amount) {
@@ -938,6 +961,7 @@ export const undoCardPlay = (
     player.sacrificeCooldownTurns = undo.previousSacrificeCooldown
     player.hasSacrificedCardThisTurn = undo.previousHasSacrificedCard
   }
+  player.echoPowerAvailable = undo.previousEchoPowerAvailable ?? false
   const historyIndex = gameState.roundPlayedCards.findIndex(
     (play) =>
       play.playerId === playerId && play.instanceId === undo.cardInstanceId,
@@ -971,7 +995,9 @@ export const useActionCard = (
   const actionCard = card!
   const actionDefinition = definition!
   const isHexSeal = actionDefinition.actionEffect === 'HEX_SEAL'
+  const isFateSwap = actionDefinition.actionEffect === 'RESHUFFLE_HAND'
   let sealedTile: HexTile | undefined
+  let fateSwapTile: HexTile | undefined
   if (isHexSeal) {
     if (!targetHexId) error('INVALID_ACTION', 'Choose a hex to block.')
     sealedTile = findTile(gameState.map, targetHexId!)
@@ -1003,6 +1029,19 @@ export const useActionCard = (
   if (curseBlocked) {
     curseTarget.curseShieldAvailable = false
   }
+  if (isFateSwap && !curseBlocked) {
+    if (!targetHexId) error('INVALID_ACTION', 'Choose a neighboring hex.')
+    fateSwapTile = findTile(gameState.map, targetHexId!)
+    const targetTile = findTile(gameState.map, curseTarget!.position)
+    if (
+      axialDistance(targetTile, fateSwapTile) !== 1 ||
+      fateSwapTile.isBlocked ||
+      ['MOUNTAIN', 'UNKNOWN'].includes(fateSwapTile.terrain) ||
+      gameState.players.some((other) => other.position === fateSwapTile!.id)
+    ) {
+      error('INVALID_ACTION', 'Choose an empty, passable neighboring hex.')
+    }
+  }
   let actionCardRemoved = false
 
   if (!curseBlocked)
@@ -1011,18 +1050,18 @@ export const useActionCard = (
         player.shortcutMoveAvailable = true
         break
       case 'SECOND_WIND':
+        if (player.hand.length <= 1) {
+          error('INVALID_ACTION', 'Choose another card to remove permanently.')
+        }
         player.hand.splice(cardIndex, 1)
         player.removedCards.push(actionCard)
+        player.removedCards.push(player.hand.shift()!)
         drawCards(
           player,
           4,
           `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
         )
-        player.pendingDiscardCount = 1
         actionCardRemoved = true
-        break
-      case 'MERCHANT_CARAVAN':
-        player.extraPurchaseAvailable = true
         break
       case 'STEAL_PLANS': {
         const target = curseTarget!
@@ -1046,43 +1085,14 @@ export const useActionCard = (
         break
       case 'PHASE_WALK':
         player.sharedTileAccessAvailable = true
+        player.sharedTileAccessTurns = 2
         break
       case 'RESHUFFLE_HAND': {
-        player.hand.splice(cardIndex, 1)
-        player.removedCards.push(actionCard)
-        player.discardPile.push(...player.hand)
-        player.hand = []
-        drawCards(
-          player,
-          5,
-          `${gameState.seed}:${player.id}:action:${actionCard.instanceId}`,
-        )
-        actionCardRemoved = true
+        curseTarget!.position = fateSwapTile!.id
         break
       }
       case 'ECHO_POWER': {
-        const previousPlay = [...gameState.roundPlayedCards]
-          .reverse()
-          .find(
-            (play) =>
-              play.playerId === playerId &&
-              (play.mode === 'MOVEMENT' || play.mode === 'GOLD') &&
-              CARD_BY_ID[play.cardId]?.type === 'MOVEMENT',
-          )
-        if (!previousPlay) {
-          return error('INVALID_ACTION', 'No movement card can be echoed.')
-        }
-        const echoedCard = CARD_BY_ID[previousPlay.cardId]
-        if (!echoedCard || echoedCard.type !== 'MOVEMENT') {
-          return error('INVALID_ACTION', 'No movement card can be echoed.')
-        }
-        const multiplier = previousPlay.sacrificed ? 2 : 1
-        if (previousPlay.mode === 'GOLD') {
-          player.availableGold += echoedCard.goldValue * multiplier
-        } else {
-          addCardMovement(player, echoedCard, multiplier)
-        }
-        clearUndoableCardPlays(gameState, playerId)
+        player.echoPowerAvailable = true
         break
       }
       case 'PROTECTIVE_CIRCLE':
@@ -1461,7 +1471,14 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.extraPurchaseAvailable = false
   player.shortcutMoveAvailable = false
   player.guidedMoveAvailable = false
-  player.sharedTileAccessAvailable = false
+  if ((player.sharedTileAccessTurns ?? 0) > 1) {
+    player.sharedTileAccessTurns = (player.sharedTileAccessTurns ?? 0) - 1
+    player.sharedTileAccessAvailable = true
+  } else {
+    player.sharedTileAccessTurns = 0
+    player.sharedTileAccessAvailable = false
+  }
+  player.echoPowerAvailable = false
   player.fogCostsHidden = false
   player.shortcutBlocked = false
   player.marketBlocked = false

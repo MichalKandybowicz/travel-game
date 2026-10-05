@@ -20,7 +20,10 @@ import {
   serializePublicGameState,
   useToken as activateToken,
 } from '../../../packages/game-engine/src/index.js'
-import { generateMap } from '../../../packages/map-generator/src/index.js'
+import {
+  generateMap,
+  getNeighbors,
+} from '../../../packages/map-generator/src/index.js'
 import {
   EVENTS,
   CARD_BY_ID,
@@ -470,7 +473,6 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         return (
           effect === 'GUIDE' ||
           effect === 'SECOND_WIND' ||
-          effect === 'MERCHANT_CARAVAN' ||
           effect === 'STEAL_PLANS' ||
           effect === 'PHASE_WALK' ||
           effect === 'RESHUFFLE_HAND' ||
@@ -482,7 +484,7 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
       if (actionCard) {
         const definition = CARD_BY_ID[actionCard.cardId]!
         const effect = definition.actionEffect
-        const targetHexId = effect === 'HEX_SEAL' ? sealHexId : undefined
+        let targetHexId = effect === 'HEX_SEAL' ? sealHexId : undefined
         const targetPlayerId =
           definition.actionCategory === 'CURSE' && effect !== 'HEX_SEAL'
             ? game.players.find(
@@ -491,6 +493,22 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
                   (effect !== 'STEAL_PLANS' || candidate.hand.length > 0),
               )?.id
             : undefined
+        if (effect === 'RESHUFFLE_HAND' && targetPlayerId) {
+          const targetPlayer = game.players.find(
+            (candidate) => candidate.id === targetPlayerId,
+          )
+          const targetTile = game.map.tiles.find(
+            (tile) => tile.id === targetPlayer?.position,
+          )
+          targetHexId = targetTile
+            ? getNeighbors(game.map.tiles, targetTile).find(
+                (tile) =>
+                  !tile.isBlocked &&
+                  !['MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+                  !game.players.some((player) => player.position === tile.id),
+              )?.id
+            : undefined
+        }
         if (
           definition.actionCategory !== 'CURSE' ||
           targetPlayerId ||

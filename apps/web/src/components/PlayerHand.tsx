@@ -36,7 +36,10 @@ interface PlayerHandProps {
   opponents: PlayerState[]
   onUseToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   onUseActionCard: (cardInstanceId: string, targetPlayerId?: string) => void
-  onChooseHexCurseCard: (cardInstanceId: string) => void
+  onChooseHexCurseCard: (
+    cardInstanceId: string,
+    targetPlayerId?: string,
+  ) => void
   onDiscardCard: (cardInstanceId: string) => void
   onEndTurn: () => void
   roundNumber: number
@@ -385,7 +388,13 @@ export function PlayerHand({
                 type="button"
                 onClick={() => {
                   if (!pendingCurseCardId) return
-                  onUseActionCard(pendingCurseCardId, opponent.id)
+                  if (
+                    pendingCurseDefinition?.actionEffect === 'RESHUFFLE_HAND'
+                  ) {
+                    onChooseHexCurseCard(pendingCurseCardId, opponent.id)
+                  } else {
+                    onUseActionCard(pendingCurseCardId, opponent.id)
+                  }
                   curseTargetDialogRef.current?.close()
                 }}
               >

@@ -299,7 +299,7 @@ describe('GameEngine', () => {
       deck.every(
         (card) =>
           CARD_BY_ID[card.cardId]!.goldValue ===
-          (card.cardId === 'coin' ? 2 : 1),
+          (card.cardId === 'coin' ? CARD_BY_ID.coin!.movementValue : 1),
       ),
     ).toBe(true)
   })
@@ -565,14 +565,7 @@ describe('GameEngine', () => {
 
     expect(game.market).toHaveLength(4)
     expect(
-      game.market.some(
-        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 1,
-      ),
-    ).toBe(true)
-    expect(
-      game.market.some(
-        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 2,
-      ),
+      game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 4),
     ).toBe(true)
     expect(game.market).toEqual(sameSeedGame.market)
     expect(
@@ -601,18 +594,14 @@ describe('GameEngine', () => {
           .length,
       ).toBeLessThanOrEqual(1)
       expect(
-        game.market.some(
-          (offer) => getMarketTier(CARD_BY_ID[offer]!.purchaseCost) <= 2,
-        ),
+        game.market.some((offer) => CARD_BY_ID[offer]!.purchaseCost <= 6),
       ).toBe(true)
       endTurn(game, 'p1')
       endTurn(game, 'p2')
     }
     expect(game.marketCycle).toBeGreaterThan(0)
     expect(
-      [...seenOffers].some(
-        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) >= 3,
-      ),
+      [...seenOffers].some((cardId) => CARD_BY_ID[cardId]!.purchaseCost >= 5),
     ).toBe(true)
     expect(serializePublicGameState(game, 'p1').marketDrawPile).toEqual([])
   })
@@ -626,38 +615,39 @@ describe('GameEngine', () => {
       game.market.some(
         (cardId) =>
           CARD_BY_ID[cardId]?.type === 'MOVEMENT' &&
-          getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) <= 2,
+          CARD_BY_ID[cardId]!.purchaseCost <= 4,
       ),
     ).toBe(true)
   })
 
-  it('prices movement by value and caps every card at eleven gold', () => {
+  it('prices movement by value and caps every card at nine gold', () => {
     expect(CARD_BY_ID.dune_runner).toMatchObject({
       movementType: 'YELLOW',
       movementValue: 3,
-      goldValue: 2,
-      purchaseCost: 4,
-    })
-    expect(CARD_BY_ID.sand_merchant).toMatchObject({
-      movementType: 'YELLOW',
-      movementValue: 2,
       goldValue: 3,
-      purchaseCost: 3,
+      purchaseCost: 5,
     })
-    expect(MARKET_CARD_IDS).toEqual(
-      expect.arrayContaining(['dune_runner', 'sand_merchant']),
-    )
-    expect(CARD_BY_ID.pathfinder!.purchaseCost).toBe(9)
-    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(10)
-    expect(CARD_BY_ID.echo_power!.purchaseCost).toBe(11)
-    expect(getMarketTier(4)).toBe(1)
-    expect(getMarketTier(5)).toBe(2)
-    expect(getMarketTier(7)).toBe(3)
-    expect(getMarketTier(9)).toBe(3)
-    expect(getMarketTier(10)).toBe(4)
+    expect(MARKET_CARD_IDS).toContain('dune_runner')
+    expect(MARKET_CARD_IDS).not.toContain('sand_merchant')
+    expect(CARD_BY_ID.pathfinder).toMatchObject({
+      movementType: 'GREEN',
+      movementValue: 6,
+      purchaseCost: 8,
+    })
+    expect(CARD_BY_ID.wayfarer).toMatchObject({
+      movementType: 'WILD',
+      movementValue: 4,
+      purchaseCost: 8,
+    })
+    expect(CARD_BY_ID.flooded_forest!.purchaseCost).toBe(8)
+    expect(CARD_BY_ID.echo_power!.purchaseCost).toBe(5)
+    expect(getMarketTier(2)).toBe(1)
+    expect(getMarketTier(4)).toBe(2)
+    expect(getMarketTier(6)).toBe(3)
+    expect(getMarketTier(9)).toBe(4)
     expect(
       Object.values(CARD_BY_ID).every(
-        (card) => card.purchaseCost > 0 && card.purchaseCost <= 11,
+        (card) => card.purchaseCost > 0 && card.purchaseCost <= 9,
       ),
     ).toBe(true)
 
@@ -705,83 +695,36 @@ describe('GameEngine', () => {
         .length,
     ).toBeLessThanOrEqual(1)
     expect(
-      game.market.some(
-        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 1,
-      ),
-    ).toBe(true)
-    expect(
-      game.market.some(
-        (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 2,
-      ),
+      game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 4),
     ).toBe(true)
   })
 
-  it('unlocks higher shop tiers while keeping tier one and two offers', () => {
+  it('keeps cheap cards common while giving expensive cards a chance', () => {
     const game = buildTestGame()
     const player = game.players[0]!
-    const tier1And2 = MARKET_CARD_IDS.filter(
-      (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) <= 2,
-    )
-    const tier3 = MARKET_CARD_IDS.filter(
-      (cardId) => getMarketTier(CARD_BY_ID[cardId]!.purchaseCost) === 3,
-    )
-    const addPurchases = (cardIds: string[], amount: number) => {
-      let added = 0
-      while (added < amount) {
-        for (const cardId of cardIds) {
-          if (added === amount) break
-          const current = game.cardPurchaseCounts?.[cardId] ?? 0
-          if (current >= MARKET_CARD_COPY_LIMIT) continue
-          game.cardPurchaseCounts![cardId] = current + 1
-          added += 1
-        }
-      }
-    }
     const giveRefreshToken = (instanceId: string) => {
       player.tokens!.push({ instanceId, type: 'REFRESH_MARKET' })
       activateToken(game, player.id, instanceId)
     }
 
     game.cardPurchaseCounts = {}
-    addPurchases(
-      tier1And2,
-      Math.ceil((tier1And2.length * MARKET_CARD_COPY_LIMIT) / 2),
-    )
-    giveRefreshToken('refresh-tier-3')
-    expect(
-      game.market.some(
-        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 3,
-      ),
-    ).toBe(true)
-    expect(
-      game.market.some(
-        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1,
-      ),
-    ).toBe(true)
-    expect(
-      game.market.some(
-        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2,
-      ),
-    ).toBe(true)
+    const seenCosts = new Set<number>()
+    for (let refresh = 0; refresh < 80; refresh += 1) {
+      giveRefreshToken(`refresh-weighted-${refresh}`)
+      for (const cardId of game.market) {
+        seenCosts.add(CARD_BY_ID[cardId]!.purchaseCost)
+      }
+      expect(
+        game.market.filter((id) => CARD_BY_ID[id]!.purchaseCost <= 6).length,
+      ).toBeGreaterThanOrEqual(2)
+      expect(
+        game.market.filter((id) => CARD_BY_ID[id]?.type === 'ACTION').length,
+      ).toBeLessThanOrEqual(1)
+      game.roundNumber = (game.roundNumber ?? 1) + 1
+    }
 
-    addPurchases(tier3, Math.ceil((tier3.length * MARKET_CARD_COPY_LIMIT) / 2))
-    game.roundNumber = (game.roundNumber ?? 1) + 1
-    giveRefreshToken('refresh-tier-4')
-    expect(
-      game.market.some(
-        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 4,
-      ),
-    ).toBe(true)
-    expect(
-      game.market.some(
-        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 1,
-      ),
-    ).toBe(true)
-    expect(
-      game.market.some(
-        (id) => getMarketTier(CARD_BY_ID[id]!.purchaseCost) === 2,
-      ),
-    ).toBe(true)
+    expect([...seenCosts].some((cost) => cost >= 7)).toBe(true)
+    expect([...seenCosts].some((cost) => cost <= 4)).toBe(true)
   })
 
   it('starts a game from an unchanged custom map snapshot', () => {
@@ -815,10 +758,11 @@ describe('GameEngine', () => {
     ).toMatchObject({ terrain: 'WATER', difficulty: 3 })
   })
 
-  it('uses second wind once, draws four and requires one discard', () => {
+  it('uses second wind once, removes another card and draws four', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const handSize = player.hand.length
+    const removedCard = player.hand[0]!
     player.hand.push({
       cardId: 'second_wind',
       instanceId: 'second-wind-test',
@@ -826,35 +770,15 @@ describe('GameEngine', () => {
 
     activateActionCard(game, player.id, 'second-wind-test')
 
-    expect(player.removedCards.at(-1)?.cardId).toBe('second_wind')
-    expect(player.hand).toHaveLength(handSize + 4)
-    expect(player.pendingDiscardCount).toBe(1)
-    expect(() => endTurn(game, player.id)).toThrow(
-      expect.objectContaining({ code: 'INVALID_ACTION' }),
+    expect(player.removedCards).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ cardId: 'second_wind' }),
+        removedCard,
+      ]),
     )
-    discardCard(game, player.id, player.hand[0]!.instanceId)
-    expect(player.pendingDiscardCount).toBe(0)
     expect(player.hand).toHaveLength(handSize + 3)
-  })
-
-  it('allows a second market purchase after using merchant caravan', () => {
-    const game = buildTestGame()
-    const player = game.players[0]!
-    player.hand.push({
-      cardId: 'merchant_caravan',
-      instanceId: 'merchant-caravan-test',
-    })
-    activateActionCard(game, player.id, 'merchant-caravan-test')
-    player.availableGold = 30
-
-    buyCard(game, player.id, game.market[0]!)
-    buyCard(game, player.id, game.market[0]!)
-
-    expect(player.hasBoughtThisTurn).toBe(true)
-    expect(player.extraPurchaseAvailable).toBe(false)
-    expect(() => buyCard(game, player.id, game.market[0]!)).toThrow(
-      expect.objectContaining({ code: 'PURCHASE_LIMIT' }),
-    )
+    expect(player.pendingDiscardCount).toBe(0)
+    endTurn(game, player.id)
   })
 
   it('steals plans by discarding a random opponent card', () => {
@@ -942,13 +866,18 @@ describe('GameEngine', () => {
     expect(player.shortcutMoveAvailable).toBe(false)
   })
 
-  it('allows entering occupied tiles until the turn ends after phase walk', () => {
+  it('allows entering occupied tiles for two own turns after phase walk', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const opponent = game.players[1]!
     const target = findReachableTile(game, 'JUNGLE')
+    const secondTarget = getNeighbors(game.map.tiles, target).find(
+      (tile) => tile.id !== opponent.position && !tile.isBlocked,
+    )!
     game.settings.allowSharedTiles = false
     target.difficulty = 1
+    secondTarget.terrain = 'JUNGLE'
+    secondTarget.difficulty = 1
     opponent.position = target.id
     player.hand.push({
       cardId: 'phase_walk',
@@ -965,25 +894,49 @@ describe('GameEngine', () => {
     expect(player.position).toBe(target.id)
     expect(player.sharedTileAccessAvailable).toBe(true)
     endTurn(game, player.id)
+    expect(player.sharedTileAccessAvailable).toBe(true)
+    endTurn(game, opponent.id)
+    opponent.position = secondTarget.id
+    player.availableMovement.WILD = 10
+    movePlayer(game, player.id, secondTarget.id)
+    expect(player.position).toBe(secondTarget.id)
+    endTurn(game, player.id)
     expect(player.sharedTileAccessAvailable).toBe(false)
   })
 
-  it('draws five cards after using reshuffle hand from a normal five-card hand', () => {
+  it('moves an opponent to a chosen adjacent hex with fate swap', () => {
     const game = buildTestGame()
-    const player = game.players[0]!
-    player.hand[0] = {
+    const caster = game.players[0]!
+    const target = game.players[1]!
+    const targetTile = game.map.tiles.find(
+      (tile) => tile.id === target.position,
+    )!
+    const destination = getNeighbors(game.map.tiles, targetTile).find(
+      (tile) =>
+        !tile.isBlocked &&
+        !['MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        !game.players.some((player) => player.position === tile.id),
+    )!
+    caster.hand.push({
       cardId: 'reshuffle_hand',
       instanceId: 'reshuffle-hand-test',
-    }
-    const previousHand = player.hand.slice(1)
+    })
 
-    activateActionCard(game, player.id, 'reshuffle-hand-test')
-
-    expect(player.hand).toHaveLength(5)
-    expect([...player.hand, ...player.drawPile, ...player.discardPile]).toEqual(
-      expect.arrayContaining(previousHand),
+    activateActionCard(
+      game,
+      caster.id,
+      'reshuffle-hand-test',
+      target.id,
+      destination.id,
     )
-    expect(player.removedCards.at(-1)?.cardId).toBe('reshuffle_hand')
+
+    expect(target.position).toBe(destination.id)
+    expect(caster.removedCards.at(-1)?.cardId).toBe('reshuffle_hand')
+    expect(game.latestCurse).toMatchObject({
+      cardId: 'reshuffle_hand',
+      targetPlayerId: target.id,
+      targetHexId: destination.id,
+    })
   })
 
   it('draws five cards after using the hand swap rune', () => {
@@ -998,16 +951,17 @@ describe('GameEngine', () => {
     expect(player.tokens).toEqual([])
   })
 
-  it('copies the last movement card effect with echo power', () => {
+  it('doubles the next movement card with echo power', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     const coin = player.hand.find((card) => card.cardId === 'coin')!
     player.hand.push({ cardId: 'echo_power', instanceId: 'echo-power-test' })
 
-    playCard(game, player.id, coin.instanceId, 'GOLD')
     activateActionCard(game, player.id, 'echo-power-test')
+    playCard(game, player.id, coin.instanceId, 'GOLD')
 
     expect(player.availableGold).toBe(CARD_BY_ID.coin!.goldValue * 2)
+    expect(player.echoPowerAvailable).toBe(false)
   })
 
   it('exchanges a curse for one gold and returns it to the deck after reshuffling', () => {
@@ -1045,9 +999,9 @@ describe('GameEngine', () => {
       { cardId: 'echo_power', instanceId: 'echo-after-action-gold' },
     )
 
-    playCard(game, player.id, coin.instanceId, 'GOLD')
     playCard(game, player.id, 'guide-gold', 'GOLD')
     activateActionCard(game, player.id, 'echo-after-action-gold')
+    playCard(game, player.id, coin.instanceId, 'GOLD')
 
     expect(player.availableGold).toBe(CARD_BY_ID.coin!.goldValue * 2 + 1)
   })
@@ -1229,17 +1183,27 @@ describe('GameEngine', () => {
     expect(game.temporaryBlockedHexes).toEqual([])
   })
 
-  it('replaces every unsold offer after a round without purchases', () => {
+  it('refreshes unsold offers after a round without purchases', () => {
     const game = buildTestGame()
     const previousMarket = [...game.market]
+    const previousMarketCycle = game.marketCycle
 
     endTurn(game, 'p1')
     endTurn(game, 'p2')
 
     expect(game.market).toHaveLength(4)
+    expect(game.marketCycle).toBeGreaterThan(previousMarketCycle)
     expect(
-      game.market.every((cardId) => !previousMarket.includes(cardId)),
-    ).toBe(true)
+      game.market.filter((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 6)
+        .length,
+    ).toBeGreaterThanOrEqual(2)
+    expect(
+      game.market.filter((cardId) => CARD_BY_ID[cardId]?.type === 'ACTION')
+        .length,
+    ).toBeLessThanOrEqual(1)
+    expect(game.market.some((cardId) => !previousMarket.includes(cardId))).toBe(
+      true,
+    )
   })
 
   it('keeps the current offers after a round with a purchase', () => {
@@ -1379,7 +1343,7 @@ describe('GameEngine', () => {
     const player = game.players[0]!
     player.hand.push(
       { cardId: 'seasoned_sailor', instanceId: 'sailor-test' },
-      { cardId: 'master_trader', instanceId: 'trader-test' },
+      { cardId: 'trader', instanceId: 'trader-test' },
     )
 
     playCard(game, 'p1', 'sailor-test')
@@ -1389,7 +1353,7 @@ describe('GameEngine', () => {
       CARD_BY_ID.seasoned_sailor!.movementValue,
     )
     expect(player.availableMovement.YELLOW).toBe(
-      CARD_BY_ID.master_trader!.movementValue,
+      CARD_BY_ID.trader!.movementValue,
     )
     expect(player.availableGold).toBe(0)
   })
@@ -1416,7 +1380,7 @@ describe('GameEngine', () => {
     playCard(game, player.id, 'flooded-forest-test', 'GOLD')
     expect(player.availableMovement.GREEN).toBe(4)
     expect(player.availableMovement.BLUE).toBe(4)
-    expect(player.availableGold).toBe(2)
+    expect(player.availableGold).toBe(1)
   })
 
   it('doubles both mixed card colors when sacrificed or echoed', () => {
@@ -1427,11 +1391,11 @@ describe('GameEngine', () => {
       { cardId: 'echo_power', instanceId: 'mixed-echo' },
     )
 
-    playCard(game, player.id, 'mixed-sacrifice', 'MOVEMENT', true)
     activateActionCard(game, player.id, 'mixed-echo')
+    playCard(game, player.id, 'mixed-sacrifice', 'MOVEMENT')
 
-    expect(player.availableMovement.YELLOW).toBe(12)
-    expect(player.availableMovement.BLUE).toBe(12)
+    expect(player.availableMovement.YELLOW).toBe(6)
+    expect(player.availableMovement.BLUE).toBe(6)
   })
 
   it('exchanges cards for the gold value in their definitions', () => {

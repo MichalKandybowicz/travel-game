@@ -78,7 +78,6 @@ export const cardLabels: Record<string, { name: string }> = {
   storm_oasis: { name: 'Burzowa oaza' },
   shortcut_map: { name: 'Zwój tajemnych przejść' },
   second_wind: { name: 'Eliksir odnowy' },
-  merchant_caravan: { name: 'Widmowy bazar' },
   steal_plans: { name: 'Kradzież wspomnień' },
   guide: { name: 'Duch przewodnik' },
   phase_walk: { name: 'Widmowy krok' },
@@ -101,14 +100,16 @@ export function cardDescription(card: CardDefinition): string {
     const descriptions = {
       MAP_SHORTCUT:
         'W tej turze pozwala raz przeskoczyć przez sąsiednią górę lub zablokowane pole. Kliknij przeszkodę albo pole za nią; potrzebujesz punktów ruchu na koszt pola docelowego.',
-      SECOND_WIND: 'Dobierz cztery karty, a następnie odrzuć jedną z ręki.',
-      MERCHANT_CARAVAN: 'Możesz kupić w tej turze drugą kartę.',
+      SECOND_WIND:
+        'Usuń jedną inną kartę z ręki na stałe, a następnie dobierz cztery karty.',
       STEAL_PLANS: 'Wybrany przeciwnik odrzuca losową kartę z ręki.',
       GUIDE: 'Następne sąsiednie przejście kosztuje 1 dowolnego ruchu.',
       PHASE_WALK:
-        'Do końca tury możesz wchodzić na pola zajęte przez innych graczy.',
-      RESHUFFLE_HAND: 'Odrzuć pozostałe karty z ręki i dobierz 5 kart.',
-      ECHO_POWER: 'Skopiuj ostatnią zagraną kartę ruchu lub złota.',
+        'Przez dwie twoje tury możesz wchodzić na pola zajęte przez innych graczy.',
+      RESHUFFLE_HAND:
+        'Przesuń pionek wybranego przeciwnika na wybrane sąsiednie pole.',
+      ECHO_POWER:
+        'Następna zagrana karta ruchu daje podwójną korzyść, jak przy poświęceniu.',
       PROTECTIVE_CIRCLE: 'Ignoruj następną klątwę wymierzoną w ciebie.',
       PATH_FRACTURE:
         'Do końca rundy każde przejście wybranego gracza kosztuje o 1 dowolny punkt ruchu więcej.',

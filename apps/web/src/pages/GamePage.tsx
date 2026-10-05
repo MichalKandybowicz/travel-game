@@ -47,7 +47,10 @@ export function GamePage() {
   const [leaving, setLeaving] = useState(false)
   const [soundVolume, setSoundVolume] = useState(getTurnSoundVolume)
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
-  const [pendingHexCurseCardId, setPendingHexCurseCardId] = useState<string>()
+  const [pendingHexCurse, setPendingHexCurse] = useState<{
+    cardInstanceId: string
+    targetPlayerId?: string
+  }>()
   const [focusHexRequest, setFocusHexRequest] = useState<{ hexId: string }>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
   const runeChoiceRef = useRef<HTMLDivElement>(null)
@@ -435,11 +438,15 @@ export function GamePage() {
               focusHexRequest={focusHexRequest}
               onSelectHex={movePlayer}
               onChooseStart={chooseStart}
-              blockTargeting={isActive && !!pendingHexCurseCardId}
+              blockTargeting={isActive && !!pendingHexCurse}
               onBlockHex={(hexId) => {
-                if (!pendingHexCurseCardId) return
-                playActionCard(pendingHexCurseCardId, undefined, hexId)
-                setPendingHexCurseCardId(undefined)
+                if (!pendingHexCurse) return
+                playActionCard(
+                  pendingHexCurse.cardInstanceId,
+                  pendingHexCurse.targetPlayerId,
+                  hexId,
+                )
+                setPendingHexCurse(undefined)
               }}
             />
           </div>
@@ -509,10 +516,15 @@ export function GamePage() {
                 onPlayCard={playCard}
                 onUseToken={useToken}
                 onUseActionCard={playActionCard}
-                onChooseHexCurseCard={setPendingHexCurseCardId}
+                onChooseHexCurseCard={(cardInstanceId, targetPlayerId) =>
+                  setPendingHexCurse({
+                    cardInstanceId,
+                    ...(targetPlayerId ? { targetPlayerId } : {}),
+                  })
+                }
                 onDiscardCard={discardCard}
                 onEndTurn={() => {
-                  setPendingHexCurseCardId(undefined)
+                  setPendingHexCurse(undefined)
                   endTurn()
                 }}
                 roundNumber={game.roundNumber ?? 1}
@@ -531,12 +543,12 @@ export function GamePage() {
                 <CampReward player={localPlayer} onChoose={chooseCampReward} />
               </div>
             )}
-            {isActive && pendingHexCurseCardId && (
+            {isActive && pendingHexCurse && (
               <div className="hex-curse-prompt" role="status">
-                <span>Wybierz podświetlone pole w zasięgu 2 heksów.</span>
+                <span>Wybierz pole na mapie dla tej klątwy.</span>
                 <button
                   type="button"
-                  onClick={() => setPendingHexCurseCardId(undefined)}
+                  onClick={() => setPendingHexCurse(undefined)}
                 >
                   Anuluj
                 </button>
