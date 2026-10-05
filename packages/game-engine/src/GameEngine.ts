@@ -256,7 +256,8 @@ const isShortcutMove = (
   )
 
 const DRAGON_CONTROL_COST = 6
-const DRAGON_RANDOM_STEPS = 3
+const DRAGON_RANDOM_MIN_STEPS = 1
+const DRAGON_RANDOM_MAX_STEPS = 2
 
 const isDragonRestrictedTile = (tile: HexTile): boolean =>
   tile.isBlocked ||
@@ -680,7 +681,8 @@ const moveDragonsRandomly = (gameState: GameState): void => {
     `${gameState.seed}:${gameState.roomCode}:dragons:${gameState.roundNumber ?? 1}:${gameState.turnNumber}`,
   )
   for (const dragon of gameState.dragons) {
-    for (let step = 0; step < DRAGON_RANDOM_STEPS; step += 1) {
+    const steps = random.int(DRAGON_RANDOM_MIN_STEPS, DRAGON_RANDOM_MAX_STEPS)
+    for (let step = 0; step < steps; step += 1) {
       const currentTile = gameState.map.tiles.find(
         (tile) => tile.id === dragon.position,
       )

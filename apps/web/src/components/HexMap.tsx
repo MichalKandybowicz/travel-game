@@ -180,8 +180,16 @@ export function HexMap({
     x: number
     y: number
   }>()
+  const [dragonRenderPositions, setDragonRenderPositions] = useState<
+    Record<string, { x: number; y: number }>
+  >({})
+  const [movingDragonIds, setMovingDragonIds] = useState<Set<string>>(
+    () => new Set(),
+  )
   const [isAnimatingMove, setIsAnimatingMove] = useState(false)
   const animationIdRef = useRef(0)
+  const dragonAnimationIdRef = useRef(0)
+  const dragonHexRef = useRef<Record<string, string>>({})
   const latestGameRef = useRef(game)
   latestGameRef.current = game
   const svgRef = useRef<SVGSVGElement>(null)
@@ -584,9 +592,101 @@ export function HexMap({
   useEffect(
     () => () => {
       animationIdRef.current += 1
+      dragonAnimationIdRef.current += 1
     },
     [],
   )
+
+  useEffect(() => {
+    const dragons = game.dragons ?? []
+    const currentDragonHexes = dragonHexRef.current
+    const nextDragonIds = new Set(dragons.map((dragon) => dragon.id))
+    const immediatePositions: Record<string, { x: number; y: number }> = {}
+    const animations: Array<{
+      id: string
+      from: { x: number; y: number }
+      to: { x: number; y: number }
+    }> = []
+
+    for (const key of Object.keys(currentDragonHexes)) {
+      if (!nextDragonIds.has(key)) delete currentDragonHexes[key]
+    }
+
+    for (const dragon of dragons) {
+      const newTile = game.map.tiles.find((tile) => tile.id === dragon.position)
+      if (!newTile) continue
+      const newPoint = hexToPixel(newTile.q, newTile.r, HEX_SPACING)
+      const previousHexId = currentDragonHexes[dragon.id]
+      const previousTile = previousHexId
+        ? game.map.tiles.find((tile) => tile.id === previousHexId)
+        : undefined
+      currentDragonHexes[dragon.id] = dragon.position
+
+      if (!previousTile || previousTile.id === newTile.id) {
+        immediatePositions[dragon.id] = newPoint
+        continue
+      }
+
+      animations.push({
+        id: dragon.id,
+        from: hexToPixel(previousTile.q, previousTile.r, HEX_SPACING),
+        to: newPoint,
+      })
+    }
+
+    if (Object.keys(immediatePositions).length > 0) {
+      setDragonRenderPositions((current) => ({
+        ...current,
+        ...immediatePositions,
+      }))
+    }
+    if (animations.length === 0) {
+      setDragonRenderPositions((current) =>
+        Object.fromEntries(
+          Object.entries(current).filter(([id]) => nextDragonIds.has(id)),
+        ),
+      )
+      return
+    }
+
+    const animationId = dragonAnimationIdRef.current + 1
+    dragonAnimationIdRef.current = animationId
+    setMovingDragonIds(new Set(animations.map((animation) => animation.id)))
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    const duration = reducedMotion ? 80 : 520
+    const startedAt = performance.now()
+
+    const frame = (now: number) => {
+      if (dragonAnimationIdRef.current !== animationId) return
+      const progress = Math.min(1, (now - startedAt) / duration)
+      const jump = Math.sin(progress * Math.PI) * (reducedMotion ? 0 : 12)
+      setDragonRenderPositions((current) => {
+        const next = { ...current }
+        for (const animation of animations) {
+          next[animation.id] = {
+            x:
+              animation.from.x + (animation.to.x - animation.from.x) * progress,
+            y:
+              animation.from.y +
+              (animation.to.y - animation.from.y) * progress -
+              jump,
+          }
+        }
+        return Object.fromEntries(
+          Object.entries(next).filter(([id]) => nextDragonIds.has(id)),
+        )
+      })
+
+      if (progress < 1) {
+        requestAnimationFrame(frame)
+      } else {
+        setMovingDragonIds(new Set())
+      }
+    }
+    requestAnimationFrame(frame)
+  }, [game.dragons, game.map.tiles])
 
   useEffect(() => {
     if (isAnimatingMove && (game.currentPlayerId !== playerId || !isActive)) {
@@ -836,7 +936,7 @@ export function HexMap({
         localPlayer?.extraMoveCostPending ||
         localPlayer?.fogCostsHidden ||
         (game.temporaryBlockedHexes?.length ?? 0) > 0 ||
-        (game.dragons?.length ?? 0) > 0) && (
+        localDragonDistance <= 1) && (
         <div
           className="map-curse-notices"
           aria-label="Klątwy wpływające na mapę"
@@ -1164,11 +1264,19 @@ export function HexMap({
                   />
                 )}
                 {isDragonPenaltyZone && (
-                  <polygon
-                    points={polygonPoints(x, y, HEX_RADIUS - 5)}
-                    className="dragon-zone-fill dragon-zone-fill--penalty"
-                    pointerEvents="none"
-                  />
+                  <>
+                    <polygon
+                      points={polygonPoints(x, y, HEX_RADIUS - 5)}
+                      className="dragon-zone-fill dragon-zone-fill--penalty"
+                      pointerEvents="none"
+                    />
+                    <g className="dragon-zone-cost" pointerEvents="none">
+                      <circle cx={x + 15} cy={y - 15} r="9" />
+                      <text x={x + 15} y={y - 11.5} textAnchor="middle">
+                        +2
+                      </text>
+                    </g>
+                  </>
                 )}
                 <path
                   d={`M${x - 16} ${y - 14}L${x} ${y - 22}L${x + 16} ${y - 14}`}
@@ -1271,12 +1379,14 @@ export function HexMap({
               (entry) => entry.id === dragon.position,
             )
             if (!tile) return null
-            const { x, y } = hexToPixel(tile.q, tile.r, HEX_SPACING)
+            const fallbackPoint = hexToPixel(tile.q, tile.r, HEX_SPACING)
+            const { x, y } = dragonRenderPositions[dragon.id] ?? fallbackPoint
             const selected = selectedDragonId === dragon.id
+            const moving = movingDragonIds.has(dragon.id)
             return (
               <g
                 key={dragon.id}
-                className={`map-dragon-marker${selected ? ' map-dragon-marker--selected' : ''}`}
+                className={`map-dragon-marker${selected ? ' map-dragon-marker--selected' : ''}${moving ? ' map-dragon-marker--moving' : ''}`}
                 onClick={(event) => {
                   event.stopPropagation()
                   if (isActive) {
@@ -1635,7 +1745,7 @@ export function HexMap({
                 <p>
                   W swojej turze możesz kliknąć smoka, a potem sąsiednie pole,
                   żeby przesunąć go za 6 dowolnych punktów ruchu. Smok rusza się
-                  też losowo o 3 pola po kolejce wszystkich graczy.
+                  też losowo o 1–2 pola po kolejce wszystkich graczy.
                 </p>
               </div>
             ) : (

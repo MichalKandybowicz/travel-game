@@ -258,7 +258,8 @@ export function GamePage() {
                 <p>
                   Czerwona strefa blokuje pola przy smoku, a dalszy pierścień
                   dodaje koszt +2 dowolnego ruchu. Smoka możesz przesunąć za 6
-                  dowolnego ruchu.
+                  dowolnego ruchu. Po kolejce graczy smok rusza się losowo o 1–2
+                  pola.
                 </p>
               </article>
             )}

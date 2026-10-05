@@ -2838,6 +2838,21 @@ select {
   filter: drop-shadow(0 0 10px rgba(248, 113, 113, 0.95));
 }
 
+.dragon-zone-cost circle {
+  fill: rgba(124, 45, 18, 0.92);
+  stroke: #fed7aa;
+  stroke-width: 1.4px;
+}
+
+.dragon-zone-cost text {
+  fill: #ffedd5;
+  font-size: 8px;
+  font-weight: 900;
+  paint-order: stroke;
+  stroke: rgba(67, 20, 7, 0.82);
+  stroke-width: 1.6px;
+}
+
 .map-dragon-marker {
   cursor: pointer;
   filter: drop-shadow(0 0 9px rgba(127, 29, 29, 0.85));
