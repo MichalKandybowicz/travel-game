@@ -110,6 +110,7 @@ export async function connectStorage(url: string): Promise<Storage> {
             fogMode: lobbySettings.fogMode ?? 'NONE',
             terrainVisibilityRange: lobbySettings.terrainVisibilityRange ?? 4,
             costVisibilityRange: lobbySettings.costVisibilityRange ?? 2,
+            dragonCount: lobbySettings.dragonCount ?? 0,
           },
           players: room.players.map(({ socketId, ...player }) => {
             void socketId
@@ -156,7 +157,9 @@ export async function connectStorage(url: string): Promise<Storage> {
                       room.gameState.settings.terrainVisibilityRange ?? 4,
                     costVisibilityRange:
                       room.gameState.settings.costVisibilityRange ?? 2,
+                    dragonCount: room.gameState.settings.dragonCount ?? 0,
                   },
+                  dragons: room.gameState.dragons ?? [],
                   marketOfferExpiresAtTurns:
                     room.gameState.marketOfferExpiresAtTurns ??
                     room.gameState.market?.map(

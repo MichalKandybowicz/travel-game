@@ -17,14 +17,28 @@ import {
   type PlayerState,
 } from '../../../packages/shared/src/index.js'
 
+const dragonDistanceTo = (game: GameState, tile: HexTile): number => {
+  if (!game.dragons?.length) return Infinity
+  return Math.min(
+    ...game.dragons.map((dragon) => {
+      const dragonTile = game.map.tiles.find(
+        (entry) => entry.id === dragon.position,
+      )
+      return dragonTile ? axialDistance(dragonTile, tile) : Infinity
+    }),
+  )
+}
+
 export const cardMovementFor = (
   card: CardDefinition,
   from: HexTile,
   target: HexTile,
   player?: PlayerState,
+  tiles?: HexTile[],
+  dragons?: GameState['dragons'],
 ): number => {
   const requirements = player
-    ? getEffectiveMoveRequirements(player, from, target)
+    ? getEffectiveMoveRequirements(player, from, target, tiles, dragons)
     : getMoveRequirements(from, target)
   if (requirements.length === 0) return 0
   const usefulValue = (type: CardDefinition['movementType'], value: number) =>
@@ -63,6 +77,8 @@ export const canReachWithHand = (
   from: HexTile,
   target: HexTile,
   initialMovement?: MovementPool,
+  tiles?: HexTile[],
+  dragons?: GameState['dragons'],
 ): boolean =>
   canAffordMove(
     {
@@ -71,6 +87,8 @@ export const canReachWithHand = (
     },
     from,
     target,
+    tiles,
+    dragons,
   )
 
 // The room preview already exposes the board outline. Fill unseen tiles with
@@ -231,6 +249,7 @@ const planBotRoute = (
       if (
         neighbor.isBlocked ||
         neighbor.terrain === 'MOUNTAIN' ||
+        dragonDistanceTo(game, neighbor) <= 1 ||
         (game.settings.allowSharedTiles === false &&
           !player.sharedTileAccessAvailable &&
           game.players.some(
@@ -244,7 +263,13 @@ const planBotRoute = (
         tile.difficulty < 0 ||
         neighbor.difficulty < 0
           ? undefined
-          : getMoveRequirements(tile, neighbor)
+          : getEffectiveMoveRequirements(
+              player,
+              tile,
+              neighbor,
+              game.map.tiles,
+              game.dragons,
+            )
       if (requirements?.length === 0) continue
       const movementCost = requirements
         ? requirements.reduce((sum, requirement) => {
@@ -299,6 +324,10 @@ export const isBotStepTemporarilyBlocked = (
 ): boolean =>
   Boolean(
     game.temporaryBlockedHexes?.some((block) => block.hexId === hexId) ||
+    (() => {
+      const tile = game.map.tiles.find((entry) => entry.id === hexId)
+      return tile ? dragonDistanceTo(game, tile) <= 1 : false
+    })() ||
     (game.settings.allowSharedTiles === false &&
       game.players.some(
         (other) => other.id !== player.id && other.position === hexId,
@@ -377,6 +406,7 @@ export const chooseBotSealHex = (
         tile.difficulty >= 0 &&
         !tile.isBlocked &&
         !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        dragonDistanceTo(game, tile) > 1 &&
         !game.players.some((other) => other.position === tile.id),
     )
     .map((tile) => ({

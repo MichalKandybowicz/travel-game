@@ -21,6 +21,16 @@ import {
   setTurnSoundVolume,
 } from '../turnSound.js'
 
+const gameIntroStorageKey = 'travel-game-hide-intro-v1'
+
+const readIntroPreference = (): boolean => {
+  try {
+    return localStorage.getItem(gameIntroStorageKey) === 'true'
+  } catch {
+    return false
+  }
+}
+
 export function GamePage() {
   const navigate = useNavigate()
   const { roomCode = '' } = useParams()
@@ -35,6 +45,7 @@ export function GamePage() {
   const playCard = useGameStore((state) => state.playCard)
   const undoCardPlay = useGameStore((state) => state.undoCardPlay)
   const movePlayer = useGameStore((state) => state.movePlayer)
+  const moveDragon = useGameStore((state) => state.moveDragon)
   const chooseStart = useGameStore((state) => state.chooseStart)
   const buyCard = useGameStore((state) => state.buyCard)
   const useToken = useGameStore((state) => state.useToken)
@@ -46,6 +57,10 @@ export function GamePage() {
   const leaveRoom = useGameStore((state) => state.leaveRoom)
   const [leaving, setLeaving] = useState(false)
   const [soundVolume, setSoundVolume] = useState(getTurnSoundVolume)
+  const [showGameIntro, setShowGameIntro] = useState(
+    () => !readIntroPreference(),
+  )
+  const [hideGameIntro, setHideGameIntro] = useState(false)
   const [visibleCurse, setVisibleCurse] = useState<CurseEvent>()
   const [pendingHexCurse, setPendingHexCurse] = useState<{
     cardInstanceId: string
@@ -54,6 +69,7 @@ export function GamePage() {
   const [focusHexRequest, setFocusHexRequest] = useState<{ hexId: string }>()
   const seenCurseId = useRef(game?.latestCurse?.instanceId)
   const runeChoiceRef = useRef<HTMLDivElement>(null)
+  const gameIntroDialogRef = useRef<HTMLDialogElement>(null)
   const mapAreaRef = useRef<HTMLDivElement>(null)
   const gameInfoRef = useRef<HTMLDetailsElement>(null)
   const pendingCampId = game?.players.find(
@@ -66,6 +82,18 @@ export function GamePage() {
       status: game.status,
     },
   )
+
+  const closeGameIntro = () => {
+    if (hideGameIntro) {
+      try {
+        localStorage.setItem(gameIntroStorageKey, 'true')
+      } catch {
+        // Ignore storage errors in private windows.
+      }
+    }
+    setShowGameIntro(false)
+    gameIntroDialogRef.current?.close()
+  }
 
   useEffect(() => {
     window.addEventListener('pointerdown', prepareTurnSound)
@@ -113,6 +141,13 @@ export function GamePage() {
       })
     }
   }, [pendingCampId])
+
+  useEffect(() => {
+    if (!game || !showGameIntro || game.status === 'FINISHED') return
+    if (!gameIntroDialogRef.current?.open) {
+      gameIntroDialogRef.current?.showModal()
+    }
+  }, [game, showGameIntro])
 
   useEffect(() => {
     if (!session && !account) {
@@ -172,6 +207,81 @@ export function GamePage() {
 
   return (
     <main className="page shell journey-page game-shell">
+      <dialog
+        ref={gameIntroDialogRef}
+        className="game-intro-dialog"
+        aria-labelledby="game-intro-title"
+        onCancel={(event) => {
+          event.preventDefault()
+          closeGameIntro()
+        }}
+      >
+        <div className="game-intro-content">
+          <header>
+            <small>Krótki przewodnik</small>
+            <h2 id="game-intro-title">Najważniejsze zasady wyprawy</h2>
+          </header>
+          <div className="game-intro-grid">
+            <article>
+              <span aria-hidden="true">🏁</span>
+              <strong>Cel gry</strong>
+              <p>Dotrzyj swoim pionkiem do pradawnego portalu przed innymi.</p>
+            </article>
+            <article>
+              <span aria-hidden="true">🃏</span>
+              <strong>Karty</strong>
+              <p>
+                Używaj kart jako ruchu albo jako złota. Kupione karty trafiają
+                od razu na rękę.
+              </p>
+            </article>
+            <article>
+              <span aria-hidden="true">💰</span>
+              <strong>Magiczny bazar</strong>
+              <p>
+                Oferty znikają po kilku turach. Pod kartą widać, za ile tur
+                zmieni się oferta.
+              </p>
+            </article>
+            <article>
+              <span aria-hidden="true">✦</span>
+              <strong>Runy i klątwy</strong>
+              <p>
+                Kręgi run dają jednorazowe efekty. Klątwy mogą blokować ruch,
+                sklep lub karty przeciwnika.
+              </p>
+            </article>
+            {(game.dragons?.length ?? 0) > 0 && (
+              <article>
+                <span aria-hidden="true">🐉</span>
+                <strong>Smoki</strong>
+                <p>
+                  Czerwona strefa blokuje pola przy smoku, a dalszy pierścień
+                  dodaje koszt +2 dowolnego ruchu. Smoka możesz przesunąć za 6
+                  dowolnego ruchu.
+                </p>
+              </article>
+            )}
+          </div>
+          <label className="game-intro-checkbox">
+            <input
+              type="checkbox"
+              checked={hideGameIntro}
+              onChange={(event) => setHideGameIntro(event.target.checked)}
+            />
+            Nie pokazuj więcej
+          </label>
+          <div className="game-intro-actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={closeGameIntro}
+            >
+              Zaczynam
+            </button>
+          </div>
+        </div>
+      </dialog>
       {visibleCurse && (
         <div className="curse-popup" role="alert" aria-live="assertive">
           <div className="curse-popup-body">
@@ -437,6 +547,7 @@ export function GamePage() {
               focusOnPlayer={pendingCampId}
               focusHexRequest={focusHexRequest}
               onSelectHex={movePlayer}
+              onMoveDragon={moveDragon}
               onChooseStart={chooseStart}
               blockTargeting={isActive && !!pendingHexCurse}
               onBlockHex={(hexId) => {

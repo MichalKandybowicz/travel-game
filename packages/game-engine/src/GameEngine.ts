@@ -2,6 +2,7 @@ import type {
   CardPlayMode,
   CardInstance,
   CardDefinition,
+  DragonState,
   GameError,
   GameMap,
   GameState,
@@ -254,12 +255,60 @@ const isShortcutMove = (
       getNeighbors(tiles, neighbor).some((tile) => tile.id === to.id),
   )
 
+const DRAGON_CONTROL_COST = 6
+const DRAGON_RANDOM_STEPS = 3
+
+const isDragonRestrictedTile = (tile: HexTile): boolean =>
+  tile.isBlocked ||
+  tile.terrain === 'MOUNTAIN' ||
+  tile.terrain === 'UNKNOWN' ||
+  tile.terrain === 'START' ||
+  tile.terrain === 'GOAL' ||
+  tile.difficulty < 0
+
+const startPetalIds = (map: GameMap): Set<number> =>
+  new Set(
+    (map.startHexIds ?? [map.startHexId])
+      .map((id) => map.tiles.find((tile) => tile.id === id)?.petalId ?? 0)
+      .filter((petalId) => Number.isFinite(petalId)),
+  )
+
+const dragonDistance = (
+  tiles: HexTile[] | undefined,
+  dragons: readonly DragonState[] | undefined,
+  tile: HexTile,
+): number => {
+  if (!tiles || !dragons?.length) return Infinity
+  let distance = Infinity
+  for (const dragon of dragons) {
+    const dragonTile = tiles.find((entry) => entry.id === dragon.position)
+    if (!dragonTile) continue
+    distance = Math.min(distance, axialDistance(dragonTile, tile))
+  }
+  return distance
+}
+
+const isDragonBlockedTile = (
+  tiles: HexTile[] | undefined,
+  dragons: readonly DragonState[] | undefined,
+  tile: HexTile,
+): boolean => dragonDistance(tiles, dragons, tile) <= 1
+
+const dragonMovePenalty = (
+  tiles: HexTile[] | undefined,
+  dragons: readonly DragonState[] | undefined,
+  tile: HexTile,
+): MoveRequirement[] =>
+  dragonDistance(tiles, dragons, tile) === 2 ? [{ type: 'ANY', amount: 2 }] : []
+
 export const getEffectiveMoveRequirements = (
   player: PlayerState,
   from: HexTile,
   to: HexTile,
   tiles?: HexTile[],
+  dragons?: readonly DragonState[],
 ): MoveRequirement[] => {
+  if (isDragonBlockedTile(tiles, dragons, to)) return []
   let requirements: MoveRequirement[] = []
   if (axialDistance(from, to) === 1) {
     requirements = player.guidedMoveAvailable
@@ -276,9 +325,14 @@ export const getEffectiveMoveRequirements = (
     requirements =
       type === 'BLOCKED' ? [] : [{ type, amount: Math.max(1, to.difficulty) }]
   }
-  return player.extraMoveCostPending && requirements.length > 0
-    ? [...requirements, { type: 'ANY', amount: 1 }]
-    : requirements
+  if (requirements.length === 0) return []
+  const penalties = [
+    ...(player.extraMoveCostPending
+      ? [{ type: 'ANY' as const, amount: 1 }]
+      : []),
+    ...dragonMovePenalty(tiles, dragons, to),
+  ]
+  return penalties.length > 0 ? [...requirements, ...penalties] : requirements
 }
 
 export const canAffordMove = (
@@ -286,8 +340,15 @@ export const canAffordMove = (
   from: HexTile,
   to: HexTile,
   tiles?: HexTile[],
+  dragons?: readonly DragonState[],
 ): boolean => {
-  const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
+  const requirements = getEffectiveMoveRequirements(
+    player,
+    from,
+    to,
+    tiles,
+    dragons,
+  )
   if (requirements.length === 0) return false
   const coloredDeficit = requirements
     .filter(
@@ -371,11 +432,17 @@ export const getReachableMovePaths = (
         continue
       }
       if (
+        isDragonBlockedTile(gameState.map.tiles, gameState.dragons, neighbor)
+      ) {
+        continue
+      }
+      if (
         !canAffordMove(
           current.player,
           current.tile,
           neighbor,
           gameState.map.tiles,
+          gameState.dragons,
         )
       ) {
         continue
@@ -385,7 +452,14 @@ export const getReachableMovePaths = (
         ...current.player,
         availableMovement: { ...current.player.availableMovement },
       }
-      spendMove(nextPlayer, current.tile, neighbor, gameState.map.tiles)
+      spendMove(
+        nextPlayer,
+        current.tile,
+        neighbor,
+        gameState.map.tiles,
+        undefined,
+        gameState.dragons,
+      )
       if (
         nextPlayer.shortcutMoveAvailable &&
         axialDistance(current.tile, neighbor) > 1
@@ -416,8 +490,15 @@ const spendMove = (
   to: HexTile,
   tiles: HexTile[],
   anyMovementSpent?: MovementPool,
+  dragons?: readonly DragonState[],
 ): void => {
-  const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
+  const requirements = getEffectiveMoveRequirements(
+    player,
+    from,
+    to,
+    tiles,
+    dragons,
+  )
   if (requirements.length === 0) {
     error('HEX_BLOCKED', 'That connection is blocked.')
   }
@@ -536,6 +617,84 @@ export interface PlayerSetup {
   symbol?: PlayerSymbol
 }
 
+const createDragons = (
+  gameState: Pick<
+    GameState,
+    'settings' | 'seed' | 'roomCode' | 'map' | 'players'
+  >,
+): DragonState[] => {
+  const count = Math.max(0, Math.min(3, gameState.settings.dragonCount ?? 0))
+  if (count === 0) return []
+  const forbiddenPetals = startPetalIds(gameState.map)
+  const petalIds = [
+    ...new Set(gameState.map.tiles.map((tile) => tile.petalId ?? 0)),
+  ]
+    .filter((petalId) => !forbiddenPetals.has(petalId))
+    .sort((left, right) => left - right)
+  const random = new SeededRandom(
+    `${gameState.seed}:${gameState.roomCode}:dragons`,
+  )
+  const dragons: DragonState[] = []
+  for (const petalId of random.shuffle(petalIds).slice(0, count)) {
+    const occupied = new Set([
+      ...gameState.players.map((player) => player.position).filter(Boolean),
+      ...dragons.map((dragon) => dragon.position),
+    ])
+    const candidates = gameState.map.tiles.filter(
+      (tile) =>
+        (tile.petalId ?? 0) === petalId &&
+        !occupied.has(tile.id) &&
+        !isDragonRestrictedTile(tile),
+    )
+    const tile = random.pick(candidates)
+    if (!tile) continue
+    dragons.push({
+      id: `dragon-${dragons.length + 1}`,
+      position: tile.id,
+      homePetalId: petalId,
+    })
+  }
+  return dragons
+}
+
+const isValidDragonDestination = (
+  gameState: GameState,
+  dragon: DragonState,
+  tile: HexTile,
+): boolean => {
+  const forbiddenPetals = startPetalIds(gameState.map)
+  return (
+    !forbiddenPetals.has(tile.petalId ?? 0) &&
+    !isDragonRestrictedTile(tile) &&
+    !gameState.players.some((player) => player.position === tile.id) &&
+    !(gameState.dragons ?? []).some(
+      (candidate) =>
+        candidate.id !== dragon.id && candidate.position === tile.id,
+    )
+  )
+}
+
+const moveDragonsRandomly = (gameState: GameState): void => {
+  if (!gameState.dragons?.length) return
+  const random = new SeededRandom(
+    `${gameState.seed}:${gameState.roomCode}:dragons:${gameState.roundNumber ?? 1}:${gameState.turnNumber}`,
+  )
+  for (const dragon of gameState.dragons) {
+    for (let step = 0; step < DRAGON_RANDOM_STEPS; step += 1) {
+      const currentTile = gameState.map.tiles.find(
+        (tile) => tile.id === dragon.position,
+      )
+      if (!currentTile) break
+      const candidates = getNeighbors(gameState.map.tiles, currentTile).filter(
+        (tile) => isValidDragonDestination(gameState, dragon, tile),
+      )
+      const next = random.pick(candidates)
+      if (!next) break
+      dragon.position = next.id
+    }
+  }
+}
+
 export const createGameState = (
   roomCode: string,
   settings: MapSettings,
@@ -611,10 +770,12 @@ export const createGameState = (
     marketCycle: 0,
     cardPurchaseCounts: {},
     marketPurchasedThisRound: false,
+    dragons: [],
     roundPlayedCards: [],
     temporaryBlockedHexes: [],
   }
   gameState.market = createMarketOffers(gameState, 4, 'initial')
+  gameState.dragons = createDragons(gameState)
   return gameState
 }
 
@@ -1246,6 +1407,9 @@ export const movePlayer = (
   if (targetTile.isBlocked || targetTile.terrain === 'MOUNTAIN') {
     error('HEX_BLOCKED', 'That hex is blocked.')
   }
+  if (isDragonBlockedTile(gameState.map.tiles, gameState.dragons, targetTile)) {
+    error('HEX_BLOCKED', 'A dragon blocks that hex.')
+  }
   if (
     gameState.settings.allowSharedTiles === false &&
     !player.sharedTileAccessAvailable &&
@@ -1255,7 +1419,15 @@ export const movePlayer = (
   ) {
     error('HEX_OCCUPIED', 'That hex is occupied by another player.')
   }
-  if (!canAffordMove(player, currentTile, targetTile, gameState.map.tiles)) {
+  if (
+    !canAffordMove(
+      player,
+      currentTile,
+      targetTile,
+      gameState.map.tiles,
+      gameState.dragons,
+    )
+  ) {
     error('NOT_ENOUGH_MOVEMENT', 'Not enough movement for the selected hex.')
   }
   spendMove(
@@ -1264,6 +1436,7 @@ export const movePlayer = (
     targetTile,
     gameState.map.tiles,
     anyMovementSpent,
+    gameState.dragons,
   )
   if (shortcut) player.shortcutMoveAvailable = false
   if (adjacent && player.guidedMoveAvailable) {
@@ -1303,6 +1476,37 @@ export const movePlayer = (
 
   clearUndoableCardPlays(gameState, playerId)
 
+  return gameState
+}
+
+export const moveDragon = (
+  gameState: GameState,
+  playerId: string,
+  dragonId: string,
+  targetHexId: string,
+): GameState => {
+  ensureTurn(gameState, playerId)
+  const player = findPlayer(gameState, playerId)
+  const dragon = gameState.dragons?.find((entry) => entry.id === dragonId)
+  if (!dragon) error('INVALID_ACTION', 'Dragon was not found.')
+  const currentTile = findTile(gameState.map, dragon!.position)
+  const targetTile = findTile(gameState.map, targetHexId)
+  if (axialDistance(currentTile, targetTile) !== 1) {
+    error('INVALID_MOVE', 'Dragon can move only to an adjacent hex.')
+  }
+  if (!isValidDragonDestination(gameState, dragon!, targetTile)) {
+    error('INVALID_MOVE', 'Dragon cannot move to that hex.')
+  }
+  if (totalMovement(player) < DRAGON_CONTROL_COST) {
+    error('NOT_ENOUGH_MOVEMENT', 'Not enough movement to control the dragon.')
+  }
+  const pool = { ...player.availableMovement }
+  if (spendAny(pool, DRAGON_CONTROL_COST) > 0) {
+    error('NOT_ENOUGH_MOVEMENT', 'Not enough movement to control the dragon.')
+  }
+  player.availableMovement = pool
+  dragon!.position = targetTile.id
+  clearUndoableCardPlays(gameState, playerId)
   return gameState
 }
 
@@ -1556,6 +1760,7 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
       gameState.temporaryBlockedHexes ?? []
     ).filter((block) => block.casterPlayerId !== gameState.currentPlayerId)
     if (gameState.currentPlayerId === gameState.players[0]?.id) {
+      moveDragonsRandomly(gameState)
       gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
       gameState.roundPlayedCards = []
       for (const roundPlayer of gameState.players) {

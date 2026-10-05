@@ -26,6 +26,7 @@ export const mapSettingsSchema = z
     costVisibilityRange: z
       .union([z.number().int().min(1).max(4), z.literal('ALL')])
       .default(2),
+    dragonCount: z.number().int().min(0).max(3).default(0),
   })
   .refine(
     ({ campCountMinPerPetal, campCountMaxPerPetal }) =>
@@ -204,6 +205,13 @@ export const discardCardSchema = z.object({
   cardInstanceId: z.string(),
 })
 
+const movementPoolPaymentSchema = z.object({
+  GREEN: z.number().int().nonnegative(),
+  BLUE: z.number().int().nonnegative(),
+  YELLOW: z.number().int().nonnegative(),
+  WILD: z.number().int().nonnegative(),
+})
+
 export const movePlayerSchema = z.object({
   roomCode: z
     .string()
@@ -211,14 +219,17 @@ export const movePlayerSchema = z.object({
     .transform((value) => value.toUpperCase()),
   playerId: z.string(),
   targetHexId: z.string(),
-  anyMovementSpent: z
-    .object({
-      GREEN: z.number().int().nonnegative(),
-      BLUE: z.number().int().nonnegative(),
-      YELLOW: z.number().int().nonnegative(),
-      WILD: z.number().int().nonnegative(),
-    })
-    .optional(),
+  anyMovementSpent: movementPoolPaymentSchema.optional(),
+})
+
+export const moveDragonSchema = z.object({
+  roomCode: z
+    .string()
+    .length(5)
+    .transform((value) => value.toUpperCase()),
+  playerId: z.string(),
+  dragonId: z.string(),
+  targetHexId: z.string(),
 })
 
 export const chooseStartSchema = z.object({

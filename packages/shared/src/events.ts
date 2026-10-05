@@ -20,6 +20,7 @@ export const EVENTS = {
   gameUseActionCard: 'game:use-action-card',
   gameDiscardCard: 'game:discard-card',
   gameMove: 'game:move',
+  gameMoveDragon: 'game:move-dragon',
   gameBuyCard: 'game:buy-card',
   gameUseToken: 'game:use-token',
   gameChooseCampReward: 'game:choose-camp-reward',

@@ -82,6 +82,7 @@ export interface MapSettings {
   fogMode: FogMode
   terrainVisibilityRange?: number | 'ALL'
   costVisibilityRange?: number | 'ALL'
+  dragonCount?: number
 }
 
 export interface MapAnalysis {
@@ -103,6 +104,12 @@ export interface HexTile {
   isBlocked: boolean
   petalId?: number
   specialType?: 'CHOKEPOINT' | 'LOOP' | 'CAMP'
+}
+
+export interface DragonState {
+  id: string
+  position: string
+  homePetalId: number
 }
 
 export interface GameMap {
@@ -255,6 +262,7 @@ export interface GameState {
   cardPurchaseCounts?: Record<string, number>
   marketPurchasedThisRound?: boolean
   marketLockedUntilPlayerId?: string
+  dragons?: DragonState[]
   roundPlayedCards: PlayedCardRecord[]
   undoableCardPlays?: Record<string, UndoableCardPlay[]>
   latestCurse?: CurseEvent

@@ -153,6 +153,7 @@ interface HexMapProps {
     hexId: string,
     anyMovementSpent?: MovementPool,
   ) => Promise<boolean>
+  onMoveDragon: (dragonId: string, targetHexId: string) => Promise<boolean>
   onChooseStart: (hexId: string) => void
   blockTargeting: boolean
   onBlockHex: (hexId: string) => void
@@ -166,11 +167,14 @@ export function HexMap({
   focusHexRequest,
   canChooseStart,
   onSelectHex,
+  onMoveDragon,
   onChooseStart,
   blockTargeting,
   onBlockHex,
 }: HexMapProps) {
   const [selectedHexId, setSelectedHexId] = useState<string>()
+  const [selectedDragonId, setSelectedDragonId] = useState<string>()
+  const [inspectedDragonId, setInspectedDragonId] = useState<string>()
   const [inspectedHexId, setInspectedHexId] = useState<string>()
   const [animatedPlayerPosition, setAnimatedPlayerPosition] = useState<{
     x: number
@@ -206,9 +210,46 @@ export function HexMap({
   const currentTile = game.map.tiles.find(
     (tile) => tile.id === localPlayer?.position,
   )
+  const selectedDragon = game.dragons?.find(
+    (dragon) => dragon.id === selectedDragonId,
+  )
+  const selectedDragonTile = game.map.tiles.find(
+    (tile) => tile.id === selectedDragon?.position,
+  )
+  const totalAvailableMovement = localPlayer
+    ? localPlayer.availableMovement.GREEN +
+      localPlayer.availableMovement.BLUE +
+      localPlayer.availableMovement.YELLOW +
+      localPlayer.availableMovement.WILD
+    : 0
+  const canControlDragon = isActive && totalAvailableMovement >= 6
+  const startPetalIds = new Set(
+    (game.map.startHexIds ?? [game.map.startHexId]).map(
+      (id) => game.map.tiles.find((tile) => tile.id === id)?.petalId ?? 0,
+    ),
+  )
+  const isDragonMoveTarget = (tile: HexTile): boolean =>
+    Boolean(
+      canControlDragon &&
+      selectedDragon &&
+      selectedDragonTile &&
+      cubeDistance(selectedDragonTile, tile) === 1 &&
+      !startPetalIds.has(tile.petalId ?? 0) &&
+      !tile.isBlocked &&
+      !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+      tile.difficulty >= 0 &&
+      !game.players.some((player) => player.position === tile.id) &&
+      !game.dragons?.some(
+        (dragon) =>
+          dragon.id !== selectedDragon.id && dragon.position === tile.id,
+      ),
+    )
   const inspectedTile = game.map.tiles.find(
     (tile) => tile.id === inspectedHexId,
   )
+  const inspectedDragon =
+    game.dragons?.find((dragon) => dragon.id === inspectedDragonId) ??
+    game.dragons?.find((dragon) => dragon.position === inspectedHexId)
   const inspectedOccupants = game.players.filter(
     (player) => player.position === inspectedHexId,
   )
@@ -216,6 +257,19 @@ export function HexMap({
     currentTile && inspectedTile
       ? cubeDistance(currentTile, inspectedTile)
       : undefined
+  const dragonDistanceTo = (tile: HexTile | undefined): number => {
+    if (!tile || !game.dragons?.length) return Infinity
+    return Math.min(
+      ...game.dragons.map((dragon) => {
+        const dragonTile = game.map.tiles.find(
+          (entry) => entry.id === dragon.position,
+        )
+        return dragonTile ? cubeDistance(dragonTile, tile) : Infinity
+      }),
+    )
+  }
+  const inspectedDragonDistance = dragonDistanceTo(inspectedTile)
+  const localDragonDistance = dragonDistanceTo(currentTile)
   const inspectedCostHidden =
     inspectedTile?.terrain === 'UNKNOWN' ||
     (inspectedTile?.difficulty ?? -1) < 0 ||
@@ -227,6 +281,7 @@ export function HexMap({
           currentTile,
           inspectedTile,
           game.map.tiles,
+          game.dragons,
         )
       : []
   const inspectedTerrainCost = inspectedTile
@@ -247,6 +302,12 @@ export function HexMap({
       )
       .join(' + ')
   const openTileInfo = (hexId: string) => {
+    setInspectedDragonId(undefined)
+    setInspectedHexId(hexId)
+    if (!tileInfoDialogRef.current?.open) tileInfoDialogRef.current?.showModal()
+  }
+  const openDragonInfo = (dragonId: string, hexId: string) => {
+    setInspectedDragonId(dragonId)
     setInspectedHexId(hexId)
     if (!tileInfoDialogRef.current?.open) tileInfoDialogRef.current?.showModal()
   }
@@ -415,6 +476,7 @@ export function HexMap({
             currentTile,
             landing,
             game.map.tiles,
+            game.dragons,
           )
           return requirements.length > 0
             ? [{ obstacle, landing, requirements }]
@@ -433,6 +495,21 @@ export function HexMap({
     if (inspectedTile.terrain === 'UNKNOWN') {
       return 'Pole pozostaje nieodkryte. Zbliż się, aby poznać teren i koszt.'
     }
+    if (game.dragons?.some((dragon) => dragon.position === inspectedTile.id)) {
+      return 'Na tym polu stoi smok.'
+    }
+    if (
+      game.dragons?.some((dragon) => {
+        const dragonTile = game.map.tiles.find(
+          (tile) => tile.id === dragon.position,
+        )
+        return dragonTile
+          ? cubeDistance(dragonTile, inspectedTile) === 1
+          : false
+      })
+    ) {
+      return 'Smok blokuje pola sąsiadujące ze swoim polem.'
+    }
     if (inspectedTile.isBlocked || inspectedTerrainCost === 'BLOCKED') {
       return 'Pole jest zablokowane i nie można na nie wejść.'
     }
@@ -447,7 +524,13 @@ export function HexMap({
       localPlayer &&
       currentTile &&
       inspectedRequirements.length > 0 &&
-      !canAffordMove(localPlayer, currentTile, inspectedTile, game.map.tiles)
+      !canAffordMove(
+        localPlayer,
+        currentTile,
+        inspectedTile,
+        game.map.tiles,
+        game.dragons,
+      )
     ) {
       return 'Brakuje punktów ruchu do przejścia na to pole.'
     }
@@ -520,7 +603,13 @@ export function HexMap({
     to: HexTile,
     tiles: HexTile[],
   ): Promise<MovementPool | undefined | null> => {
-    const requirements = getEffectiveMoveRequirements(player, from, to, tiles)
+    const requirements = getEffectiveMoveRequirements(
+      player,
+      from,
+      to,
+      tiles,
+      game.dragons,
+    )
     const amount = requirements
       .filter((requirement) => requirement.type === 'ANY')
       .reduce((sum, requirement) => sum + requirement.amount, 0)
@@ -746,7 +835,8 @@ export function HexMap({
       {(localPlayer?.shortcutMoveAvailable ||
         localPlayer?.extraMoveCostPending ||
         localPlayer?.fogCostsHidden ||
-        (game.temporaryBlockedHexes?.length ?? 0) > 0) && (
+        (game.temporaryBlockedHexes?.length ?? 0) > 0 ||
+        (game.dragons?.length ?? 0) > 0) && (
         <div
           className="map-curse-notices"
           aria-label="Klątwy wpływające na mapę"
@@ -775,6 +865,20 @@ export function HexMap({
             <p>
               <strong>Pieczęć pola:</strong> pole oznaczone fioletowym × jest
               zablokowane.
+            </p>
+          )}
+          {/*{(game.dragons?.length ?? 0) > 0 && (*/}
+          {/*  <p>*/}
+          {/*    <strong>Smok:</strong> czerwone pulsujące pola są zablokowane*/}
+          {/*    przez smoka. Czerwony pierścień oznacza pola z dodatkowym kosztem*/}
+          {/*    +2 dowolnego ruchu. Kliknij smoka, aby zobaczyć zasady sterowania.*/}
+          {/*  </p>*/}
+          {/*)}*/}
+          {localDragonDistance <= 1 && (
+            <p>
+              <strong>Jesteś przy smoku:</strong> pola sąsiadujące ze smokiem są
+              zablokowane. Możesz wyjść tylko na pole poza tą strefą, jeśli masz
+              wystarczająco punktów ruchu.
             </p>
           )}
         </div>
@@ -965,17 +1069,33 @@ export function HexMap({
               ) &&
               occupiedBy.length === 0
             const isSelected = selectedHexId === tile.id
+            const tileDragonDistance = dragonDistanceTo(tile)
+            const isDragonBlockedZone = tileDragonDistance <= 1
+            const isDragonPenaltyZone = tileDragonDistance === 2
+            const isDragonTarget = isDragonMoveTarget(tile)
             const isLocalTile = localPlayer?.position === tile.id
             return (
               <g
                 key={tile.id}
-                className={`map-tile${!blockTargeting && ((isActive && (isReachable || isShortcutObstacle)) || isAvailableStart) ? ' reachable-hex' : ''}${isBlockTarget ? ' curse-target-hex' : ''}`}
+                className={`map-tile${!blockTargeting && ((isActive && (isReachable || isShortcutObstacle)) || isAvailableStart) ? ' reachable-hex' : ''}${isBlockTarget ? ' curse-target-hex' : ''}${isDragonBlockedZone ? ' dragon-block-zone' : ''}${isDragonPenaltyZone ? ' dragon-penalty-zone' : ''}${isDragonTarget ? ' dragon-target-hex' : ''}`}
                 onClick={() => {
                   setSelectedHexId(tile.id)
                   if (isAnimatingMove) return
                   if (blockTargeting) {
                     if (isBlockTarget) onBlockHex(tile.id)
                     else openTileInfo(tile.id)
+                    return
+                  }
+                  if (selectedDragon) {
+                    if (isDragonTarget) {
+                      void onMoveDragon(selectedDragon.id, tile.id).then(
+                        (ok) => {
+                          if (ok) setSelectedDragonId(undefined)
+                        },
+                      )
+                    } else {
+                      openTileInfo(tile.id)
+                    }
                     return
                   }
                   if (isActive && isReachable) {
@@ -1004,26 +1124,30 @@ export function HexMap({
                   points={polygonPoints(x, y, HEX_RADIUS)}
                   fill={tilePalette[tile.terrain].dark}
                   stroke={
-                    isAvailableStart
-                      ? '#ffe0a1'
-                      : isLocalTile
-                        ? '#f5c778'
-                        : isSelected
-                          ? '#fff2ca'
-                          : isReachable || (isActive && isShortcutObstacle)
-                            ? '#b7e8cc'
-                            : tilePalette[tile.terrain].edge
+                    isDragonTarget
+                      ? '#ff3d2e'
+                      : isAvailableStart
+                        ? '#ffe0a1'
+                        : isLocalTile
+                          ? '#f5c778'
+                          : isSelected
+                            ? '#fff2ca'
+                            : isReachable || (isActive && isShortcutObstacle)
+                              ? '#b7e8cc'
+                              : tilePalette[tile.terrain].edge
                   }
                   strokeWidth={
-                    isAvailableStart
-                      ? 3.5
-                      : isLocalTile
+                    isDragonTarget
+                      ? 4
+                      : isAvailableStart
                         ? 3.5
-                        : isSelected
-                          ? 3
-                          : isReachable || (isActive && isShortcutObstacle)
-                            ? 2.5
-                            : 1.25
+                        : isLocalTile
+                          ? 3.5
+                          : isSelected
+                            ? 3
+                            : isReachable || (isActive && isShortcutObstacle)
+                              ? 2.5
+                              : 1.25
                   }
                 />
                 <polygon
@@ -1032,6 +1156,20 @@ export function HexMap({
                   stroke="rgba(255, 249, 224, 0.24)"
                   strokeWidth="0.65"
                 />
+                {isDragonBlockedZone && (
+                  <polygon
+                    points={polygonPoints(x, y, HEX_RADIUS - 4)}
+                    className="dragon-zone-fill dragon-zone-fill--blocked"
+                    pointerEvents="none"
+                  />
+                )}
+                {isDragonPenaltyZone && (
+                  <polygon
+                    points={polygonPoints(x, y, HEX_RADIUS - 5)}
+                    className="dragon-zone-fill dragon-zone-fill--penalty"
+                    pointerEvents="none"
+                  />
+                )}
                 <path
                   d={`M${x - 16} ${y - 14}L${x} ${y - 22}L${x + 16} ${y - 14}`}
                   fill="none"
@@ -1123,6 +1261,54 @@ export function HexMap({
                     </g>
                   )
                 })}
+              </g>
+            )
+          })}
+        </g>
+        <g className="map-dragons">
+          {(game.dragons ?? []).map((dragon) => {
+            const tile = game.map.tiles.find(
+              (entry) => entry.id === dragon.position,
+            )
+            if (!tile) return null
+            const { x, y } = hexToPixel(tile.q, tile.r, HEX_SPACING)
+            const selected = selectedDragonId === dragon.id
+            return (
+              <g
+                key={dragon.id}
+                className={`map-dragon-marker${selected ? ' map-dragon-marker--selected' : ''}`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  if (isActive) {
+                    setSelectedDragonId(selected ? undefined : dragon.id)
+                    setSelectedHexId(tile.id)
+                  }
+                  openDragonInfo(dragon.id, tile.id)
+                }}
+              >
+                <title>
+                  Smok — kliknij, żeby wybrać kierunek ruchu za 6 dowolnego
+                  ruchu
+                </title>
+                <circle
+                  cx={x}
+                  cy={y - 2}
+                  r={selected ? 18 : 16}
+                  fill="#7f1d1d"
+                  stroke={selected ? '#fde68a' : '#fecaca'}
+                  strokeWidth={selected ? 3.5 : 2.5}
+                />
+                <text
+                  x={x}
+                  y={y + 5}
+                  textAnchor="middle"
+                  fill="#fff7ed"
+                  fontSize="22"
+                  fontWeight="900"
+                  pointerEvents="none"
+                >
+                  🐉
+                </text>
               </g>
             )
           })}
@@ -1407,7 +1593,10 @@ export function HexMap({
         ref={tileInfoDialogRef}
         className="tile-info-dialog"
         aria-labelledby="tile-info-title"
-        onClose={() => setInspectedHexId(undefined)}
+        onClose={() => {
+          setInspectedHexId(undefined)
+          setInspectedDragonId(undefined)
+        }}
         onClick={(event) => {
           if (event.target === event.currentTarget) {
             event.currentTarget.close()
@@ -1418,9 +1607,13 @@ export function HexMap({
           <div className="tile-info-content">
             <header>
               <div>
-                <small>Informacje o polu</small>
+                <small>
+                  {inspectedDragon ? 'Informacje o smoku' : 'Informacje o polu'}
+                </small>
                 <h2 id="tile-info-title">
-                  {terrainLabels[inspectedTile.terrain]}
+                  {inspectedDragon
+                    ? 'Smok'
+                    : terrainLabels[inspectedTile.terrain]}
                 </h2>
               </div>
               <button
@@ -1431,7 +1624,23 @@ export function HexMap({
                 ×
               </button>
             </header>
-            <p>{terrainRules[inspectedTile.terrain]}</p>
+            {inspectedDragon ? (
+              <div className="dragon-info-box">
+                <strong>Smok blokuje okolicę</strong>
+                <p>
+                  Pole smoka i wszystkie pola sąsiednie są niedostępne dla
+                  graczy. Pola oddalone o 2 hexy kosztują dodatkowe 2 dowolne
+                  punkty ruchu.
+                </p>
+                <p>
+                  W swojej turze możesz kliknąć smoka, a potem sąsiednie pole,
+                  żeby przesunąć go za 6 dowolnych punktów ruchu. Smok rusza się
+                  też losowo o 3 pola po kolejce wszystkich graczy.
+                </p>
+              </div>
+            ) : (
+              <p>{terrainRules[inspectedTile.terrain]}</p>
+            )}
             <dl>
               <div>
                 <dt>Koszt pola</dt>
@@ -1466,6 +1675,22 @@ export function HexMap({
                             : 'Sprawdź po zbliżeniu się do pola'}
                 </dd>
               </div>
+              {inspectedDragonDistance <= 2 && (
+                <div>
+                  <dt>Wpływ smoka</dt>
+                  <dd>
+                    {inspectedDragonDistance <= 1
+                      ? 'Pole zablokowane przez smoka'
+                      : '+2 dowolnego ruchu przy wejściu'}
+                  </dd>
+                </div>
+              )}
+              {inspectedDragon && (
+                <div>
+                  <dt>Sterowanie smokiem</dt>
+                  <dd>6 dowolnych punktów ruchu, ruch na sąsiednie pole</dd>
+                </div>
+              )}
               {inspectedOccupants.length > 0 && (
                 <div>
                   <dt>Gracze na polu</dt>
@@ -1476,13 +1701,29 @@ export function HexMap({
               )}
             </dl>
             <div className="tile-info-status">
-              <strong>Dlaczego nie można teraz wejść?</strong>
-              <p>{inspectedReason}</p>
+              <strong>
+                {inspectedDragon
+                  ? 'Jak działa smok?'
+                  : 'Dlaczego nie można teraz wejść?'}
+              </strong>
+              <p>
+                {inspectedDragon
+                  ? 'Kliknięty smok jest wybrany. Czerwone pola wokół niego pokazują zablokowaną strefę, a pierścień dalej pokazuje dodatkowy koszt ruchu.'
+                  : inspectedReason}
+              </p>
             </div>
             <div className="tile-info-actions">
               <strong>Możliwe działania</strong>
               <ul>
-                {inspectedActions.map((action) => (
+                {(inspectedDragon
+                  ? [
+                      canControlDragon
+                        ? 'Kliknij sąsiednie podświetlone pole, aby przesunąć smoka za 6 dowolnego ruchu.'
+                        : 'Potrzebujesz łącznie 6 punktów ruchu, żeby poruszyć smokiem.',
+                      'Smok nie może wejść na start, metę, góry, nieznane pola ani pola graczy.',
+                    ]
+                  : inspectedActions
+                ).map((action) => (
                   <li key={action}>{action}</li>
                 ))}
               </ul>

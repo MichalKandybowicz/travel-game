@@ -526,6 +526,25 @@ export function RoomPage() {
                   </select>
                 </label>
                 <label>
+                  Liczba smoków
+                  <select
+                    value={settings.dragonCount ?? 0}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        dragonCount: Number(event.target.value),
+                      })
+                    }
+                  >
+                    {[0, 1, 2, 3].map((count) => (
+                      <option key={count} value={count}>
+                        {count}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
                   Min. kręgów run na płatek
                   <select
                     value={settings.campCountMinPerPetal}

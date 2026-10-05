@@ -18,6 +18,7 @@ import {
   getEffectiveMoveRequirements,
   getReachableMovePaths,
   getMoveRequirements,
+  moveDragon,
   movePlayer,
   playCard,
   undoCardPlay,
@@ -76,6 +77,113 @@ const findReachableTile = (
 }
 
 describe('GameEngine', () => {
+  it('spawns dragons on distinct non-start petals', () => {
+    const game = createGameState(
+      'ABCDE',
+      { ...settings, petalCount: 4, dragonCount: 3 },
+      [
+        { id: 'p1', name: 'Player 1' },
+        { id: 'p2', name: 'Player 2' },
+      ],
+    )
+    const startPetals = new Set(
+      (game.map.startHexIds ?? [game.map.startHexId]).map(
+        (id) => game.map.tiles.find((tile) => tile.id === id)?.petalId ?? 0,
+      ),
+    )
+
+    expect(game.dragons?.length).toBeGreaterThan(0)
+    expect(game.dragons?.length).toBeLessThanOrEqual(3)
+    expect(
+      new Set(game.dragons?.map((dragon) => dragon.homePetalId)).size,
+    ).toBe(game.dragons?.length)
+    for (const dragon of game.dragons ?? []) {
+      const tile = game.map.tiles.find((entry) => entry.id === dragon.position)!
+      expect(startPetals.has(tile.petalId ?? 0)).toBe(false)
+      expect(['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN']).not.toContain(
+        tile.terrain,
+      )
+    }
+  })
+
+  it('blocks dragon-adjacent hexes and adds any movement at distance two', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const current = game.map.tiles.find((tile) => tile.id === player.position)!
+    const target = getNeighbors(game.map.tiles, current).find(
+      (tile) =>
+        !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        tile.difficulty >= 0,
+    )!
+    const dragonTile = getNeighbors(game.map.tiles, target).find(
+      (tile) =>
+        tile.id !== current.id &&
+        !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        tile.difficulty >= 0,
+    )!
+    game.dragons = [
+      {
+        id: 'dragon-1',
+        position: dragonTile.id,
+        homePetalId: dragonTile.petalId ?? 0,
+      },
+    ]
+    player.availableMovement.WILD = 20
+
+    expect(() => movePlayer(game, player.id, target.id)).toThrow(
+      expect.objectContaining({ code: 'HEX_BLOCKED' }),
+    )
+
+    const penaltyTarget = getNeighbors(game.map.tiles, current).find(
+      (tile) =>
+        tile.id !== target.id &&
+        axialDistance(tile, dragonTile) === 2 &&
+        !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        tile.difficulty >= 0,
+    )
+    if (penaltyTarget) {
+      const requirements = getEffectiveMoveRequirements(
+        player,
+        current,
+        penaltyTarget,
+        game.map.tiles,
+        game.dragons,
+      )
+      expect(requirements).toContainEqual({ type: 'ANY', amount: 2 })
+    }
+  })
+
+  it('lets the active player move a dragon to an adjacent valid hex for six any movement', () => {
+    const game = buildTestGame()
+    game.map.startHexIds = []
+    const player = game.players[0]!
+    const dragonTile = game.map.tiles.find(
+      (tile) =>
+        !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        tile.difficulty >= 0 &&
+        !game.players.some((entry) => entry.position === tile.id),
+    )!
+    const destination = getNeighbors(game.map.tiles, dragonTile).find(
+      (tile) =>
+        !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+        tile.difficulty >= 0 &&
+        !game.players.some((entry) => entry.position === tile.id),
+    )!
+    game.dragons = [
+      {
+        id: 'dragon-1',
+        position: dragonTile.id,
+        homePetalId: dragonTile.petalId ?? 0,
+      },
+    ]
+    player.availableMovement.WILD = 6
+
+    moveDragon(game, player.id, 'dragon-1', destination.id)
+
+    expect(game.dragons[0]!.position).toBe(destination.id)
+    expect(player.availableMovement.WILD).toBe(0)
+  })
+
   it('offers three distinct camp runes and grants only the chosen one', () => {
     const game = buildTestGame()
     const player = game.players[0]!

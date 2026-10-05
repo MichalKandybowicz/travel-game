@@ -12,6 +12,7 @@ import {
   canAffordMove,
   endTurn,
   movePlayer,
+  moveDragon,
   playCard,
   undoCardPlay,
   useActionCard as activateActionCard,
@@ -46,6 +47,7 @@ import {
   useActionCardSchema,
   discardCardSchema,
   movePlayerSchema,
+  moveDragonSchema,
   buyCardSchema,
   useTokenSchema,
   chooseCampRewardSchema,
@@ -693,7 +695,13 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      const legalMove = canAffordMove(player, currentTile, target)
+      const legalMove = canAffordMove(
+        player,
+        currentTile,
+        target,
+        game.map.tiles,
+        game.dragons,
+      )
 
       if (legalMove) {
         movePlayer(game, bot.id, target.id)
@@ -737,13 +745,27 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      const movementCard = canReachWithHand(player, currentTile, target)
+      const movementCard = canReachWithHand(
+        player,
+        currentTile,
+        target,
+        undefined,
+        game.map.tiles,
+        game.dragons,
+      )
         ? player.hand
             .filter((card) => {
               const definition = CARD_BY_ID[card.cardId]
               return (
                 definition?.type === 'MOVEMENT' &&
-                cardMovementFor(definition, currentTile, target, player) > 0
+                cardMovementFor(
+                  definition,
+                  currentTile,
+                  target,
+                  player,
+                  game.map.tiles,
+                  game.dragons,
+                ) > 0
               )
             })
             .sort(
@@ -753,12 +775,16 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
                   currentTile,
                   target,
                   player,
+                  game.map.tiles,
+                  game.dragons,
                 ) -
                 cardMovementFor(
                   CARD_BY_ID[left.cardId]!,
                   currentTile,
                   target,
                   player,
+                  game.map.tiles,
+                  game.dragons,
                 ),
             )[0]
         : undefined
@@ -1183,6 +1209,7 @@ io.on('connection', (socket) => {
         fogMode: parsed.data.settings.fogMode,
         terrainVisibilityRange: parsed.data.settings.terrainVisibilityRange,
         costVisibilityRange: parsed.data.settings.costVisibilityRange,
+        dragonCount: parsed.data.settings.dragonCount,
         difficulty: 'NORMAL',
         routeCount: 1,
       }),
@@ -1414,6 +1441,7 @@ io.on('connection', (socket) => {
     }
     const nextSettings = normalizeLobbyFogSettings({
       ...parsed.data.settings,
+      dragonCount: parsed.data.settings.dragonCount ?? 0,
       difficulty: 'NORMAL',
       routeCount: 1,
     })
@@ -1500,6 +1528,7 @@ io.on('connection', (socket) => {
         fogMode: room.settings.fogMode,
         terrainVisibilityRange: room.settings.terrainVisibilityRange ?? 4,
         costVisibilityRange: room.settings.costVisibilityRange ?? 2,
+        dragonCount: room.settings.dragonCount ?? 0,
         difficulty: 'NORMAL',
         routeCount: 1,
       })
@@ -2105,6 +2134,59 @@ io.on('connection', (socket) => {
         if (room.gameState.status === 'FINISHED') {
           room.status = 'FINISHED'
         }
+        await emitRoom(io, room)
+        scheduleBotTurns(io, room)
+        acknowledge?.({ ok: true })
+      } catch (caught) {
+        sendError(socket.id, io, caught as GameError)
+        acknowledge?.({ ok: false })
+      }
+    },
+  )
+
+  socket.on(
+    EVENTS.gameMoveDragon,
+    async (
+      payload: unknown,
+      acknowledge?: (result: { ok: boolean }) => void,
+    ) => {
+      const parsed = moveDragonSchema.safeParse(payload)
+      if (!parsed.success) {
+        sendError(socket.id, io, {
+          code: 'INVALID_ACTION',
+          message: parsed.error.message,
+        })
+        acknowledge?.({ ok: false })
+        return
+      }
+      const room = roomStore.get(parsed.data.roomCode)
+      if (!room?.gameState) {
+        sendError(socket.id, io, {
+          code: 'GAME_NOT_STARTED',
+          message: 'Game has not started.',
+        })
+        acknowledge?.({ ok: false })
+        return
+      }
+      try {
+        if (!authorizeRoomPlayer(room, socket.id, parsed.data.playerId)) {
+          sendError(socket.id, io, {
+            code: 'PLAYER_NOT_FOUND',
+            message: 'Socket is not authorized for this player.',
+          })
+          acknowledge?.({ ok: false })
+          return
+        }
+        moveDragon(
+          room.gameState,
+          parsed.data.playerId,
+          parsed.data.dragonId,
+          parsed.data.targetHexId,
+        )
+        logGameAction(room, parsed.data.playerId, 'move_dragon', {
+          dragonId: parsed.data.dragonId,
+          targetHexId: parsed.data.targetHexId,
+        })
         await emitRoom(io, room)
         scheduleBotTurns(io, room)
         acknowledge?.({ ok: true })

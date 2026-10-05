@@ -32,6 +32,7 @@ const defaultSettings: MapSettings = {
   fogMode: 'NONE',
   terrainVisibilityRange: 4,
   costVisibilityRange: 2,
+  dragonCount: 0,
 }
 
 const sessionStorageKey = 'travel-game-session'
@@ -119,6 +120,7 @@ interface GameStore {
     targetHexId: string,
     anyMovementSpent?: MovementPool,
   ) => Promise<boolean>
+  moveDragon: (dragonId: string, targetHexId: string) => Promise<boolean>
   buyCard: (cardId: string) => void
   useToken: (tokenInstanceId: string, targetPlayerId?: string) => void
   chooseCampReward: (tokenType: string) => void
@@ -423,6 +425,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
         error: {
           code: 'INVALID_ACTION',
           message: 'Nie udało się wykonać ruchu. Spróbuj ponownie.',
+        },
+      })
+      return false
+    }
+  },
+  moveDragon: async (dragonId, targetHexId) => {
+    const { session } = get()
+    if (!session) return false
+    try {
+      const result = (await getSocket()
+        .timeout(5000)
+        .emitWithAck(EVENTS.gameMoveDragon, {
+          roomCode: session.roomCode,
+          playerId: session.playerId,
+          dragonId,
+          targetHexId,
+        })) as { ok: boolean }
+      return result.ok
+    } catch {
+      set({
+        error: {
+          code: 'INVALID_ACTION',
+          message: 'Nie udało się poruszyć smokiem. Spróbuj ponownie.',
         },
       })
       return false
