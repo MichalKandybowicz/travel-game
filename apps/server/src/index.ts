@@ -232,6 +232,90 @@ const chooseBotPurchase = (
     )[0]
 }
 
+const canBotUseMarket = (game: GameState, player: PlayerState): boolean =>
+  !player.hasBoughtThisTurn &&
+  !game.marketLockedUntilPlayerId &&
+  !player.marketBlocked
+
+const getBotPurchaseCost = (
+  player: PlayerState,
+  purchase: CardDefinition,
+): number => purchase.purchaseCost + (player.nextPurchaseCostIncrease ?? 0)
+
+const chooseBotGoldCardForPurchase = (
+  game: GameState,
+  player: PlayerState,
+  from: HexTile,
+  target: HexTile,
+):
+  | { card: CardInstance; purchase: CardDefinition; purchaseCost: number }
+  | undefined => {
+  if (!canBotUseMarket(game, player)) return undefined
+  const purchase = chooseBotPurchase(game, player, from, target)
+  if (!purchase) return undefined
+
+  const purchaseCost = getBotPurchaseCost(player, purchase)
+  if (purchaseCost <= player.availableGold) return undefined
+
+  const possibleGold =
+    player.availableGold +
+    player.hand.reduce(
+      (sum, card) => sum + (CARD_BY_ID[card.cardId]?.goldValue ?? 0),
+      0,
+    )
+  if (possibleGold < purchaseCost) return undefined
+
+  const candidates = player.hand
+    .flatMap((card) => {
+      const definition = CARD_BY_ID[card.cardId]
+      return definition && definition.goldValue > 0
+        ? [{ card, definition }]
+        : []
+    })
+    .sort((left, right) => {
+      const leftScore = cardPlanScore(left.definition, from, target)
+      const rightScore = cardPlanScore(right.definition, from, target)
+      const leftMovement = cardMovementFor(
+        left.definition,
+        from,
+        target,
+        player,
+      )
+      const rightMovement = cardMovementFor(
+        right.definition,
+        from,
+        target,
+        player,
+      )
+      return (
+        leftMovement - rightMovement ||
+        leftScore - rightScore ||
+        left.definition.goldValue - right.definition.goldValue
+      )
+    })
+
+  const uselessCard = candidates.find(
+    ({ definition }) => cardMovementFor(definition, from, target, player) <= 0,
+  )
+  const card = uselessCard?.card ?? candidates[0]?.card
+  return card ? { card, purchase, purchaseCost } : undefined
+}
+
+const chooseBotAffordablePurchase = (
+  game: GameState,
+  player: PlayerState,
+  from: HexTile,
+  target: HexTile,
+): { purchase: CardDefinition; purchaseCost: number } | undefined => {
+  if (!canBotUseMarket(game, player)) return undefined
+  const purchase = chooseBotPurchase(game, player, from, target)
+  if (!purchase) return undefined
+  const purchaseCost = getBotPurchaseCost(player, purchase)
+  return purchaseCost <= player.availableGold
+    ? { purchase, purchaseCost }
+    : undefined
+}
+
 const chooseBotGoldCard = (
   player: PlayerState,
   from: HexTile,
@@ -528,52 +612,42 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         }
       }
       if (isBotStepTemporarilyBlocked(game, player, target.id)) {
-        const canBuy =
-          !player.hasBoughtThisTurn &&
-          !game.marketLockedUntilPlayerId &&
-          !player.marketBlocked
-        const purchase = canBuy
-          ? chooseBotPurchase(game, player, currentTile, target)
-          : undefined
-        const purchaseCost = purchase
-          ? purchase.purchaseCost + (player.nextPurchaseCostIncrease ?? 0)
-          : undefined
-        if (purchase && purchaseCost !== undefined) {
-          if (player.availableGold >= purchaseCost) {
-            buyCard(game, bot.id, purchase.id)
-            logGameAction(room, bot.id, 'buy_card', {
-              cardId: purchase.id,
-              purchaseCost,
-              reason: 'route_temporarily_blocked',
-            })
-            await emitRoom(io, room)
-            continue
-          }
-          const goldCard = player.hand
-            .map((card) => ({ card, definition: CARD_BY_ID[card.cardId] }))
-            .filter(
-              (
-                entry,
-              ): entry is { card: CardInstance; definition: CardDefinition } =>
-                Boolean(entry.definition?.goldValue),
-            )
-            .sort(
-              (left, right) =>
-                cardPlanScore(left.definition, currentTile, target) -
-                  cardPlanScore(right.definition, currentTile, target) ||
-                right.definition.goldValue - left.definition.goldValue,
-            )[0]?.card
-          if (goldCard) {
-            playCard(game, bot.id, goldCard.instanceId, 'GOLD')
-            logGameAction(room, bot.id, 'play_card', {
-              cardId: goldCard.cardId,
-              mode: 'GOLD',
-              reason: 'route_temporarily_blocked',
-            })
-            await emitRoom(io, room)
-            continue
-          }
+        const affordablePurchase = chooseBotAffordablePurchase(
+          game,
+          player,
+          currentTile,
+          target,
+        )
+        if (affordablePurchase) {
+          buyCard(game, bot.id, affordablePurchase.purchase.id)
+          logGameAction(room, bot.id, 'buy_card', {
+            cardId: affordablePurchase.purchase.id,
+            purchaseCost: affordablePurchase.purchaseCost,
+            reason: 'route_temporarily_blocked',
+          })
+          await emitRoom(io, room)
+          continue
         }
+
+        const goldForPurchase = chooseBotGoldCardForPurchase(
+          game,
+          player,
+          currentTile,
+          target,
+        )
+        if (goldForPurchase) {
+          playCard(game, bot.id, goldForPurchase.card.instanceId, 'GOLD')
+          logGameAction(room, bot.id, 'play_card', {
+            cardId: goldForPurchase.card.cardId,
+            mode: 'GOLD',
+            targetPurchaseCardId: goldForPurchase.purchase.id,
+            targetPurchaseCost: goldForPurchase.purchaseCost,
+            reason: 'route_temporarily_blocked_prepare_purchase',
+          })
+          await emitRoom(io, room)
+          continue
+        }
+
         endTurn(game, bot.id)
         logGameAction(room, bot.id, 'end_turn', {
           reason: 'route_temporarily_blocked',
@@ -582,6 +656,43 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         await emitRoom(io, room)
         continue
       }
+      const affordablePurchase = chooseBotAffordablePurchase(
+        game,
+        player,
+        currentTile,
+        target,
+      )
+      if (affordablePurchase) {
+        buyCard(game, bot.id, affordablePurchase.purchase.id)
+        logGameAction(room, bot.id, 'buy_card', {
+          cardId: affordablePurchase.purchase.id,
+          purchaseCost: affordablePurchase.purchaseCost,
+          curseSurcharge: player.nextPurchaseCostIncrease ?? 0,
+          reason: 'before_movement',
+        })
+        await emitRoom(io, room)
+        continue
+      }
+
+      const goldForPurchase = chooseBotGoldCardForPurchase(
+        game,
+        player,
+        currentTile,
+        target,
+      )
+      if (goldForPurchase) {
+        playCard(game, bot.id, goldForPurchase.card.instanceId, 'GOLD')
+        logGameAction(room, bot.id, 'play_card', {
+          cardId: goldForPurchase.card.cardId,
+          mode: 'GOLD',
+          targetPurchaseCardId: goldForPurchase.purchase.id,
+          targetPurchaseCost: goldForPurchase.purchaseCost,
+          reason: 'prepare_purchase_before_movement',
+        })
+        await emitRoom(io, room)
+        continue
+      }
+
       const legalMove = canAffordMove(player, currentTile, target)
 
       if (legalMove) {
@@ -609,30 +720,21 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         continue
       }
 
-      if (
-        !player.hasBoughtThisTurn &&
-        !game.marketLockedUntilPlayerId &&
-        !player.marketBlocked
-      ) {
-        const purchase = chooseBotPurchase(game, player, currentTile, target)
-        const curseSurcharge = player.nextPurchaseCostIncrease ?? 0
-        const effectivePurchaseCost = purchase
-          ? purchase.purchaseCost + curseSurcharge
-          : undefined
-        if (
-          purchase &&
-          effectivePurchaseCost !== undefined &&
-          effectivePurchaseCost <= player.availableGold
-        ) {
-          buyCard(game, bot.id, purchase.id)
-          logGameAction(room, bot.id, 'buy_card', {
-            cardId: purchase.id,
-            purchaseCost: effectivePurchaseCost,
-            curseSurcharge,
-          })
-          await emitRoom(io, room)
-          continue
-        }
+      const laterAffordablePurchase = chooseBotAffordablePurchase(
+        game,
+        player,
+        currentTile,
+        target,
+      )
+      if (laterAffordablePurchase) {
+        buyCard(game, bot.id, laterAffordablePurchase.purchase.id)
+        logGameAction(room, bot.id, 'buy_card', {
+          cardId: laterAffordablePurchase.purchase.id,
+          purchaseCost: laterAffordablePurchase.purchaseCost,
+          curseSurcharge: player.nextPurchaseCostIncrease ?? 0,
+        })
+        await emitRoom(io, room)
+        continue
       }
 
       const movementCard = canReachWithHand(player, currentTile, target)
