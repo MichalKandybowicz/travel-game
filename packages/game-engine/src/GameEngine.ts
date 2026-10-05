@@ -256,8 +256,77 @@ const isShortcutMove = (
   )
 
 const DRAGON_CONTROL_COST = 6
-const DRAGON_RANDOM_MIN_STEPS = 1
-const DRAGON_RANDOM_MAX_STEPS = 2
+const DRAGON_EDGE_DIRECTIONS = [
+  { q: 1, r: 0 },
+  { q: 0, r: 1 },
+  { q: -1, r: 1 },
+  { q: -1, r: 0 },
+  { q: 0, r: -1 },
+  { q: 1, r: -1 },
+] as const
+
+const edgeProjection = (tile: HexTile, edgeIndex: number): number => {
+  const direction =
+    DRAGON_EDGE_DIRECTIONS[edgeIndex % DRAGON_EDGE_DIRECTIONS.length]!
+  return tile.q * direction.q + tile.r * direction.r
+}
+
+const edgeExtrema = (tiles: readonly HexTile[]): number[] =>
+  DRAGON_EDGE_DIRECTIONS.map((_, edgeIndex) =>
+    Math.max(...tiles.map((tile) => edgeProjection(tile, edgeIndex))),
+  )
+
+const nearestEdgeIndex = (tiles: readonly HexTile[], tile: HexTile): number => {
+  const extrema = edgeExtrema(tiles)
+  return extrema
+    .map((edge, index) => ({
+      index,
+      distance: edge - edgeProjection(tile, index),
+    }))
+    .sort(
+      (left, right) =>
+        left.distance - right.distance || left.index - right.index,
+    )[0]!.index
+}
+
+const edgeDistance = (
+  tiles: readonly HexTile[],
+  tile: HexTile,
+  edgeIndex: number,
+): number => edgeExtrema(tiles)[edgeIndex]! - edgeProjection(tile, edgeIndex)
+
+const isAdjacentDragonEdge = (left: number, right: number): boolean => {
+  const length = DRAGON_EDGE_DIRECTIONS.length
+  const difference = Math.abs(left - right)
+  return difference <= 1 || difference === length - 1
+}
+
+const chooseDragonTargetEdge = (
+  tiles: readonly HexTile[],
+  fromEdgeIndex: number,
+  random: SeededRandom,
+): number => {
+  const options = DRAGON_EDGE_DIRECTIONS.map((_, index) => index).filter(
+    (index) => !isAdjacentDragonEdge(index, fromEdgeIndex),
+  )
+  return (
+    random.pick(options) ?? (fromEdgeIndex + 3) % DRAGON_EDGE_DIRECTIONS.length
+  )
+}
+
+const setDragonTargetFromEdge = (
+  gameState: Pick<GameState, 'map'>,
+  dragon: DragonState,
+  fromEdgeIndex: number,
+  random: SeededRandom,
+): void => {
+  dragon.lastReachedEdgeIndex = fromEdgeIndex
+  dragon.targetEdgeIndex = chooseDragonTargetEdge(
+    gameState.map.tiles,
+    fromEdgeIndex,
+    random,
+  )
+}
 
 const isDragonRestrictedTile = (tile: HexTile): boolean =>
   tile.isBlocked ||
@@ -649,10 +718,17 @@ const createDragons = (
     )
     const tile = random.pick(candidates)
     if (!tile) continue
+    const startEdgeIndex = nearestEdgeIndex(gameState.map.tiles, tile)
     dragons.push({
       id: `dragon-${dragons.length + 1}`,
       position: tile.id,
       homePetalId: petalId,
+      lastReachedEdgeIndex: startEdgeIndex,
+      targetEdgeIndex: chooseDragonTargetEdge(
+        gameState.map.tiles,
+        startEdgeIndex,
+        random,
+      ),
     })
   }
   return dragons
@@ -678,22 +754,42 @@ const isValidDragonDestination = (
 const moveDragonsRandomly = (gameState: GameState): void => {
   if (!gameState.dragons?.length) return
   const random = new SeededRandom(
-    `${gameState.seed}:${gameState.roomCode}:dragons:${gameState.roundNumber ?? 1}:${gameState.turnNumber}`,
+    `${gameState.seed}:${gameState.roomCode}:dragons:${gameState.turnNumber}`,
   )
   for (const dragon of gameState.dragons) {
-    const steps = random.int(DRAGON_RANDOM_MIN_STEPS, DRAGON_RANDOM_MAX_STEPS)
-    for (let step = 0; step < steps; step += 1) {
-      const currentTile = gameState.map.tiles.find(
-        (tile) => tile.id === dragon.position,
-      )
-      if (!currentTile) break
-      const candidates = getNeighbors(gameState.map.tiles, currentTile).filter(
-        (tile) => isValidDragonDestination(gameState, dragon, tile),
-      )
-      const next = random.pick(candidates)
-      if (!next) break
-      dragon.position = next.id
+    const currentTile = gameState.map.tiles.find(
+      (tile) => tile.id === dragon.position,
+    )
+    if (!currentTile) continue
+    const currentEdgeIndex = nearestEdgeIndex(gameState.map.tiles, currentTile)
+    if (dragon.targetEdgeIndex === undefined) {
+      setDragonTargetFromEdge(gameState, dragon, currentEdgeIndex, random)
     }
+    if (
+      dragon.targetEdgeIndex !== undefined &&
+      edgeDistance(gameState.map.tiles, currentTile, dragon.targetEdgeIndex) ===
+        0
+    ) {
+      setDragonTargetFromEdge(gameState, dragon, dragon.targetEdgeIndex, random)
+    }
+    const targetEdgeIndex = dragon.targetEdgeIndex ?? currentEdgeIndex
+    const candidates = getNeighbors(gameState.map.tiles, currentTile).filter(
+      (tile) => isValidDragonDestination(gameState, dragon, tile),
+    )
+    if (candidates.length === 0) continue
+    const bestDistance = Math.min(
+      ...candidates.map((tile) =>
+        edgeDistance(gameState.map.tiles, tile, targetEdgeIndex),
+      ),
+    )
+    const bestCandidates = candidates.filter(
+      (tile) =>
+        edgeDistance(gameState.map.tiles, tile, targetEdgeIndex) ===
+        bestDistance,
+    )
+    const next = random.pick(bestCandidates) ?? random.pick(candidates)
+    if (!next) continue
+    dragon.position = next.id
   }
 }
 
@@ -1745,6 +1841,7 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   player.fogCostsHidden = false
   player.shortcutBlocked = false
   player.marketBlocked = false
+  moveDragonsRandomly(gameState)
   let shouldSkipPlayer: boolean
   do {
     gameState.turnNumber += 1
@@ -1761,7 +1858,6 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
       gameState.temporaryBlockedHexes ?? []
     ).filter((block) => block.casterPlayerId !== gameState.currentPlayerId)
     if (gameState.currentPlayerId === gameState.players[0]?.id) {
-      moveDragonsRandomly(gameState)
       gameState.roundNumber = (gameState.roundNumber ?? 1) + 1
       gameState.roundPlayedCards = []
       for (const roundPlayer of gameState.players) {

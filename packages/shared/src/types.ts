@@ -110,6 +110,8 @@ export interface DragonState {
   id: string
   position: string
   homePetalId: number
+  targetEdgeIndex?: number
+  lastReachedEdgeIndex?: number
 }
 
 export interface GameMap {

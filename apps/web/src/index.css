@@ -1165,6 +1165,37 @@ select {
   margin: 0;
 }
 
+.map-dragon-control-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.72);
+  border-radius: 12px;
+  background: rgba(69, 10, 10, 0.72);
+  color: #fee2e2;
+  box-shadow: 0 10px 22px rgba(69, 10, 10, 0.18);
+}
+
+.map-dragon-control-notice p {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+}
+
+.map-dragon-control-notice strong {
+  color: #fecaca;
+}
+
+.map-dragon-control-notice button {
+  border: 1px solid rgba(254, 202, 202, 0.72);
+  border-radius: 999px;
+  background: rgba(127, 29, 29, 0.82);
+  color: #fff7ed;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .map-curse-costs circle {
   fill: #793394;
   stroke: #f1b7ff;

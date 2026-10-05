@@ -163,8 +163,10 @@ export function DeckPreview({ player }: { player: PlayerState | undefined }) {
     return null
   }
 
-  const allCards = piles.flatMap(({ key }) => player[key])
-  const totalStats = calculateStats(allCards)
+  const activeDeckCards = piles
+    .filter(({ key }) => key !== 'removedCards')
+    .flatMap(({ key }) => player[key])
+  const totalStats = calculateStats(activeDeckCards)
   const nextTurnStats = calculateStats(player.drawPile)
 
   return (
@@ -174,7 +176,7 @@ export function DeckPreview({ player }: { player: PlayerState | undefined }) {
         className="deck-trigger"
         onClick={() => dialogRef.current?.showModal()}
       >
-        Moja talia ({allCards.length})
+        Moja talia ({activeDeckCards.length})
       </button>
       <dialog
         ref={dialogRef}

@@ -76,6 +76,28 @@ const findReachableTile = (
   return target
 }
 
+const dragonEdgeDirections = [
+  { q: 1, r: 0 },
+  { q: 0, r: 1 },
+  { q: -1, r: 1 },
+  { q: -1, r: 0 },
+  { q: 0, r: -1 },
+  { q: 1, r: -1 },
+] as const
+
+const testEdgeProjection = (tile: HexTile, edgeIndex: number): number => {
+  const direction = dragonEdgeDirections[edgeIndex]!
+  return tile.q * direction.q + tile.r * direction.r
+}
+
+const testEdgeDistance = (
+  tiles: HexTile[],
+  tile: HexTile,
+  edgeIndex: number,
+): number =>
+  Math.max(...tiles.map((entry) => testEdgeProjection(entry, edgeIndex))) -
+  testEdgeProjection(tile, edgeIndex)
+
 describe('GameEngine', () => {
   it('spawns dragons on distinct non-start petals', () => {
     const game = createGameState(
@@ -182,6 +204,48 @@ describe('GameEngine', () => {
 
     expect(game.dragons[0]!.position).toBe(destination.id)
     expect(player.availableMovement.WILD).toBe(0)
+  })
+
+  it('moves dragons one hex toward a non-adjacent target edge after each turn', () => {
+    const game = buildTestGame()
+    game.map.startHexIds = []
+    const targetEdgeIndex = 0
+    const dragonTile = game.map.tiles
+      .filter(
+        (tile) =>
+          !['START', 'GOAL', 'MOUNTAIN', 'UNKNOWN'].includes(tile.terrain) &&
+          tile.difficulty >= 0 &&
+          !game.players.some((entry) => entry.position === tile.id),
+      )
+      .sort(
+        (left, right) =>
+          testEdgeDistance(game.map.tiles, right, targetEdgeIndex) -
+          testEdgeDistance(game.map.tiles, left, targetEdgeIndex),
+      )[0]!
+    game.dragons = [
+      {
+        id: 'dragon-1',
+        position: dragonTile.id,
+        homePetalId: dragonTile.petalId ?? 0,
+        lastReachedEdgeIndex: 3,
+        targetEdgeIndex,
+      },
+    ]
+    const beforeDistance = testEdgeDistance(
+      game.map.tiles,
+      dragonTile,
+      targetEdgeIndex,
+    )
+
+    endTurn(game, game.players[0]!.id)
+
+    const nextTile = game.map.tiles.find(
+      (tile) => tile.id === game.dragons?.[0]?.position,
+    )!
+    expect(axialDistance(dragonTile, nextTile)).toBe(1)
+    expect(
+      testEdgeDistance(game.map.tiles, nextTile, targetEdgeIndex),
+    ).toBeLessThan(beforeDistance)
   })
 
   it('offers three distinct camp runes and grants only the chosen one', () => {

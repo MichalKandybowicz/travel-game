@@ -231,6 +231,15 @@ export function HexMap({
       localPlayer.availableMovement.WILD
     : 0
   const canControlDragon = isActive && totalAvailableMovement >= 6
+  useEffect(() => {
+    if (!selectedDragonId) return
+    if (
+      !isActive ||
+      !game.dragons?.some((dragon) => dragon.id === selectedDragonId)
+    ) {
+      setSelectedDragonId(undefined)
+    }
+  }, [game.dragons, isActive, selectedDragonId])
   const startPetalIds = new Set(
     (game.map.startHexIds ?? [game.map.startHexId]).map(
       (id) => game.map.tiles.find((tile) => tile.id === id)?.petalId ?? 0,
@@ -932,6 +941,20 @@ export function HexMap({
           </button>
         </div>
       </div>
+      {selectedDragon && (
+        <div className="map-dragon-control-notice" role="status">
+          <div>
+            <strong>Tryb poruszania smokiem</strong>
+            <p>
+              Kliknij podświetlone sąsiednie pole, aby przesunąć smoka za 6
+              dowolnych punktów ruchu.
+            </p>
+          </div>
+          <button type="button" onClick={() => setSelectedDragonId(undefined)}>
+            Anuluj
+          </button>
+        </div>
+      )}
       {(localPlayer?.shortcutMoveAvailable ||
         localPlayer?.extraMoveCostPending ||
         localPlayer?.fogCostsHidden ||
@@ -1460,6 +1483,27 @@ export function HexMap({
             const length = Math.hypot(deltaX, deltaY)
             const perpendicularX = (-deltaY / length) * 5.2
             const perpendicularY = (deltaX / length) * 5.2
+            const fromDragonDistance = dragonDistanceTo(connection.from)
+            const toDragonDistance = dragonDistanceTo(connection.to)
+            const fromDragonBlocked = fromDragonDistance <= 1
+            const toDragonBlocked = toDragonDistance <= 1
+            const exitsLocalDragonBlock = Boolean(
+              currentTile &&
+              localPlayer &&
+              dragonDistanceTo(currentTile) <= 1 &&
+              (connection.from.id === currentTile.id ||
+                connection.to.id === currentTile.id) &&
+              (connection.from.id === currentTile.id
+                ? !toDragonBlocked
+                : !fromDragonBlocked),
+            )
+
+            if (
+              (fromDragonBlocked || toDragonBlocked) &&
+              !exitsLocalDragonBlock
+            ) {
+              return null
+            }
 
             if (
               connection.from.terrain === 'MOUNTAIN' ||
@@ -1477,7 +1521,17 @@ export function HexMap({
               connection.from.difficulty < 0 ||
               connection.to.difficulty < 0
                 ? [undefined]
-                : getMoveRequirements(connection.from, connection.to)
+                : exitsLocalDragonBlock && localPlayer && currentTile
+                  ? getEffectiveMoveRequirements(
+                      localPlayer,
+                      currentTile,
+                      connection.from.id === currentTile.id
+                        ? connection.to
+                        : connection.from,
+                      game.map.tiles,
+                      game.dragons,
+                    )
+                  : getMoveRequirements(connection.from, connection.to)
             if (requirements.length === 0) return null
 
             if (requirements.length === 1) {
