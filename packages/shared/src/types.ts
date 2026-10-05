@@ -249,6 +249,7 @@ export interface GameState {
   turnNumber: number
   roundNumber?: number
   market: string[]
+  marketOfferExpiresAtTurns?: number[]
   marketDrawPile: string[]
   marketCycle: number
   cardPurchaseCounts?: Record<string, number>

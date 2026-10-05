@@ -1198,13 +1198,24 @@ describe('GameEngine', () => {
     expect(game.temporaryBlockedHexes).toEqual([])
   })
 
-  it('refreshes unsold offers after a round without purchases', () => {
+  it('refreshes individual unsold offers after their player-turn lifetime', () => {
     const game = buildTestGame()
     const previousMarket = [...game.market]
     const previousMarketCycle = game.marketCycle
+    const offerLifetime = Math.max(4, Math.ceil(game.players.length * 1.2))
 
-    endTurn(game, 'p1')
-    endTurn(game, 'p2')
+    expect(game.marketOfferExpiresAtTurns).toEqual(
+      game.market.map(() => game.turnNumber + offerLifetime),
+    )
+
+    for (let turn = 0; turn < offerLifetime - 1; turn += 1) {
+      endTurn(game, game.currentPlayerId)
+    }
+
+    expect(game.market).toEqual(previousMarket)
+    expect(game.marketCycle).toBe(previousMarketCycle)
+
+    endTurn(game, game.currentPlayerId)
 
     expect(game.market).toHaveLength(4)
     expect(game.marketCycle).toBeGreaterThan(previousMarketCycle)
@@ -1219,6 +1230,7 @@ describe('GameEngine', () => {
     expect(game.market.some((cardId) => !previousMarket.includes(cardId))).toBe(
       true,
     )
+    expect(game.marketOfferExpiresAtTurns).toHaveLength(game.market.length)
   })
 
   it('keeps the current offers after a round with a purchase', () => {

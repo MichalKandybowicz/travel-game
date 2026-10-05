@@ -1774,6 +1774,30 @@ select {
   padding-bottom: 8px;
 }
 
+.market-card-expiry {
+  display: inline-flex;
+  width: fit-content;
+  max-width: calc(100% - 16px);
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  align-self: center;
+  margin: 2px 8px 8px;
+  padding: 5px 10px;
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  border-radius: 999px;
+  background: rgba(66, 32, 6, 0.76);
+  color: #fde68a;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.market-card-expiry-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
 .market-card-status {
   display: block;
   width: 100%;

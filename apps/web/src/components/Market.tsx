@@ -20,6 +20,12 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
   const isLocked = Boolean(
     game.marketLockedUntilPlayerId || player?.marketBlocked,
   )
+  const defaultOfferLifetime = Math.max(4, Math.ceil(game.players.length * 1.2))
+  const formatTurnsRemaining = (turns: number): string => {
+    if (turns <= 1) return 'Zniknie za 1 turę'
+    if (turns < 5) return `Zniknie za ${turns} tury`
+    return `Zniknie za ${turns} tur`
+  }
 
   return (
     <>
@@ -92,6 +98,13 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
               const effectiveCost = card.purchaseCost + cursePriceIncrease
               const tier = getMarketTier(card.purchaseCost)
               const copiesPurchased = game.cardPurchaseCounts?.[cardId] ?? 0
+              const expiresAtTurn = game.marketOfferExpiresAtTurns?.[index]
+              const turnsRemaining = Math.max(
+                1,
+                typeof expiresAtTurn === 'number'
+                  ? expiresAtTurn - game.turnNumber
+                  : defaultOfferLifetime,
+              )
               const affordable = availableGold >= effectiveCost
               const canBuy =
                 isActive && affordable && !hasBoughtThisTurn && !isLocked
@@ -117,6 +130,15 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                     {MARKET_CARD_COPY_LIMIT}
                   </span>
                   <CardFace card={card} purchaseCost={effectiveCost} />
+                  <span className="market-card-expiry">
+                    <span
+                      className="market-card-expiry-icon"
+                      aria-hidden="true"
+                    >
+                      ↻
+                    </span>
+                    <span>{formatTurnsRemaining(turnsRemaining)}</span>
+                  </span>
                   <span className="market-card-status">
                     {isLocked
                       ? 'Sklep zablokowany klątwą'

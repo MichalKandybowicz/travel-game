@@ -157,6 +157,19 @@ export async function connectStorage(url: string): Promise<Storage> {
                     costVisibilityRange:
                       room.gameState.settings.costVisibilityRange ?? 2,
                   },
+                  marketOfferExpiresAtTurns:
+                    room.gameState.marketOfferExpiresAtTurns ??
+                    room.gameState.market?.map(
+                      () =>
+                        (room.gameState?.turnNumber ?? 1) +
+                        Math.max(
+                          4,
+                          Math.ceil(
+                            (room.gameState?.players.length ?? 1) * 1.2,
+                          ),
+                        ),
+                    ) ??
+                    [],
                   roundPlayedCards: room.gameState.roundPlayedCards ?? [],
                   players: room.gameState.players.map((player) => ({
                     ...player,

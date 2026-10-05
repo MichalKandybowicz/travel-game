@@ -606,6 +606,7 @@ export const createGameState = (
     turnNumber: 1,
     roundNumber: 1,
     market: [],
+    marketOfferExpiresAtTurns: [],
     marketDrawPile: [],
     marketCycle: 0,
     cardPurchaseCounts: {},
@@ -718,6 +719,24 @@ const weightedMarketPick = (
   return random.pick(availableBuckets.at(-1)!.cards)
 }
 
+const getMarketOfferLifetime = (gameState: GameState): number =>
+  Math.max(4, Math.ceil(gameState.players.length * 1.2))
+
+const getNewMarketOfferExpiryTurn = (gameState: GameState): number =>
+  gameState.turnNumber + getMarketOfferLifetime(gameState)
+
+const normalizeMarketOfferExpiryTurns = (gameState: GameState): number[] => {
+  const fallbackExpiryTurn = getNewMarketOfferExpiryTurn(gameState)
+  const expiryTurns = gameState.market.map((_, index) => {
+    const expiresAt = gameState.marketOfferExpiresAtTurns?.[index]
+    return typeof expiresAt === 'number' && Number.isFinite(expiresAt)
+      ? expiresAt
+      : fallbackExpiryTurn
+  })
+  gameState.marketOfferExpiresAtTurns = expiryTurns
+  return expiryTurns
+}
+
 const createMarketOffers = (
   gameState: GameState,
   amount: number,
@@ -727,9 +746,11 @@ const createMarketOffers = (
   const random = new SeededRandom(
     `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
   )
+  const previousExpiryTurns = normalizeMarketOfferExpiryTurns(gameState)
   const retainedCounts = new Map<string, number>()
   const offers: string[] = []
-  for (const cardId of gameState.market) {
+  const offerExpiryTurns: number[] = []
+  for (const [index, cardId] of gameState.market.entries()) {
     const retainedCount = (retainedCounts.get(cardId) ?? 0) + 1
     retainedCounts.set(cardId, retainedCount)
     if (
@@ -740,6 +761,9 @@ const createMarketOffers = (
       continue
     }
     offers.push(cardId)
+    offerExpiryTurns.push(
+      previousExpiryTurns[index] ?? getNewMarketOfferExpiryTurn(gameState),
+    )
   }
   const marketCounts = new Map<string, number>()
   for (const cardId of offers) {
@@ -763,10 +787,12 @@ const createMarketOffers = (
 
   const addOffer = (cardId: string): void => {
     offers.push(cardId)
+    offerExpiryTurns.push(getNewMarketOfferExpiryTurn(gameState))
     marketCounts.set(cardId, (marketCounts.get(cardId) ?? 0) + 1)
   }
   const removeOfferAt = (index: number): void => {
     const [removed] = offers.splice(index, 1)
+    offerExpiryTurns.splice(index, 1)
     if (!removed) return
     const nextCount = (marketCounts.get(removed) ?? 1) - 1
     if (nextCount > 0) marketCounts.set(removed, nextCount)
@@ -820,7 +846,34 @@ const createMarketOffers = (
   }
 
   gameState.marketDrawPile = []
+  gameState.marketOfferExpiresAtTurns = offerExpiryTurns
   return offers
+}
+
+const refreshExpiredMarketOffers = (gameState: GameState): void => {
+  const expiryTurns = normalizeMarketOfferExpiryTurns(gameState)
+  if (!expiryTurns.some((expiresAt) => expiresAt <= gameState.turnNumber)) {
+    return
+  }
+
+  const retainedMarket: string[] = []
+  const retainedExpiryTurns: number[] = []
+  for (const [index, cardId] of gameState.market.entries()) {
+    const expiresAt =
+      expiryTurns[index] ?? getNewMarketOfferExpiryTurn(gameState)
+    if (expiresAt <= gameState.turnNumber) continue
+    retainedMarket.push(cardId)
+    retainedExpiryTurns.push(expiresAt)
+  }
+
+  gameState.marketCycle += 1
+  gameState.market = retainedMarket
+  gameState.marketOfferExpiresAtTurns = retainedExpiryTurns
+  gameState.market = createMarketOffers(
+    gameState,
+    4,
+    `expired:${gameState.turnNumber}`,
+  )
 }
 
 const replenishMarket = (gameState: GameState): void => {
@@ -831,6 +884,7 @@ const replenishMarket = (gameState: GameState): void => {
 const refreshMarket = (gameState: GameState, reason: string): void => {
   gameState.marketCycle += 1
   gameState.market = []
+  gameState.marketOfferExpiresAtTurns = []
   gameState.market = createMarketOffers(gameState, 4, reason)
 }
 
@@ -1436,6 +1490,7 @@ export const buyCard = (
   gameState.marketPurchasedThisRound = true
   const marketCardIndex = gameState.market.indexOf(cardId)
   gameState.market.splice(marketCardIndex, 1)
+  gameState.marketOfferExpiresAtTurns?.splice(marketCardIndex, 1)
   replenishMarket(gameState)
   clearUndoableCardPlays(gameState, playerId)
   return gameState
@@ -1489,6 +1544,7 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
   do {
     gameState.turnNumber += 1
     gameState.currentPlayerId = nextPlayerId(gameState)
+    refreshExpiredMarketOffers(gameState)
     const expiredBlocks = (gameState.temporaryBlockedHexes ?? []).filter(
       (block) => block.casterPlayerId === gameState.currentPlayerId,
     )
@@ -1504,9 +1560,6 @@ export const endTurn = (gameState: GameState, playerId: string): GameState => {
       gameState.roundPlayedCards = []
       for (const roundPlayer of gameState.players) {
         roundPlayer.extraMoveCostPending = false
-      }
-      if (!(gameState.marketPurchasedThisRound ?? false)) {
-        refreshMarket(gameState, 'stale')
       }
       gameState.marketPurchasedThisRound = false
     }
