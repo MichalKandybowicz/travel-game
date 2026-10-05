@@ -1291,7 +1291,7 @@ select {
 
 .hand-card-grid .hand-card:hover,
 .hand-card-grid .hand-card:focus-within {
-  z-index: 10;
+  z-index: 1000 !important;
   transform: translateY(-22px) scale(1.035);
 }
 

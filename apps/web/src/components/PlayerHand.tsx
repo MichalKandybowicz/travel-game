@@ -189,7 +189,7 @@ export function PlayerHand({
             />
           )}
           <div className="card-grid hand-card-grid">
-            {player?.hand.map((card) => {
+            {player?.hand.map((card, cardIndex) => {
               const definition = CARD_BY_ID[card.cardId]
               if (!definition) {
                 return null
@@ -203,6 +203,10 @@ export function PlayerHand({
                   data-card-type={definition.type.toLowerCase()}
                   data-action-category={definition.actionCategory?.toLowerCase()}
                   data-pending-discard={mustDiscard || undefined}
+                  style={{
+                    zIndex:
+                      (player?.hand.length ?? 0) + usedCards.length - cardIndex,
+                  }}
                 >
                   <CardFace
                     card={definition}
@@ -231,7 +235,7 @@ export function PlayerHand({
                 </div>
               )
             })}
-            {usedCards.map((play) => {
+            {usedCards.map((play, usedCardIndex) => {
               const definition = CARD_BY_ID[play.cardId]
               if (!definition) return null
               return (
@@ -243,6 +247,7 @@ export function PlayerHand({
                   data-card-type={definition.type.toLowerCase()}
                   data-action-category={definition.actionCategory?.toLowerCase()}
                   aria-label={`${cardLabels[definition.id]?.name ?? definition.name} — wykorzystana`}
+                  style={{ zIndex: usedCards.length - usedCardIndex }}
                 >
                   <CardFace card={definition} compact />
                   <span className="hand-card-used-label">Wykorzystana</span>
