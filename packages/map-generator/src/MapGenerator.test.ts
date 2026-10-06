@@ -323,12 +323,68 @@ describe('generateMap', () => {
     ).toBe(true)
   })
 
-  it('uses terrain cost ranges and creates spaced camps, mountain groups and water bodies', () => {
+  it.each(['EASY', 'NORMAL', 'HARD'] as const)(
+    'uses progressive ordinary movement costs on every petal at %s difficulty',
+    (difficulty) => {
+      const map = generateMap({ ...settings, difficulty, petalCount: 6 })
+      const ranges = [
+        [1, 2],
+        [1, 3],
+        [2, 4],
+        [2, 5],
+        [2, 5],
+        [2, 5],
+      ] as const
+      for (const [petalId, [min, max]] of ranges.entries()) {
+        const tiles = map.tiles.filter(
+          (tile) =>
+            tile.petalId === petalId &&
+            ['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain),
+        )
+        expect(tiles.length).toBeGreaterThan(0)
+        for (const tile of tiles) {
+          expect(tile.difficulty).toBeGreaterThanOrEqual(min)
+          expect(tile.difficulty).toBeLessThanOrEqual(max)
+        }
+      }
+    },
+  )
+
+  it('samples ordinary movement costs according to the petal percentages', () => {
+    const expected = [
+      [0.5, 0.5, 0, 0, 0],
+      [0.3, 0.5, 0.2, 0, 0],
+      [0, 0.4, 0.45, 0.15, 0],
+      [0, 0.2, 0.45, 0.3, 0.05],
+      [0, 0.1, 0.3, 0.4, 0.2],
+      [0, 0.1, 0.3, 0.4, 0.2],
+    ]
+    const counts = expected.map(() => [0, 0, 0, 0, 0])
+    for (let seed = 0; seed < 12; seed += 1) {
+      const map = generateMap({
+        ...settings,
+        seed: `cost-distribution-${seed}`,
+        petalCount: 6,
+      })
+      for (const tile of map.tiles) {
+        if (['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
+          counts[tile.petalId!]![tile.difficulty - 1]! += 1
+        }
+      }
+    }
+    for (const [petalId, probabilities] of expected.entries()) {
+      const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
+      expect(total).toBeGreaterThan(0)
+      for (const [index, probability] of probabilities.entries()) {
+        const frequency = counts[petalId]![index]! / total
+        if (probability === 0) expect(frequency).toBe(0)
+        else expect(Math.abs(frequency - probability)).toBeLessThan(0.05)
+      }
+    }
+  })
+
+  it('uses special terrain cost ranges and creates spaced camps, mountain groups and water bodies', () => {
     const ranges = {
-      JUNGLE: [1, 4],
-      WATER: [1, 3],
-      DESERT: [1, 4],
-      RUBBLE: [2, 4],
       CAMP: [1, 3],
       GOAL: [5, 8],
     } as const

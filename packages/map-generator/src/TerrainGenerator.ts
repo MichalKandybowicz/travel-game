@@ -8,21 +8,37 @@ import { SeededRandom } from './SeededRandom.js'
 
 type CostTerrain = 'JUNGLE' | 'WATER' | 'DESERT' | 'RUBBLE' | 'CAMP' | 'GOAL'
 
-const costRanges: Record<CostTerrain, readonly [number, number]> = {
-  JUNGLE: [1, 4],
-  WATER: [1, 3],
-  DESERT: [1, 4],
-  RUBBLE: [2, 4],
-  CAMP: [1, 3],
+const specialCostRanges = {
+  CAMP: [1, 1],
   GOAL: [5, 8],
-}
+} as const
+
+// Columns correspond to movement costs 1 through 5; rows to successive petals.
+const ordinaryCostWeights = [
+  [35, 65, 0, 0, 0],
+  [25, 50, 25, 0, 0],
+  [0, 40, 45, 15, 0],
+  [0, 20, 45, 30, 5],
+  [0, 10, 30, 40, 20],
+] as const
 
 const pickCost = (
   random: SeededRandom,
   difficulty: GameDifficulty,
   terrain: CostTerrain,
+  petalId: number,
 ): number => {
-  const [min, max] = costRanges[terrain]
+  if (terrain !== 'CAMP' && terrain !== 'GOAL') {
+    const weights =
+      ordinaryCostWeights[Math.min(petalId, ordinaryCostWeights.length - 1)]!
+    let roll = random.int(1, 100)
+    for (const [index, weight] of weights.entries()) {
+      roll -= weight
+      if (roll <= 0) return index + 1
+    }
+    throw new Error('Ordinary movement cost weights must total 100.')
+  }
+  const [min, max] = specialCostRanges[terrain]
   const roll = random.next()
   const weighted =
     difficulty === 'EASY'
@@ -356,11 +372,19 @@ export const applyTerrain = (
   )
 
   for (const tile of tiles) {
-    if (tile.terrain in costRanges) {
+    if (
+      tile.terrain === 'JUNGLE' ||
+      tile.terrain === 'WATER' ||
+      tile.terrain === 'DESERT' ||
+      tile.terrain === 'RUBBLE' ||
+      tile.terrain === 'CAMP' ||
+      tile.terrain === 'GOAL'
+    ) {
       tile.difficulty = pickCost(
         random,
         settings.difficulty,
-        tile.terrain as CostTerrain,
+        tile.terrain,
+        tile.petalId ?? 0,
       )
     }
   }
