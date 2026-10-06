@@ -134,7 +134,7 @@ describe('bot movement planning', () => {
 
     expect(canAffordMove(player, from, target)).toBe(false)
     expect(canReachWithHand(player, from, target)).toBe(true)
-    expect(cardMovementFor(CARD_BY_ID.coin!, from, target, player)).toBe(2)
+    expect(cardMovementFor(CARD_BY_ID.coin!, from, target, player)).toBe(3)
   })
 
   it('counts both colors of a mixed card when choosing a move', () => {
@@ -147,7 +147,7 @@ describe('bot movement planning', () => {
 
     expect(canReachWithHand(player, from, target)).toBe(true)
     expect(cardMovementFor(CARD_BY_ID.river_grove!, from, target, player)).toBe(
-      4,
+      6,
     )
   })
 

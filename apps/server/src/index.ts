@@ -658,43 +658,6 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         await emitRoom(io, room)
         continue
       }
-      const affordablePurchase = chooseBotAffordablePurchase(
-        game,
-        player,
-        currentTile,
-        target,
-      )
-      if (affordablePurchase) {
-        buyCard(game, bot.id, affordablePurchase.purchase.id)
-        logGameAction(room, bot.id, 'buy_card', {
-          cardId: affordablePurchase.purchase.id,
-          purchaseCost: affordablePurchase.purchaseCost,
-          curseSurcharge: player.nextPurchaseCostIncrease ?? 0,
-          reason: 'before_movement',
-        })
-        await emitRoom(io, room)
-        continue
-      }
-
-      const goldForPurchase = chooseBotGoldCardForPurchase(
-        game,
-        player,
-        currentTile,
-        target,
-      )
-      if (goldForPurchase) {
-        playCard(game, bot.id, goldForPurchase.card.instanceId, 'GOLD')
-        logGameAction(room, bot.id, 'play_card', {
-          cardId: goldForPurchase.card.cardId,
-          mode: 'GOLD',
-          targetPurchaseCardId: goldForPurchase.purchase.id,
-          targetPurchaseCost: goldForPurchase.purchaseCost,
-          reason: 'prepare_purchase_before_movement',
-        })
-        await emitRoom(io, room)
-        continue
-      }
-
       const legalMove = canAffordMove(
         player,
         currentTile,
@@ -724,23 +687,6 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
           tokenChoice.targetPlayerId,
         )
         logGameAction(room, bot.id, 'use_token', tokenChoice)
-        await emitRoom(io, room)
-        continue
-      }
-
-      const laterAffordablePurchase = chooseBotAffordablePurchase(
-        game,
-        player,
-        currentTile,
-        target,
-      )
-      if (laterAffordablePurchase) {
-        buyCard(game, bot.id, laterAffordablePurchase.purchase.id)
-        logGameAction(room, bot.id, 'buy_card', {
-          cardId: laterAffordablePurchase.purchase.id,
-          purchaseCost: laterAffordablePurchase.purchaseCost,
-          curseSurcharge: player.nextPurchaseCostIncrease ?? 0,
-        })
         await emitRoom(io, room)
         continue
       }
@@ -793,6 +739,43 @@ const runBotTurns = async (io: Server, room: RoomRecord): Promise<void> => {
         logGameAction(room, bot.id, 'play_card', {
           cardId: movementCard.cardId,
           mode: 'MOVEMENT',
+        })
+        await emitRoom(io, room)
+        continue
+      }
+
+      const affordablePurchase = chooseBotAffordablePurchase(
+        game,
+        player,
+        currentTile,
+        target,
+      )
+      if (affordablePurchase) {
+        buyCard(game, bot.id, affordablePurchase.purchase.id)
+        logGameAction(room, bot.id, 'buy_card', {
+          cardId: affordablePurchase.purchase.id,
+          purchaseCost: affordablePurchase.purchaseCost,
+          curseSurcharge: player.nextPurchaseCostIncrease ?? 0,
+          reason: 'movement_unavailable',
+        })
+        await emitRoom(io, room)
+        continue
+      }
+
+      const goldForPurchase = chooseBotGoldCardForPurchase(
+        game,
+        player,
+        currentTile,
+        target,
+      )
+      if (goldForPurchase) {
+        playCard(game, bot.id, goldForPurchase.card.instanceId, 'GOLD')
+        logGameAction(room, bot.id, 'play_card', {
+          cardId: goldForPurchase.card.cardId,
+          mode: 'GOLD',
+          targetPurchaseCardId: goldForPurchase.purchase.id,
+          targetPurchaseCost: goldForPurchase.purchaseCost,
+          reason: 'movement_unavailable_prepare_purchase',
         })
         await emitRoom(io, room)
         continue
