@@ -110,6 +110,7 @@ export interface DragonState {
   id: string
   position: string
   homePetalId: number
+  targetHexId?: string
   targetEdgeIndex?: number
   lastReachedEdgeIndex?: number
 }

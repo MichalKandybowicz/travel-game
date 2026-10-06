@@ -202,7 +202,21 @@ describe('GameEngine', () => {
 
     moveDragon(game, player.id, 'dragon-1', destination.id)
 
+    const directionEdgeIndex = dragonEdgeDirections.findIndex(
+      (direction) =>
+        direction.q === destination.q - dragonTile.q &&
+        direction.r === destination.r - dragonTile.r,
+    )
+    const targetHex = game.map.tiles.find(
+      (tile) => tile.id === game.dragons![0]!.targetHexId,
+    )
+
     expect(game.dragons[0]!.position).toBe(destination.id)
+    expect(game.dragons[0]!.targetEdgeIndex).toBe(directionEdgeIndex)
+    expect(targetHex).toBeDefined()
+    expect(
+      testEdgeDistance(game.map.tiles, targetHex!, directionEdgeIndex),
+    ).toBe(0)
     expect(player.availableMovement.WILD).toBe(0)
   })
 
