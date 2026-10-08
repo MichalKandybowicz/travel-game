@@ -3,6 +3,7 @@ import type { GameState, HexTile, MapSettings } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
   getMarketTier,
+  getMarketCardCopyLimit,
   MARKET_CARD_COPY_LIMIT,
   MARKET_CARD_IDS,
   TOKEN_DEFINITIONS,
@@ -14,7 +15,6 @@ import {
   chooseCampReward,
   createGameState,
   endTurn,
-  discardCard,
   getEffectiveMoveRequirements,
   getReachableMovePaths,
   getMoveRequirements,
@@ -846,7 +846,7 @@ describe('GameEngine', () => {
     expect(game.players[0]!.hand.at(-1)?.cardId).toBe('dune_runner')
   })
 
-  it('stops replenishing a card after three purchases in one game', () => {
+  it('stops replenishing a card after four purchases in one game', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     game.cardPurchaseCounts = {}
@@ -866,6 +866,37 @@ describe('GameEngine', () => {
     }
 
     expect(game.market).not.toContain('herbalist')
+  })
+
+  it.each([
+    [2, 4],
+    [4, 4],
+    [5, 7],
+    [6, 8],
+    [8, 10],
+  ])('limits each card to %i-player game supply', (playerCount, limit) => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    game.players = Array.from({ length: playerCount }, (_, index) =>
+      index === 0
+        ? player
+        : { ...structuredClone(player), id: `extra-${index}` },
+    )
+    expect(getMarketCardCopyLimit(playerCount)).toBe(limit)
+    game.cardPurchaseCounts = { herbalist: limit - 1 }
+    game.market = ['herbalist']
+    player.availableGold = 100
+    player.extraPurchaseAvailable = true
+
+    buyCard(game, player.id, 'herbalist')
+    expect(game.cardPurchaseCounts.herbalist).toBe(limit)
+    expect(game.market).not.toContain('herbalist')
+
+    // A stale offer cannot bypass the shared supply limit.
+    game.market.push('herbalist')
+    expect(() => buyCard(game, player.id, 'herbalist')).toThrow(
+      'No copies of that card remain in the market.',
+    )
   })
 
   it('does not keep duplicate cards in the market at the same time', () => {
@@ -895,6 +926,51 @@ describe('GameEngine', () => {
     expect(
       game.market.some((cardId) => CARD_BY_ID[cardId]!.purchaseCost <= 5),
     ).toBe(true)
+  })
+
+  it('guarantees a cheapest offer on refresh and after its purchase', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    game.cardPurchaseCounts = {}
+    const cheapestCost = Math.min(
+      ...MARKET_CARD_IDS.map((cardId) => CARD_BY_ID[cardId]!.purchaseCost),
+    )
+
+    for (let refresh = 0; refresh < 50; refresh += 1) {
+      const instanceId = `refresh-cheapest-${refresh}`
+      player.tokens!.push({ instanceId, type: 'REFRESH_MARKET' })
+      activateToken(game, player.id, instanceId)
+      expect(CARD_BY_ID[game.market[0]!]!.purchaseCost).toBe(cheapestCost)
+      game.roundNumber = (game.roundNumber ?? 1) + 1
+    }
+
+    // Exhaust all cards at the original cheapest price.
+    for (const cardId of MARKET_CARD_IDS) {
+      if (CARD_BY_ID[cardId]!.purchaseCost === cheapestCost) {
+        game.cardPurchaseCounts[cardId] = MARKET_CARD_COPY_LIMIT
+      }
+    }
+    player.tokens!.push({
+      instanceId: 'refresh-exhausted',
+      type: 'REFRESH_MARKET',
+    })
+    activateToken(game, player.id, 'refresh-exhausted')
+    const nextCheapestCost = Math.min(
+      ...MARKET_CARD_IDS.filter(
+        (cardId) => !game.cardPurchaseCounts?.[cardId],
+      ).map((cardId) => CARD_BY_ID[cardId]!.purchaseCost),
+    )
+    expect(CARD_BY_ID[game.market[0]!]!.purchaseCost).toBe(nextCheapestCost)
+
+    const cheapestCard = game.market[0]!
+    player.availableGold = nextCheapestCost
+    buyCard(game, player.id, cheapestCard)
+    expect(
+      game.market.some(
+        (cardId) => CARD_BY_ID[cardId]!.purchaseCost === nextCheapestCost,
+      ),
+    ).toBe(true)
+    expect(new Set(game.market).size).toBe(game.market.length)
   })
 
   it('keeps cheap cards common while giving expensive cards a chance', () => {

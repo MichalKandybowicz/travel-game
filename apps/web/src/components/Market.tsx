@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import { CARD_BY_ID, getMarketTier, MARKET_CARD_COPY_LIMIT } from '@shared'
+import { CARD_BY_ID, getMarketTier, getMarketCardCopyLimit } from '@shared'
 import type { GameState, PlayerState } from '@shared'
 import { cardDescription } from '../labels.js'
 import { CardFace } from './CardFace.js'
@@ -17,6 +17,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
   const availableGold = player?.availableGold ?? 0
   const hasBoughtThisTurn = player?.hasBoughtThisTurn ?? false
   const cursePriceIncrease = player?.nextPurchaseCostIncrease ?? 0
+  const copyLimit = getMarketCardCopyLimit(game.players.length)
   const isLocked = Boolean(
     game.marketLockedUntilPlayerId || player?.marketBlocked,
   )
@@ -126,8 +127,7 @@ export function Market({ game, player, isActive, onBuyCard }: MarketProps) {
                   }}
                 >
                   <span className="market-card-tier">
-                    Tier {tier} · kupiono {copiesPurchased}/
-                    {MARKET_CARD_COPY_LIMIT}
+                    Tier {tier} · kupiono {copiesPurchased}/{copyLimit}
                   </span>
                   <CardFace card={card} purchaseCost={effectiveCost} />
                   <span className="market-card-expiry">

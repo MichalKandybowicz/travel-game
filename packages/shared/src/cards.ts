@@ -1,6 +1,11 @@
 import type { CardDefinition, CardInstance, MarketTier } from './types.js'
 
-export const MARKET_CARD_COPY_LIMIT = 3
+export const MARKET_CARD_COPY_LIMIT = 4
+
+export const getMarketCardCopyLimit = (playerCount: number): number =>
+  playerCount > 4 ? playerCount + 2 : MARKET_CARD_COPY_LIMIT
+
+export const MARKET_CHEAPEST_CARD_CHANCES = [1, 0.7, 0.4, 0.2] as const
 
 export const getMarketTier = (purchaseCost: number): MarketTier => {
   if (purchaseCost <= 2) return 1
@@ -354,7 +359,7 @@ export const CARD_DEFINITIONS: CardDefinition[] = [
     movementType: 'WILD',
     movementValue: 0,
     goldValue: 1,
-    purchaseCost: 3,
+    purchaseCost: 4,
     actionEffect: 'FOG_OF_FORGETTING',
     actionCategory: 'CURSE',
   },

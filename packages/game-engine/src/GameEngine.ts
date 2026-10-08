@@ -17,7 +17,7 @@ import type {
 } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
-  MARKET_CARD_COPY_LIMIT,
+  getMarketCardCopyLimit,
   MARKET_CARD_IDS,
   TOKEN_BY_TYPE,
   TOKEN_DEFINITIONS,
@@ -30,6 +30,7 @@ import {
   SeededRandom,
 } from '../../map-generator/src/index.js'
 import { buildStartingDeck, drawCards } from './Deck.js'
+import { pickCheapestMarketCard } from './MarketSelection.js'
 
 const createMovementPool = (): MovementPool => ({
   GREEN: 0,
@@ -1136,6 +1137,7 @@ const createMarketOffers = (
   reason: string,
 ): string[] => {
   const purchaseCounts = getPurchaseCounts(gameState)
+  const copyLimit = getMarketCardCopyLimit(gameState.players.length)
   const random = new SeededRandom(
     `${gameState.seed}:${gameState.roomCode}:market:${gameState.marketCycle}:${reason}`,
   )
@@ -1150,7 +1152,7 @@ const createMarketOffers = (
       offers.includes(cardId) ||
       (isMarketSpecial(cardId) &&
         offers.some((offer) => isMarketSpecial(offer))) ||
-      (purchaseCounts[cardId] ?? 0) + retainedCount > MARKET_CARD_COPY_LIMIT
+      (purchaseCounts[cardId] ?? 0) + retainedCount > copyLimit
     ) {
       continue
     }
@@ -1169,7 +1171,7 @@ const createMarketOffers = (
   ): string[] =>
     MARKET_CARD_IDS.flatMap((cardId) => {
       if (marketCounts.has(cardId)) return []
-      const remaining = MARKET_CARD_COPY_LIMIT - (purchaseCounts[cardId] ?? 0)
+      const remaining = copyLimit - (purchaseCounts[cardId] ?? 0)
       return remaining > 0 &&
         CARD_BY_ID[cardId]!.purchaseCost <= maxCost &&
         (allowSpecial || !isMarketSpecial(cardId))
@@ -1191,22 +1193,54 @@ const createMarketOffers = (
     else marketCounts.delete(removed)
   }
 
-  if (
-    offers.length < amount &&
-    !offers.some((cardId) => isMarketSpecial(cardId)) &&
-    random.next() < MARKET_SPECIAL_CHANCE
-  ) {
-    const specialOffer = weightedMarketPick(
-      random,
-      availableCards(true).filter(isMarketSpecial),
-    )
-    if (specialOffer) addOffer(specialOffer)
-  }
+  // Count retained cheapest offers before drawing replacements.
+  const remainingCards = MARKET_CARD_IDS.filter(
+    (cardId) => (purchaseCounts[cardId] ?? 0) < copyLimit,
+  )
+  const cheapestCost = Math.min(
+    ...remainingCards.map((cardId) => CARD_BY_ID[cardId]!.purchaseCost),
+  )
+  let cheapestOfferCount = offers.filter(
+    (cardId) => CARD_BY_ID[cardId]!.purchaseCost === cheapestCost,
+  ).length
 
   while (offers.length < amount) {
-    const nextOffer = weightedMarketPick(random, availableCards(false))
+    const allowSpecial = !offers.some(isMarketSpecial)
+    const candidates = availableCards(allowSpecial)
+    if (candidates.length === 0) break
+    const nextCheapestCost = Math.min(
+      ...candidates.map((cardId) => CARD_BY_ID[cardId]!.purchaseCost),
+    )
+    const cheapestOffer = pickCheapestMarketCard(
+      random,
+      candidates,
+      cheapestOfferCount,
+    )
+    if (cheapestOffer) {
+      addOffer(cheapestOffer)
+      cheapestOfferCount += 1
+      continue
+    }
+
+    // Exclude the cheapest cards on a failed roll so the chances stay exact.
+    const moreExpensive = candidates.filter(
+      (cardId) => CARD_BY_ID[cardId]!.purchaseCost > nextCheapestCost,
+    )
+    const specialCandidates = moreExpensive.filter(isMarketSpecial)
+    const movementCandidates = moreExpensive.filter(
+      (cardId) => !isMarketSpecial(cardId),
+    )
+    const nextOffer =
+      (specialCandidates.length > 0 && random.next() < MARKET_SPECIAL_CHANCE
+        ? weightedMarketPick(random, specialCandidates)
+        : weightedMarketPick(random, movementCandidates)) ??
+      weightedMarketPick(random, moreExpensive) ??
+      random.pick(candidates)
     if (!nextOffer) break
     addOffer(nextOffer)
+    if (CARD_BY_ID[nextOffer]!.purchaseCost === nextCheapestCost) {
+      cheapestOfferCount += 1
+    }
   }
 
   while (
@@ -1910,7 +1944,10 @@ export const buyCard = (
   }
   const cardDefinition = definition!
   const purchaseCounts = getPurchaseCounts(gameState)
-  if ((purchaseCounts[cardId] ?? 0) >= MARKET_CARD_COPY_LIMIT) {
+  if (
+    (purchaseCounts[cardId] ?? 0) >=
+    getMarketCardCopyLimit(gameState.players.length)
+  ) {
     error('INVALID_ACTION', 'No copies of that card remain in the market.')
   }
   const purchaseCost =
