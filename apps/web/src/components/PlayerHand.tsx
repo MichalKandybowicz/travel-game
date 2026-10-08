@@ -1,4 +1,4 @@
-import { CARD_BY_ID } from '@shared'
+import { CARD_BY_ID, SACRIFICE_COOLDOWN_TURNS } from '@shared'
 import { useRef, useState, type ReactNode } from 'react'
 import type { CardPlayMode, GameState, PlayerState } from '@shared'
 import { cardDescription, cardLabels, cardMovementValues } from '../labels.js'
@@ -431,8 +431,8 @@ export function PlayerHand({
             </button>
           </header>
           <p className="sacrifice-dialog-warning">
-            Karta zniknie z talii na stałe. Po rytuale nie można palić kart
-            przez 5 kolejnych własnych tur.
+            Karta zniknie z talii na stałe. Po rytuale ponowne spalanie będzie
+            dostępne po upływie {SACRIFICE_COOLDOWN_TURNS} własnych tur.
           </p>
           <div className="sacrifice-card-list">
             {sacrificeCards.map((card) => {

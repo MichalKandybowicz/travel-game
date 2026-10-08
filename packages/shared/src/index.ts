@@ -1,5 +1,6 @@
 export * from './cards.js'
 export * from './events.js'
+export * from './gameRules.js'
 export * from './mapCapacity.js'
 export * from './playerAppearance.js'
 export * from './schemas.js'

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { GameState, HexTile, MapSettings } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
+  SACRIFICE_COOLDOWN_TURNS,
   getMarketTier,
   getMarketCardCopyLimit,
   MARKET_CARD_COPY_LIMIT,
@@ -1846,7 +1847,7 @@ describe('GameEngine', () => {
     )
   })
 
-  it('doubles a sacrificed card and blocks another sacrifice for five own turns', () => {
+  it('doubles a sacrificed card and blocks another sacrifice for the configured own turns', () => {
     const game = buildTestGame()
     const player = game.players[0]!
     player.hand.push(
@@ -1863,7 +1864,7 @@ describe('GameEngine', () => {
       cardId: 'coin',
       instanceId: 'sacrificed-coin',
     })
-    expect(player.sacrificeCooldownTurns).toBe(5)
+    expect(player.sacrificeCooldownTurns).toBe(SACRIFICE_COOLDOWN_TURNS)
     expect(player.playedCards).not.toContainEqual(
       expect.objectContaining({ instanceId: 'sacrificed-coin' }),
     )
@@ -1874,7 +1875,11 @@ describe('GameEngine', () => {
     endTurn(game, player.id)
     endTurn(game, 'p2')
 
-    for (let blockedTurn = 5; blockedTurn >= 1; blockedTurn -= 1) {
+    for (
+      let blockedTurn = SACRIFICE_COOLDOWN_TURNS;
+      blockedTurn >= 1;
+      blockedTurn -= 1
+    ) {
       expect(player.sacrificeCooldownTurns).toBe(blockedTurn)
       expect(() =>
         playCard(game, player.id, 'second-sacrifice', 'GOLD', true),

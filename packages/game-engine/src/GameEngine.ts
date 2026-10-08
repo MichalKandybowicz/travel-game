@@ -17,6 +17,7 @@ import type {
 } from '../../shared/src/index.js'
 import {
   CARD_BY_ID,
+  SACRIFICE_COOLDOWN_TURNS,
   getMarketCardCopyLimit,
   MARKET_CARD_IDS,
   TOKEN_BY_TYPE,
@@ -1348,7 +1349,7 @@ export const playCard = (
   ) {
     error(
       'INVALID_ACTION',
-      'A card cannot be sacrificed while the five-turn cooldown is active.',
+      `A card cannot be sacrificed while the ${SACRIFICE_COOLDOWN_TURNS}-turn cooldown is active.`,
     )
   }
   gameState.undoableCardPlays ??= {}
@@ -1369,7 +1370,7 @@ export const playCard = (
   if (sacrifice) {
     player.removedCards.push(card!)
     player.hasSacrificedCardThisTurn = true
-    player.sacrificeCooldownTurns = 5
+    player.sacrificeCooldownTurns = SACRIFICE_COOLDOWN_TURNS
   } else {
     player.playedCards.push(card!)
   }
