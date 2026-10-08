@@ -15,10 +15,10 @@ const specialCostRanges = {
 
 // Columns correspond to movement costs 1 through 5; rows to successive petals.
 const ordinaryCostWeights = [
-  [35, 65, 0, 0, 0],
-  [25, 50, 25, 0, 0],
-  [0, 40, 45, 15, 0],
-  [0, 20, 45, 30, 5],
+  [35, 55, 10, 0, 0],
+  [20, 50, 30, 0, 0],
+  [0, 40, 40, 20, 0],
+  [0, 20, 50, 35, 0],
   [0, 10, 30, 40, 20],
 ] as const
 
