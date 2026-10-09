@@ -28,6 +28,7 @@ import {
   axialDistance,
   generateMap,
   getNeighbors,
+  getNeighborCoordinates,
   SeededRandom,
 } from '../../map-generator/src/index.js'
 import { buildStartingDeck, drawCards } from './Deck.js'
@@ -564,6 +565,14 @@ export const getReachableMovePaths = (
   const start = gameState.map.tiles.find((tile) => tile.id === player?.position)
   if (!player || !start) return new Map()
 
+  const tilesByCoordinate = new Map(
+    gameState.map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile]),
+  )
+  const neighborsOf = (tile: HexTile): HexTile[] =>
+    getNeighborCoordinates(tile.q, tile.r)
+      .map(({ q, r }) => tilesByCoordinate.get(`${q},${r}`))
+      .filter((neighbor): neighbor is HexTile => Boolean(neighbor))
+
   const queue: Array<{ tile: HexTile; player: PlayerState; path: string[] }> = [
     { tile: start, player, path: [] },
   ]
@@ -581,20 +590,24 @@ export const getReachableMovePaths = (
       state.extraMoveCostPending ? 1 : 0,
     ].join(':')
 
-  while (queue.length > 0) {
-    const current = queue.shift()!
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const current = queue[queueIndex]!
     const key = movementKey(current.player, current.tile.id)
     if (visited.has(key)) continue
     visited.add(key)
 
-    const neighbors = getNeighbors(gameState.map.tiles, current.tile)
+    const neighbors = neighborsOf(current.tile)
     if (current.player.shortcutMoveAvailable) {
-      for (const candidate of gameState.map.tiles) {
-        if (
-          !neighbors.some((neighbor) => neighbor.id === candidate.id) &&
-          isShortcutMove(gameState.map.tiles, current.tile, candidate)
-        ) {
-          neighbors.push(candidate)
+      // A shortcut can only land beside a neighboring obstacle.
+      for (const obstacle of [...neighbors]) {
+        if (!obstacle.isBlocked && obstacle.terrain !== 'MOUNTAIN') continue
+        for (const candidate of neighborsOf(obstacle)) {
+          if (
+            axialDistance(current.tile, candidate) === 2 &&
+            !neighbors.some((neighbor) => neighbor.id === candidate.id)
+          ) {
+            neighbors.push(candidate)
+          }
         }
       }
     }

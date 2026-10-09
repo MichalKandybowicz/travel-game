@@ -215,6 +215,17 @@ export function HexMap({
   } | null>(null)
   const suppressClickRef = useRef(false)
   const localPlayer = game.players.find((player) => player.id === playerId)
+  const tilesById = useMemo(
+    () => new Map(game.map.tiles.map((tile) => [tile.id, tile])),
+    [game.map.tiles],
+  )
+  const dragonTiles = useMemo(
+    () =>
+      (game.dragons ?? [])
+        .map((dragon) => tilesById.get(dragon.position))
+        .filter((tile): tile is HexTile => Boolean(tile)),
+    [game.dragons, tilesById],
+  )
   const currentTile = game.map.tiles.find(
     (tile) => tile.id === localPlayer?.position,
   )
@@ -277,12 +288,7 @@ export function HexMap({
   const dragonDistanceTo = (tile: HexTile | undefined): number => {
     if (!tile || !game.dragons?.length) return Infinity
     return Math.min(
-      ...game.dragons.map((dragon) => {
-        const dragonTile = game.map.tiles.find(
-          (entry) => entry.id === dragon.position,
-        )
-        return dragonTile ? cubeDistance(dragonTile, tile) : Infinity
-      }),
+      ...dragonTiles.map((dragonTile) => cubeDistance(dragonTile, tile)),
     )
   }
   const inspectedDragonDistance = dragonDistanceTo(inspectedTile)
@@ -375,6 +381,20 @@ export function HexMap({
     focusedView(currentTile ?? startTile, mapView),
   )
   const { zoom, pan } = view
+  const [viewportAspectRatio, setViewportAspectRatio] = useState<number>()
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry && entry.contentRect.height > 0) {
+        setViewportAspectRatio(
+          entry.contentRect.width / entry.contentRect.height,
+        )
+      }
+    })
+    observer.observe(svg)
+    return () => observer.disconnect()
+  }, [])
   const focusedGameRef = useRef(game.id)
   const focusedOwnStartRef = useRef(Boolean(currentTile))
   const focusedCampRef = useRef<string | undefined>(undefined)
@@ -464,8 +484,9 @@ export function HexMap({
     () => new Set(reachablePaths.keys()),
     [reachablePaths],
   )
-  const tilesByCoordinate = new Map(
-    game.map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile]),
+  const tilesByCoordinate = useMemo(
+    () => new Map(game.map.tiles.map((tile) => [`${tile.q},${tile.r}`, tile])),
+    [game.map.tiles],
   )
   const shortcutOptions =
     isActive &&
@@ -840,6 +861,46 @@ export function HexMap({
     )
   }, [game.map.tiles])
 
+  // Keep a margin for tile icons and connections crossing the viewport edge.
+  const visibleTileIds = useMemo(() => {
+    if (!viewportAspectRatio) {
+      return new Set(game.map.tiles.map((tile) => tile.id))
+    }
+    // SVG's default aspect-ratio handling can show more than its viewBox.
+    const width =
+      Math.max(mapView.width, mapView.height * viewportAspectRatio) / zoom
+    const height =
+      Math.max(mapView.height, mapView.width / viewportAspectRatio) / zoom
+    const halfWidth = width / 2 + HEX_SPACING * 2
+    const halfHeight = height / 2 + HEX_SPACING * 2
+    const centerX = mapView.centerX + pan.x
+    const centerY = mapView.centerY + pan.y
+    return new Set(
+      game.map.tiles
+        .filter((tile) => {
+          const point = hexToPixel(tile.q, tile.r, HEX_SPACING)
+          return (
+            Math.abs(point.x - centerX) <= halfWidth &&
+            Math.abs(point.y - centerY) <= halfHeight
+          )
+        })
+        .map((tile) => tile.id),
+    )
+  }, [game.map.tiles, mapView, pan.x, pan.y, zoom, viewportAspectRatio])
+  const visibleTiles = useMemo(
+    () => game.map.tiles.filter((tile) => visibleTileIds.has(tile.id)),
+    [game.map.tiles, visibleTileIds],
+  )
+  const visibleConnections = useMemo(
+    () =>
+      connections.filter(
+        (connection) =>
+          visibleTileIds.has(connection.from.id) ||
+          visibleTileIds.has(connection.to.id),
+      ),
+    [connections, visibleTileIds],
+  )
+
   return (
     <div className="panel map-panel">
       <div className="panel-header">
@@ -1089,7 +1150,7 @@ export function HexMap({
               <stop offset="1" stopColor={palette.dark} />
             </linearGradient>
           ))}
-          {connections.map((connection, index) => (
+          {visibleConnections.map((connection, index) => (
             <linearGradient
               key={`connection-gradient-${connection.from.id}-${connection.to.id}`}
               id={`connection-gradient-${index}`}
@@ -1108,7 +1169,7 @@ export function HexMap({
           ))}
         </defs>
         <g className="map-connections" pointerEvents="none">
-          {connections.map((connection, index) => (
+          {visibleConnections.map((connection, index) => (
             <g key={`${connection.from.id}-${connection.to.id}`}>
               <line
                 x1={connection.fromPoint.x}
@@ -1156,7 +1217,7 @@ export function HexMap({
           </g>
         )}
         <g>
-          {game.map.tiles.map((tile) => {
+          {visibleTiles.map((tile) => {
             const { x, y } = hexToPixel(tile.q, tile.r, HEX_SPACING)
             const occupiedBy = game.players.filter(
               (player) => player.position === tile.id,
@@ -1475,7 +1536,7 @@ export function HexMap({
           </g>
         )}
         <g className="map-edge-costs" pointerEvents="none">
-          {connections.map((connection) => {
+          {visibleConnections.map((connection) => {
             const middleX = (connection.fromPoint.x + connection.toPoint.x) / 2
             const middleY = (connection.fromPoint.y + connection.toPoint.y) / 2
             const deltaX = connection.toPoint.x - connection.fromPoint.x
