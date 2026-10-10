@@ -30,6 +30,8 @@ export const PLAYER_SYMBOLS = [
   'DOVE',
   'MICROPHONE',
   'SWORD',
+  'TANK',
+  'PLANE',
 ] as const
 
 export type PlayerColor = (typeof PLAYER_COLORS)[number]

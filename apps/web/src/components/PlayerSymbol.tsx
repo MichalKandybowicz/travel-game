@@ -146,6 +146,19 @@ export function PlayerSymbol({
           <path d="m5 13 6 6m-7 1 4-4m-4 4-2 2" />
         </>
       )}
+      {symbol === 'TANK' && (
+        <>
+          <path d="M8 13V8h7l3 5M15 8h7" />
+          <rect x="2" y="13" width="20" height="8" rx="4" />
+          <path d="M6 17h12" strokeWidth="3" />
+        </>
+      )}
+      {symbol === 'PLANE' && (
+        <path
+          d="M12 2c-1 0-2 1-2 3v4l-8 5v3l8-3v5l-3 2v1l5-1 5 1v-1l-3-2v-5l8 3v-3l-8-5V5c0-2-1-3-2-3Z"
+          fill="#102b32"
+        />
+      )}
     </svg>
   )
 }

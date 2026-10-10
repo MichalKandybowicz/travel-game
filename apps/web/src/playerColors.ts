@@ -28,4 +28,6 @@ export const playerSymbolLabels: Record<PlayerSymbol, string> = {
   DOVE: 'Gołąb',
   MICROPHONE: 'Mikrofon',
   SWORD: 'Miecz',
+  TANK: 'Czołg',
+  PLANE: 'Samolot',
 }
