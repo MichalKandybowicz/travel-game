@@ -1658,7 +1658,11 @@ export function HexMap({
                       game.map.tiles,
                       game.dragons,
                     )
-                  : getMoveRequirements(connection.from, connection.to)
+                  : getMoveRequirements(
+                      connection.from,
+                      connection.to,
+                      game.map.tiles,
+                    )
             if (requirements.length === 0) return null
 
             if (requirements.length === 1) {
@@ -1756,8 +1760,11 @@ export function HexMap({
                 (connection) =>
                   (connection.from.id === currentTile.id ||
                     connection.to.id === currentTile.id) &&
-                  getMoveRequirements(connection.from, connection.to).length >
-                    0,
+                  getMoveRequirements(
+                    connection.from,
+                    connection.to,
+                    game.map.tiles,
+                  ).length > 0,
               )
               .map((connection) => {
                 const middleX =
@@ -2057,6 +2064,13 @@ export function HexMap({
           Liczba na łączniku przy danym polu oznacza koszt wejścia na to pole.
           Można przejść tylko na sąsiednie pole. Uniwersalne punkty ruchu
           zastępują wymagany kolor.
+        </p>
+        <p>
+          Przejście między polami tego samego rodzaju ruchu kosztuje sumę ich
+          kosztów pomniejszoną o 1. Dla tego samego terenu bonus wynosi 2, jeśli
+          przynajmniej jedno z pól otaczają wyłącznie pola tego terenu, góry lub
+          krawędź planszy. Dotyczy to dżungli, wody, pustyni i rumowiska. Koszt
+          przejścia nie spada poniżej 1.
         </p>
         <ul>
           {terrainOrder.map((terrain) => (

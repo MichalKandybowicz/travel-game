@@ -104,6 +104,8 @@ export interface HexTile {
   isBlocked: boolean
   petalId?: number
   specialType?: 'CHOKEPOINT' | 'LOOP' | 'CAMP'
+  // Authoritative discount eligibility for visible tiles under fog of war.
+  isTerrainInterior?: boolean
 }
 
 export interface DragonState {

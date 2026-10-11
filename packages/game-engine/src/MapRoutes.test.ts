@@ -86,6 +86,17 @@ describe('findDiverseFastestRoutes', () => {
     expect(routes[0]?.cost).toBe(8)
   })
 
+  it('includes the two-point interior discount in route costs', () => {
+    const map = mapWith([
+      tile('start', 0, 0, 'JUNGLE', 3),
+      tile('interior', 1, 0, 'JUNGLE', 3),
+      tile('goal', 2, 0, 'GOAL', 1),
+    ])
+    expect(findDiverseFastestRoutes(map, 'start')).toEqual([
+      { tileIds: ['start', 'interior', 'goal'], cost: 8 },
+    ])
+  })
+
   it('returns no route when the goal cannot be reached', () => {
     const map = mapWith([
       tile('start', 0, 0, 'START'),

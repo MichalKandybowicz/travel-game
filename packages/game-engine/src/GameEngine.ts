@@ -221,9 +221,26 @@ export type MoveRequirement = {
   amount: number
 }
 
+export const isTerrainInterior = (
+  tile: HexTile,
+  tiles?: HexTile[],
+): boolean => {
+  if (!['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
+    return false
+  }
+  if (tile.isTerrainInterior !== undefined) return tile.isTerrainInterior
+  if (!tiles) return false
+  // Missing neighbors are board edges; mountains also continue the terrain.
+  return getNeighbors(tiles, tile).every(
+    (neighbor) =>
+      neighbor.terrain === tile.terrain || neighbor.terrain === 'MOUNTAIN',
+  )
+}
+
 export const getMoveRequirements = (
   from: HexTile,
   to: HexTile,
+  tiles?: HexTile[],
 ): MoveRequirement[] => {
   const fromType = getTerrainCost(from.terrain, from.difficulty)
   const toType = getTerrainCost(to.terrain, to.difficulty)
@@ -238,7 +255,14 @@ export const getMoveRequirements = (
   const fromAmount = Math.max(1, from.difficulty)
   const toAmount = Math.max(1, to.difficulty)
   if (fromType === toType) {
-    return [{ type: fromType, amount: fromAmount + toAmount - 1 }]
+    const discount =
+      from.terrain === to.terrain &&
+      (isTerrainInterior(from, tiles) || isTerrainInterior(to, tiles))
+        ? 2
+        : 1
+    return [
+      { type: fromType, amount: Math.max(1, fromAmount + toAmount - discount) },
+    ]
   }
   return [
     { type: fromType, amount: fromAmount },
@@ -492,7 +516,7 @@ export const getEffectiveMoveRequirements = (
   if (axialDistance(from, to) === 1) {
     requirements = player.guidedMoveAvailable
       ? [{ type: 'ANY', amount: 1 }]
-      : getMoveRequirements(from, to)
+      : getMoveRequirements(from, to, tiles)
   } else if (
     player.shortcutMoveAvailable &&
     tiles &&
@@ -763,7 +787,11 @@ export const routeCostToGoal = (
     if (!currentTile) continue
 
     for (const neighbor of getNeighbors(gameState.map.tiles, currentTile)) {
-      const requirements = getMoveRequirements(currentTile, neighbor)
+      const requirements = getMoveRequirements(
+        currentTile,
+        neighbor,
+        gameState.map.tiles,
+      )
       if (requirements.length === 0) continue
       const edgeCost = requirements.reduce(
         (sum, requirement) => sum + requirement.amount,
@@ -1466,6 +1494,12 @@ export const undoCardPlay = (
   return gameState
 }
 
+const consumeCurseShield = (player: PlayerState): boolean => {
+  if (!player.curseShieldAvailable) return false
+  player.curseShieldAvailable = false
+  return true
+}
+
 export const useActionCard = (
   gameState: GameState,
   playerId: string,
@@ -1519,10 +1553,7 @@ export const useActionCard = (
         ? error('INVALID_ACTION', 'Choose an opponent for this curse.')
         : findPlayer(gameState, targetPlayerId)
       : undefined
-  const curseBlocked = curseTarget?.curseShieldAvailable === true
-  if (curseBlocked) {
-    curseTarget.curseShieldAvailable = false
-  }
+  const curseBlocked = curseTarget ? consumeCurseShield(curseTarget) : false
   if (isFateSwap && !curseBlocked) {
     if (!targetHexId) error('INVALID_ACTION', 'Choose a neighboring hex.')
     fateSwapTile = findTile(gameState.map, targetHexId!)
@@ -1853,6 +1884,7 @@ export const useToken = (
   }
 
   let curseTargetPlayerId = targetPlayerId
+  let curseBlocked = false
   switch (definition.effect.kind) {
     case 'MOVEMENT':
       player.availableMovement[definition.effect.movementType] +=
@@ -1905,6 +1937,8 @@ export const useToken = (
       if (candidates.length === 0) {
         error('INVALID_ACTION', 'The opponent has no removable cards.')
       }
+      curseBlocked = consumeCurseShield(target)
+      if (curseBlocked) break
       const selected = new SeededRandom(
         `${gameState.seed}:${playerId}:token:${token.instanceId}:${targetPlayerId}`,
       ).pick(candidates)
@@ -1912,10 +1946,13 @@ export const useToken = (
       target.removedCards.push(selected.card)
       break
     }
-    case 'CURSE_SKIP_LEADER':
-      curseTargetPlayerId = closestOpponentToGoal(gameState, playerId).id
-      findPlayer(gameState, curseTargetPlayerId).skipNextTurn = true
+    case 'CURSE_SKIP_LEADER': {
+      const target = closestOpponentToGoal(gameState, playerId)
+      curseTargetPlayerId = target.id
+      curseBlocked = consumeCurseShield(target)
+      if (!curseBlocked) target.skipNextTurn = true
       break
+    }
     case 'CURSE_MARKET':
       gameState.marketLockedUntilPlayerId = playerId
       break
@@ -1923,12 +1960,13 @@ export const useToken = (
 
   player.tokens.splice(tokenIndex, 1)
   player.tokenUsedInRound = roundNumber
-  if (token.type.startsWith('CURSE_')) {
+  if (token.type.startsWith('CURSE_') && token.type !== 'CURSE_SHIELD') {
     gameState.latestCurse = {
       instanceId: token.instanceId,
       playerId,
       source: 'TOKEN',
       tokenType: token.type,
+      blocked: curseBlocked,
       ...(curseTargetPlayerId ? { targetPlayerId: curseTargetPlayerId } : {}),
     }
   }
@@ -2186,11 +2224,15 @@ export const serializePublicGameState = (
     ...(viewer.scoutedTileIds ?? []),
     ...currentVisibility.scouted,
   ])
+  const withTerrainInterior = (tile: HexTile): HexTile => ({
+    ...tile,
+    isTerrainInterior: isTerrainInterior(tile, gameState.map.tiles),
+  })
   const visibleTiles = gameState.map.tiles.flatMap((tile) => {
     if (fogMode === 'NONE') return [tile]
     if (fogMode === 'PETAL') {
       return revealedIds.has(tile.id)
-        ? [tile]
+        ? [withTerrainInterior(tile)]
         : [
             {
               ...hideSpecialType(tile),
@@ -2201,7 +2243,8 @@ export const serializePublicGameState = (
           ]
     }
     if (fogMode === 'RANGE') {
-      if (currentVisibility.revealed.has(tile.id)) return [tile]
+      if (currentVisibility.revealed.has(tile.id))
+        return [withTerrainInterior(tile)]
       if (currentVisibility.scouted.has(tile.id)) {
         return [{ ...hideSpecialType(tile), difficulty: -1 }]
       }
@@ -2214,7 +2257,7 @@ export const serializePublicGameState = (
         },
       ]
     }
-    if (revealedIds.has(tile.id)) return [tile]
+    if (revealedIds.has(tile.id)) return [withTerrainInterior(tile)]
     if (scoutedIds.has(tile.id)) {
       return [{ ...hideSpecialType(tile), difficulty: -1 }]
     }

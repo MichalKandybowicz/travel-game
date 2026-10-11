@@ -69,6 +69,16 @@ describe('custom map starts', () => {
     ).toHaveLength(10)
   })
 
+  it('discards supplied interior discounts when importing a map', () => {
+    const map = makeMap()
+    for (const tile of map.tiles) tile.isTerrainInterior = true
+    const normalized = normalizeCustomMap(map)
+    expect(normalized).toBeDefined()
+    expect(
+      normalized!.tiles.every((tile) => tile.isTerrainInterior === undefined),
+    ).toBe(true)
+  })
+
   it('requires at least four different start fields', () => {
     const map = makeMap()
     map.startHexIds = map.startHexIds!.slice(0, 3)

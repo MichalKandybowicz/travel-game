@@ -102,6 +102,8 @@ Karty zaklęć i klątw można **użyć i usunąć** albo **wymienić na 1 złot
 
 Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte na pustyni. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju. Jeśli dostępnych jest kilka rodzajów punktów, gracz wybiera, które z nich wydać; może połączyć różne rodzaje w jednej płatności.
 
+Koszt przejścia jest sumą kosztów obu pól. Gdy pola wymagają tego samego rodzaju ruchu, obowiązuje bonus **−1**. Dla pól tego samego terenu bonus wzrasta do **−2**, jeśli przynajmniej jedno z nich jest otoczone wyłącznie tym terenem, górami lub krawędzią planszy. Dotyczy to dżungli, wody, pustyni i rumowiska; koszt przejścia wynosi co najmniej **1**. Góry nadal są niedostępne.
+
 Mapę można przesuwać przeciąganiem myszą, a przybliżać i oddalać kółkiem myszy. Przyciski kierunkowe i skali pozostają dostępne.
 
 Kliknięcie pola, na które nie można teraz wejść, otwiera informacje o terenie, znanym koszcie pola i koszcie przejścia z aktualnej pozycji, powodzie niedostępności oraz możliwych działaniach. Nieodkryte typy i koszty pozostają ukryte również w tym oknie.

@@ -137,6 +137,19 @@ describe('bot movement planning', () => {
     expect(cardMovementFor(CARD_BY_ID.coin!, from, target, player)).toBe(3)
   })
 
+  it('recognizes movement made affordable by the interior discount and still charges curses', () => {
+    const from = { ...tile('from', 0, 'JUNGLE'), difficulty: 3 }
+    const target = { ...tile('target', 1, 'JUNGLE'), difficulty: 3 }
+    const tiles = [from, target]
+    const player = {
+      availableMovement: { GREEN: 4, BLUE: 0, YELLOW: 0, WILD: 0 },
+      hand: [],
+    } as unknown as PlayerState
+    expect(canReachWithHand(player, from, target, undefined, tiles)).toBe(true)
+    player.extraMoveCostPending = true
+    expect(canReachWithHand(player, from, target, undefined, tiles)).toBe(false)
+  })
+
   it('counts both colors of a mixed card when choosing a move', () => {
     const from = tile('jungle', 0, 'JUNGLE')
     const target = tile('water', 1, 'WATER')

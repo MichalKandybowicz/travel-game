@@ -39,7 +39,7 @@ export const cardMovementFor = (
 ): number => {
   const requirements = player
     ? getEffectiveMoveRequirements(player, from, target, tiles, dragons)
-    : getMoveRequirements(from, target)
+    : getMoveRequirements(from, target, tiles)
   if (requirements.length === 0) return 0
   const usefulValue = (type: CardDefinition['movementType'], value: number) =>
     type === 'WILD' ||

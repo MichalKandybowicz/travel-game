@@ -26,31 +26,35 @@ export const normalizeCustomMap = (map: GameMap): GameMap | undefined => {
   }
   const startSet = new Set(startIds)
   const goalSet = new Set(goalIds)
-  const tiles = map.tiles.map((tile) => ({
-    ...tile,
-    terrain: startSet.has(tile.id)
-      ? ('START' as const)
-      : goalSet.has(tile.id)
-        ? ('GOAL' as const)
-        : tile.terrain === 'START' || tile.terrain === 'GOAL'
-          ? ('RUBBLE' as const)
-          : tile.terrain,
-    difficulty: startSet.has(tile.id)
-      ? 1
-      : goalSet.has(tile.id)
-        ? Math.max(5, Math.min(8, tile.difficulty))
-        : tile.terrain === 'GOAL'
-          ? 3
-          : tile.terrain === 'CAMP'
-            ? Math.max(1, Math.min(3, tile.difficulty))
-            : tile.terrain === 'MOUNTAIN'
-              ? 0
-              : tile.difficulty,
-    isBlocked:
-      !startSet.has(tile.id) &&
-      !goalSet.has(tile.id) &&
-      tile.terrain === 'MOUNTAIN',
-  }))
+  const tiles = map.tiles.map(({ isTerrainInterior, ...tile }) => {
+    // Discount eligibility must come from the map, never from imported metadata.
+    void isTerrainInterior
+    return {
+      ...tile,
+      terrain: startSet.has(tile.id)
+        ? ('START' as const)
+        : goalSet.has(tile.id)
+          ? ('GOAL' as const)
+          : tile.terrain === 'START' || tile.terrain === 'GOAL'
+            ? ('RUBBLE' as const)
+            : tile.terrain,
+      difficulty: startSet.has(tile.id)
+        ? 1
+        : goalSet.has(tile.id)
+          ? Math.max(5, Math.min(8, tile.difficulty))
+          : tile.terrain === 'GOAL'
+            ? 3
+            : tile.terrain === 'CAMP'
+              ? Math.max(1, Math.min(3, tile.difficulty))
+              : tile.terrain === 'MOUNTAIN'
+                ? 0
+                : tile.difficulty,
+      isBlocked:
+        !startSet.has(tile.id) &&
+        !goalSet.has(tile.id) &&
+        tile.terrain === 'MOUNTAIN',
+    }
+  })
   const normalized = {
     ...map,
     tiles,

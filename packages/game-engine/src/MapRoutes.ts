@@ -47,7 +47,7 @@ const buildGraph = (tiles: HexTile[]): Map<string, Edge[]> => {
         .map(({ q, r }) => byCoordinate.get(hexKey(q, r)))
         .filter((neighbor): neighbor is HexTile => Boolean(neighbor))
         .flatMap((neighbor) => {
-          const requirements = getMoveRequirements(tile, neighbor)
+          const requirements = getMoveRequirements(tile, neighbor, tiles)
           return requirements.length > 0
             ? [
                 {

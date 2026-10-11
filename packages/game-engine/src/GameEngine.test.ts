@@ -19,6 +19,7 @@ import {
   getEffectiveMoveRequirements,
   getReachableMovePaths,
   getMoveRequirements,
+  isTerrainInterior,
   moveDragon,
   movePlayer,
   playCard,
@@ -317,6 +318,192 @@ describe('GameEngine', () => {
       { type: 'GREEN', amount: 4 },
     ])
   })
+
+  it.each(['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'] as const)(
+    'increases the edge discount to two inside a %s region',
+    (terrain) => {
+      const from: HexTile = {
+        id: 'interior',
+        q: 0,
+        r: 0,
+        terrain,
+        difficulty: 3,
+        isBlocked: false,
+      }
+      const to = { ...from, id: 'neighbor', q: 1 }
+      const tiles = [
+        from,
+        to,
+        ...[
+          [1, -1],
+          [0, -1],
+          [-1, 0],
+          [-1, 1],
+          [0, 1],
+        ].map(([q, r], index): HexTile => ({
+          ...from,
+          id: `surround-${index}`,
+          q: q!,
+          r: r!,
+        })),
+        {
+          ...from,
+          id: 'other-terrain',
+          q: 2,
+          terrain: 'CAMP' as const,
+        },
+      ]
+      expect(isTerrainInterior(from, tiles)).toBe(true)
+      expect(isTerrainInterior(to, tiles)).toBe(false)
+      expect(getMoveRequirements(from, to, tiles)[0]?.amount).toBe(4)
+      expect(getMoveRequirements(to, from, tiles)).toEqual(
+        getMoveRequirements(from, to, tiles),
+      )
+      expect(getMoveRequirements(from, to)[0]?.amount).toBe(5)
+    },
+  )
+
+  it('counts board edges and mountains as matching surroundings, but not other blocked terrain', () => {
+    const from: HexTile = {
+      id: 'edge',
+      q: 0,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 3,
+      isBlocked: false,
+    }
+    const to = { ...from, id: 'neighbor', q: 1 }
+    const mountain: HexTile = {
+      ...from,
+      id: 'mountain',
+      q: 0,
+      r: 1,
+      terrain: 'MOUNTAIN' as const,
+      isBlocked: true,
+    }
+    const foreign = { ...from, id: 'foreign', q: 2, terrain: 'WATER' as const }
+    const tiles = [from, to, mountain, foreign]
+    expect(getMoveRequirements(from, to, tiles)).toEqual([
+      { type: 'GREEN', amount: 4 },
+    ])
+    mountain.terrain = 'WATER'
+    expect(getMoveRequirements(from, to, tiles)).toEqual([
+      { type: 'GREEN', amount: 5 },
+    ])
+    expect(getMoveRequirements(from, mountain, tiles)).toEqual([])
+  })
+
+  it('never reduces an interior edge below one and excludes special terrains', () => {
+    const from: HexTile = {
+      id: 'from',
+      q: 0,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 1,
+      isBlocked: false,
+    }
+    const to = { ...from, id: 'to', q: 1 }
+    expect(getMoveRequirements(from, to, [from, to])).toEqual([
+      { type: 'GREEN', amount: 1 },
+    ])
+    for (const terrain of ['START', 'GOAL', 'CAMP'] as const) {
+      const specialFrom = { ...from, terrain, difficulty: 3 }
+      const specialTo = { ...to, terrain, difficulty: 3 }
+      expect(
+        getMoveRequirements(specialFrom, specialTo, [specialFrom, specialTo]),
+      ).toEqual([{ type: 'ANY', amount: 5 }])
+    }
+    const rubble = { ...from, terrain: 'RUBBLE' as const, difficulty: 3 }
+    const camp = { ...to, terrain: 'CAMP' as const, difficulty: 3 }
+    expect(getMoveRequirements(rubble, camp, [rubble, camp])).toEqual([
+      { type: 'ANY', amount: 5 },
+    ])
+  })
+
+  it('uses the interior discount for reachable paths and actual movement payment', () => {
+    const game = buildTestGame()
+    const player = game.players[0]!
+    const from: HexTile = {
+      id: 'from',
+      q: 0,
+      r: 0,
+      terrain: 'JUNGLE',
+      difficulty: 3,
+      isBlocked: false,
+    }
+    const to = { ...from, id: 'to', q: 1 }
+    game.map.tiles = [from, to]
+    player.position = from.id
+    player.availableMovement = { GREEN: 4, BLUE: 0, YELLOW: 0, WILD: 0 }
+    expect(getReachableMovePaths(game, player.id).get(to.id)).toEqual([to.id])
+    movePlayer(game, player.id, to.id)
+    expect(player.position).toBe(to.id)
+    expect(player.availableMovement.GREEN).toBe(0)
+  })
+
+  it.each(['RANGE', 'MEDIUM', 'FULL', 'PETAL'] as const)(
+    'keeps the visible edge discount consistent under %s fog',
+    (fogMode) => {
+      const game = buildTestGame()
+      game.settings.fogMode = fogMode
+      game.settings.terrainVisibilityRange = 2
+      game.settings.costVisibilityRange = 1
+      const player = game.players[0]!
+      const from: HexTile = {
+        id: 'from',
+        q: 0,
+        r: 0,
+        terrain: 'JUNGLE',
+        difficulty: 3,
+        isBlocked: false,
+        petalId: 0,
+      }
+      const to = { ...from, id: 'to', q: 1 }
+      // This foreign neighbor can be hidden or omitted by fog; it is not a board edge.
+      const foreign: HexTile = {
+        ...from,
+        id: 'foreign',
+        q: -1,
+        terrain: 'WATER' as const,
+      }
+      const distantForeign = { ...foreign, id: 'distant', q: 2 }
+      game.map.tiles = [from, to, foreign, distantForeign]
+      game.map.startHexId = from.id
+      game.map.startHexIds = [from.id]
+      player.position = to.id
+      player.revealedTileIds = [from.id, to.id]
+      player.scoutedTileIds = []
+      const visible = serializePublicGameState(game, player.id)
+      const visibleFrom = visible.map.tiles.find((tile) => tile.id === from.id)!
+      const visibleTo = visible.map.tiles.find((tile) => tile.id === to.id)!
+      expect(visibleFrom.isTerrainInterior).toBe(false)
+      expect(visibleTo.isTerrainInterior).toBe(false)
+      expect(
+        getMoveRequirements(visibleFrom, visibleTo, visible.map.tiles),
+      ).toEqual(getMoveRequirements(from, to, game.map.tiles))
+      foreign.terrain = 'JUNGLE'
+      const discounted = serializePublicGameState(game, player.id)
+      const discountedFrom = discounted.map.tiles.find(
+        (tile) => tile.id === from.id,
+      )!
+      const discountedTo = discounted.map.tiles.find(
+        (tile) => tile.id === to.id,
+      )!
+      expect(discountedFrom.isTerrainInterior).toBe(true)
+      expect(
+        getMoveRequirements(
+          discountedFrom,
+          discountedTo,
+          discounted.map.tiles,
+        )[0]?.amount,
+      ).toBe(4)
+      for (const tile of discounted.map.tiles.filter(
+        (tile) => tile.difficulty < 0,
+      )) {
+        expect(tile.isTerrainInterior).toBeUndefined()
+      }
+    },
+  )
 
   it('requires both costs when connected terrains use different movement types', () => {
     const jungle: HexTile = {
@@ -1241,6 +1428,78 @@ describe('GameEngine', () => {
     })
   })
 
+  it.each([
+    ['CARD', 'CURSE_REMOVE_CARD'],
+    ['CARD', 'CURSE_SKIP_LEADER'],
+    ['TOKEN', 'CURSE_REMOVE_CARD'],
+    ['TOKEN', 'CURSE_SKIP_LEADER'],
+  ] as const)(
+    'consumes %s protection against a %s rune exactly once',
+    (source, curseType) => {
+      const game = buildTestGame()
+      const target = game.players[0]!
+      const caster = game.players[1]!
+      if (source === 'CARD') {
+        target.hand.push({
+          cardId: 'protective_circle',
+          instanceId: 'protection',
+        })
+        activateActionCard(game, target.id, 'protection')
+      } else {
+        target.tokens!.push({ type: 'CURSE_SHIELD', instanceId: 'protection' })
+        activateToken(game, target.id, 'protection')
+      }
+      expect(target.curseShieldAvailable).toBe(true)
+      expect(game.latestCurse).toBeUndefined()
+      caster.tokens!.push({ type: curseType, instanceId: 'blocked-rune' })
+      caster.hand.push({ cardId: 'poverty_curse', instanceId: 'next-curse' })
+      endTurn(game, target.id)
+      const drawPileBefore = [...target.drawPile]
+      const discardPileBefore = [...target.discardPile]
+      const removedBefore = [...target.removedCards]
+
+      activateToken(game, caster.id, 'blocked-rune', target.id)
+
+      expect(target.curseShieldAvailable).toBe(false)
+      expect(target.skipNextTurn).not.toBe(true)
+      expect(target.drawPile).toEqual(drawPileBefore)
+      expect(target.discardPile).toEqual(discardPileBefore)
+      expect(target.removedCards).toEqual(removedBefore)
+      expect(
+        caster.tokens!.some((token) => token.instanceId === 'blocked-rune'),
+      ).toBe(false)
+      expect(caster.tokenUsedInRound).toBe(game.roundNumber)
+      expect(game.latestCurse).toMatchObject({
+        source: 'TOKEN',
+        tokenType: curseType,
+        targetPlayerId: target.id,
+        blocked: true,
+      })
+      expect(
+        serializePublicGameState(game, target.id).players.find(
+          (player) => player.id === target.id,
+        )!.curseShieldAvailable,
+      ).toBe(false)
+
+      activateActionCard(game, caster.id, 'next-curse', target.id)
+      expect(target.nextPurchaseCostIncrease).toBe(2)
+      expect(game.latestCurse?.blocked).toBe(false)
+    },
+  )
+
+  it('preserves personal protection when a rune curses the shared market', () => {
+    const game = buildTestGame()
+    const caster = game.players[0]!
+    const target = game.players[1]!
+    target.curseShieldAvailable = true
+    caster.tokens!.push({ type: 'CURSE_MARKET', instanceId: 'global-curse' })
+    activateToken(game, caster.id, 'global-curse')
+    expect(target.curseShieldAvailable).toBe(true)
+    expect(game.marketLockedUntilPlayerId).toBe(caster.id)
+    expect(game.latestCurse?.targetPlayerId).toBeUndefined()
+    expect(game.latestCurse?.blocked).toBe(false)
+  })
+
   it('doubles the next movement card with echo power', () => {
     const game = buildTestGame()
     const player = game.players[0]!
@@ -2052,7 +2311,10 @@ describe('GameEngine', () => {
     )!
     expect(
       borderView.map.tiles.find((tile) => tile.id === crossing.id),
-    ).toEqual(crossing)
+    ).toEqual({
+      ...crossing,
+      isTerrainInterior: isTerrainInterior(crossing, game.map.tiles),
+    })
     expect(borderView.map.goalHexId).toBe(game.map.goalHexId)
     expect(borderView.players[1]!.position).toBe(game.map.goalHexId)
     const otherView = serializePublicGameState(game, 'p2')
@@ -2250,9 +2512,10 @@ describe('GameEngine', () => {
 
     const view = serializePublicGameState(game, player.id)
 
-    expect(view.map.tiles.find((tile) => tile.id === revealed.id)).toEqual(
-      revealed,
-    )
+    expect(view.map.tiles.find((tile) => tile.id === revealed.id)).toEqual({
+      ...revealed,
+      isTerrainInterior: isTerrainInterior(revealed, game.map.tiles),
+    })
     expect(view.map.tiles.find((tile) => tile.id === scouted.id)).toMatchObject(
       {
         id: scouted.id,
