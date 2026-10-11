@@ -25,7 +25,7 @@ const defaultSettings: MapSettings = {
   mountainDensity: 0.15,
   specialTileDensity: 0.05,
   chokepointCount: 2,
-  allowSharedTiles: true,
+  allowSharedTiles: false,
   petalCount: 3,
   campCountMinPerPetal: 1,
   campCountMaxPerPetal: 1,

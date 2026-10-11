@@ -160,7 +160,11 @@ const createConnectedPetals = (
   return { tiles, centers }
 }
 
-export const generateMap = (settings: MapSettings): GameMap => {
+export const generateMap = (inputSettings: MapSettings): GameMap => {
+  const settings = {
+    ...inputSettings,
+    petalCount: Math.max(3, inputSettings.petalCount ?? 3),
+  }
   const radius = settings.segmentEdgeLength
     ? settings.segmentEdgeLength - 1
     : mapRadiusBySize[settings.mapSize]
@@ -169,7 +173,7 @@ export const generateMap = (settings: MapSettings): GameMap => {
     const random = new SeededRandom(`${settings.seed}:${attempt}`)
     const { tiles: grid, centers } = createConnectedPetals(
       radius,
-      settings.petalCount ?? 1,
+      settings.petalCount,
       random,
     )
     const { starts, goals } = getEndpointTiles(grid, radius, centers, random)
@@ -197,7 +201,7 @@ export const generateMap = (settings: MapSettings): GameMap => {
     )
     const provisionalMap: GameMap = {
       tiles,
-      petalCount: settings.petalCount ?? 1,
+      petalCount: settings.petalCount,
       startHexId: starts[0]!.id,
       startHexIds: starts.map((start) => start.id),
       goalHexId: goal.id,

@@ -42,7 +42,7 @@ const settings: MapSettings = {
   specialTileDensity: 0.05,
   chokepointCount: 1,
   allowSharedTiles: true,
-  petalCount: 1,
+  petalCount: 3,
   campCountMinPerPetal: 1,
   campCountMaxPerPetal: 1,
   fogMode: 'NONE',
@@ -97,8 +97,11 @@ const testEdgeDistance = (
   tile: HexTile,
   edgeIndex: number,
 ): number =>
-  Math.max(...tiles.map((entry) => testEdgeProjection(entry, edgeIndex))) -
-  testEdgeProjection(tile, edgeIndex)
+  Math.max(
+    ...tiles
+      .filter((entry) => (entry.petalId ?? 0) === (tile.petalId ?? 0))
+      .map((entry) => testEdgeProjection(entry, edgeIndex)),
+  ) - testEdgeProjection(tile, edgeIndex)
 
 describe('GameEngine', () => {
   it('spawns dragons on distinct non-start petals', () => {
@@ -2268,7 +2271,7 @@ describe('GameEngine', () => {
   it('reveals the neighboring petal when the player reaches its border', () => {
     const game = createGameState(
       'ABCDE',
-      { ...settings, petalCount: 2, fogMode: 'PETAL' },
+      { ...settings, petalCount: 3, fogMode: 'PETAL' },
       [
         { id: 'p1', name: 'Player 1' },
         { id: 'p2', name: 'Player 2' },
@@ -2315,8 +2318,21 @@ describe('GameEngine', () => {
       ...crossing,
       isTerrainInterior: isTerrainInterior(crossing, game.map.tiles),
     })
-    expect(borderView.map.goalHexId).toBe(game.map.goalHexId)
-    expect(borderView.players[1]!.position).toBe(game.map.goalHexId)
+    expect(borderView.map.goalHexId).toBe('')
+    expect(borderView.players[1]!.position).toBe('')
+    const lastBorder = game.map.tiles.find(
+      (tile) =>
+        tile.petalId === 1 &&
+        !tile.isBlocked &&
+        getNeighbors(game.map.tiles, tile).some(
+          (neighbor) => neighbor.petalId === 2,
+        ),
+    )!
+    game.players[0]!.position = lastBorder.id
+    const goalView = serializePublicGameState(game, 'p1')
+    expect(goalView.map.goalHexId).toBe(game.map.goalHexId)
+    expect(goalView.players[1]!.position).toBe(game.map.goalHexId)
+    game.players[1]!.position = crossing.id
     const otherView = serializePublicGameState(game, 'p2')
     expect(
       otherView.map.tiles

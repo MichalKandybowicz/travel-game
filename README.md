@@ -86,11 +86,11 @@ Przycisk **Opuść pokój** w poczekalni lub **Opuść grę** podczas rozgrywki 
 
 ## Zasady ruchu i terenów
 
-Rozmiar krawędzi segmentu określa długość każdej strony heksagonalnego **płatka**: od 5 do 9 pól, domyślnie 7. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 1 do 12. Generator łączy je długimi bokami w nieregularny łańcuch: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
+Rozmiar krawędzi segmentu określa długość każdej strony heksagonalnego **płatka**: od 5 do 9 pól, domyślnie 7. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 3 do 12. Generator łączy je długimi bokami w nieregularny łańcuch: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
 
 W poczekalni wszyscy gracze widzą podgląd kształtu wygenerowanej mapy. Podgląd rozróżnia płatki, ale nie pokazuje typów terenów, kosztów ani położenia celu. Zmienia się po aktualizacji ustawień mapy.
 
-W poczekalni **Ustawienia gry** są nad graczami i mapą. Można tam włączyć przenikanie graczy oraz mgłę wojny. Po włączeniu mgły samodzielnie ustawia się zasięg widoczności **typu pola** na 2–6 heksów lub całą planszę oraz zasięg widoczności **kosztu wejścia** na 1–4 heksy lub całą planszę. Widoczność kosztu odkrywa również typ pola, jeśli jej zasięg jest większy. Podgląd kształtu i **Ustawienia mapy** są w jednym panelu obok listy graczy. Przycisk **Rozpocznij grę** znajduje się obok **Opuść pokój**.
+W poczekalni **Ustawienia gry** są nad graczami i mapą. Można tam włączyć przenikanie graczy (domyślnie wyłączone) oraz mgłę wojny. Po włączeniu mgły samodzielnie ustawia się zasięg widoczności **typu pola** na 2–6 heksów lub całą planszę oraz zasięg widoczności **kosztu wejścia** na 1–4 heksy lub całą planszę. Widoczność kosztu odkrywa również typ pola, jeśli jej zasięg jest większy. Podgląd kształtu i **Ustawienia mapy** są w jednym panelu obok listy graczy. Przycisk **Rozpocznij grę** znajduje się obok **Opuść pokój**.
 
 Przy włączonej mgle nieznane pola pozostają na mapie jako szare heksy ze znakiem **?**. Znany typ pola z ukrytym kosztem pokazuje **?** zamiast kosztu. Widoczność jest liczona osobno dla każdego gracza i przesuwa się wraz z pionkiem; odległe pola ponownie się zasłaniają.
 
@@ -101,6 +101,8 @@ Każda karta na ręce ma opis i przycisk **Użyj**. Otwiera on okno z możliwymi
 Karty zaklęć i klątw można **użyć i usunąć** albo **wymienić na 1 złoto**. Wymieniona karta trafia po turze na stos odrzuconych i wraca do talii przy przetasowaniu; użycie efektu usuwa ją z gry. W jednej turze można użyć kilku zaklęć i klątw, jeśli są na ręce.
 
 Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wejścia**; ruch zużywa tyle punktów, ile wynosi ten koszt. Zielone punkty służą do wejścia do dżungli, niebieskie do wody, a żółte na pustyni. Punkty uniwersalne mogą zastąpić wymagany kolor. Na pola wymagające dowolnego koloru można wydać punkty dowolnego rodzaju. Jeśli dostępnych jest kilka rodzajów punktów, gracz wybiera, które z nich wydać; może połączyć różne rodzaje w jednej płatności.
+
+Zwykłe pola mają koszt 1–4. Rozkład zmienia się liniowo od 55% pól za 1 i 45% za 2 na pierwszym płatku do 5% za 1, 30% za 2, 50% za 3 i 15% za 4 na ostatnim płatku.
 
 Koszt przejścia jest sumą kosztów obu pól. Gdy pola wymagają tego samego rodzaju ruchu, obowiązuje bonus **−1**. Dla pól tego samego terenu bonus wzrasta do **−2**, jeśli przynajmniej jedno z nich jest otoczone wyłącznie tym terenem, górami lub krawędzią planszy. Dotyczy to dżungli, wody, pustyni i rumowiska; koszt przejścia wynosi co najmniej **1**. Góry nadal są niedostępne.
 

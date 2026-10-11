@@ -13,8 +13,8 @@ export const mapSettingsSchema = z
     mountainDensity: z.number().min(0).max(0.4),
     specialTileDensity: z.number().min(0).max(0.2),
     chokepointCount: z.number().int().min(0).max(6),
-    allowSharedTiles: z.boolean().default(true),
-    petalCount: z.number().int().min(1).max(12).default(3),
+    allowSharedTiles: z.boolean().default(false),
+    petalCount: z.number().int().min(3).max(12).default(3),
     campCountMinPerPetal: z.number().int().min(0).max(3).default(1),
     campCountMaxPerPetal: z.number().int().min(1).max(5).default(1),
     fogMode: z
@@ -82,7 +82,7 @@ export const customMapPayloadSchema = z.object({
   settings: mapSettingsSchema,
   map: z.object({
     tiles: z.array(hexTileSchema).min(1).max(1500),
-    petalCount: z.number().int().min(1).max(12).optional(),
+    petalCount: z.number().int().min(3).max(12).optional(),
     startHexId: z.string().min(1),
     startHexIds: z.array(z.string()).min(4).max(1500),
     goalHexId: z.string().min(1),

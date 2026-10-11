@@ -22,7 +22,7 @@ const settings: MapSettings = {
   specialTileDensity: 0.05,
   chokepointCount: 1,
   allowSharedTiles: true,
-  petalCount: 1,
+  petalCount: 3,
   campCountMinPerPetal: 1,
   campCountMaxPerPetal: 1,
   fogMode: 'NONE',

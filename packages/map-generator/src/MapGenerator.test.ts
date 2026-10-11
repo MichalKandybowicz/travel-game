@@ -16,7 +16,7 @@ const settings: MapSettings = {
   specialTileDensity: 0.05,
   chokepointCount: 2,
   allowSharedTiles: true,
-  petalCount: 1,
+  petalCount: 3,
   campCountMinPerPetal: 1,
   campCountMaxPerPetal: 1,
   fogMode: 'NONE',
@@ -35,7 +35,7 @@ describe('generateMap', () => {
       ).toBe(false)
     }
   })
-  it('defaults to three petals and allows at most twelve', () => {
+  it('requires three to twelve petals and defaults to three', () => {
     expect(
       mapSettingsSchema.parse({ ...settings, petalCount: undefined })
         .petalCount,
@@ -43,9 +43,19 @@ describe('generateMap', () => {
     expect(
       mapSettingsSchema.safeParse({ ...settings, petalCount: 12 }).success,
     ).toBe(true)
+    for (const petalCount of [1, 2, 13]) {
+      expect(
+        mapSettingsSchema.safeParse({ ...settings, petalCount }).success,
+      ).toBe(false)
+    }
     expect(
-      mapSettingsSchema.safeParse({ ...settings, petalCount: 13 }).success,
+      mapSettingsSchema.parse({ ...settings, allowSharedTiles: undefined })
+        .allowSharedTiles,
     ).toBe(false)
+    expect(
+      mapSettingsSchema.parse({ ...settings, allowSharedTiles: true })
+        .allowSharedTiles,
+    ).toBe(true)
   })
 
   it('returns the same map for the same seed and settings', () => {
@@ -157,8 +167,8 @@ describe('generateMap', () => {
 
   it('connects the requested number of distinct petals', () => {
     for (const petalCount of Array.from(
-      { length: 12 },
-      (_, index) => index + 1,
+      { length: 10 },
+      (_, index) => index + 3,
     )) {
       const map = generateMap({ ...settings, petalCount })
       const ids = new Set(map.tiles.map((tile) => tile.id))
@@ -329,7 +339,7 @@ describe('generateMap', () => {
       const map = generateMap({ ...settings, difficulty, petalCount: 6 })
       const ranges = [
         [1, 2],
-        [1, 3],
+        [1, 4],
         [1, 4],
         [1, 4],
         [1, 4],
@@ -352,45 +362,53 @@ describe('generateMap', () => {
 
   it.each([
     {
+      petalCount: 3,
+      expected: [
+        [0.55, 0.45, 0, 0],
+        [0.3, 0.375, 0.25, 0.075],
+        [0.05, 0.3, 0.5, 0.15],
+      ],
+    },
+    {
       petalCount: 5,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.35, 0.5, 0.15, 0],
-        [0.2, 0.5, 0.25, 0.05],
-        [0.1, 0.45, 0.35, 0.1],
-        [0.05, 0.35, 0.4, 0.2],
+        [0.425, 0.4125, 0.125, 0.0375],
+        [0.3, 0.375, 0.25, 0.075],
+        [0.175, 0.3375, 0.375, 0.1125],
+        [0.05, 0.3, 0.5, 0.15],
       ],
     },
     {
       petalCount: 6,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.39, 0.49, 0.12, 0],
-        [0.26, 0.5, 0.21, 0.03],
-        [0.16, 0.48, 0.29, 0.07],
-        [0.09, 0.43, 0.36, 0.12],
-        [0.05, 0.35, 0.4, 0.2],
+        [0.45, 0.42, 0.1, 0.03],
+        [0.35, 0.39, 0.2, 0.06],
+        [0.25, 0.36, 0.3, 0.09],
+        [0.15, 0.33, 0.4, 0.12],
+        [0.05, 0.3, 0.5, 0.15],
       ],
     },
     {
       petalCount: 9,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.45, 0.475, 0.075, 0],
-        [0.35, 0.5, 0.15, 0],
-        [0.275, 0.5, 0.2, 0.025],
-        [0.2, 0.5, 0.25, 0.05],
-        [0.15, 0.475, 0.3, 0.075],
-        [0.1, 0.45, 0.35, 0.1],
-        [0.075, 0.4, 0.375, 0.15],
-        [0.05, 0.35, 0.4, 0.2],
+        [0.4875, 0.43125, 0.0625, 0.01875],
+        [0.425, 0.4125, 0.125, 0.0375],
+        [0.3625, 0.39375, 0.1875, 0.05625],
+        [0.3, 0.375, 0.25, 0.075],
+        [0.2375, 0.35625, 0.3125, 0.09375],
+        [0.175, 0.3375, 0.375, 0.1125],
+        [0.1125, 0.31875, 0.4375, 0.13125],
+        [0.05, 0.3, 0.5, 0.15],
       ],
     },
   ])(
     'samples progressive costs across $petalCount petals',
     ({ petalCount, expected }) => {
       const counts = expected.map(() => [0, 0, 0, 0])
-      for (let seed = 0; seed < 12; seed += 1) {
+      for (let seed = 0; seed < 36; seed += 1) {
         const map = generateMap({
           ...settings,
           seed: `cost-distribution-${seed}`,
@@ -398,10 +416,22 @@ describe('generateMap', () => {
         })
         for (const tile of map.tiles) {
           if (['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
+            expect(tile.difficulty).toBeLessThanOrEqual(4)
             counts[tile.petalId!]![tile.difficulty - 1]! += 1
           }
         }
       }
+      const lastPetalCounts = counts.at(-1)!
+      const lastPetalTotal = lastPetalCounts.reduce(
+        (sum, count) => sum + count,
+        0,
+      )
+      const lastPetalMean =
+        lastPetalCounts.reduce(
+          (sum, count, index) => sum + count * (index + 1),
+          0,
+        ) / lastPetalTotal
+      expect(Math.abs(lastPetalMean - 2.75)).toBeLessThan(0.05)
       for (const [petalId, probabilities] of expected.entries()) {
         const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
         expect(total).toBeGreaterThan(0)
@@ -413,6 +443,14 @@ describe('generateMap', () => {
       }
     },
   )
+
+  it('generates at least three petals even when called with legacy settings', () => {
+    for (const petalCount of [undefined, 1, 2]) {
+      const map = generateMap({ ...settings, petalCount } as MapSettings)
+      expect(map.petalCount).toBe(3)
+      expect(new Set(map.tiles.map((tile) => tile.petalId)).size).toBe(3)
+    }
+  })
 
   it('keeps ordinary costs within 1–4 on a twelve-petal map', () => {
     const map = generateMap({ ...settings, petalCount: 12 })

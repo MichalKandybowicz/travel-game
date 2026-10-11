@@ -315,7 +315,7 @@ export function MapCreatorPage() {
                   })
                 }
               >
-                {Array.from({ length: 6 }, (_, index) => index + 1).map(
+                {Array.from({ length: 4 }, (_, index) => index + 3).map(
                   (count) => (
                     <option key={count}>{count}</option>
                   ),

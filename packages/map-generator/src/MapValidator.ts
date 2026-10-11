@@ -77,7 +77,7 @@ export const validateMap = (
   }
   if (
     analysis.shortestPathLength >
-    maximumPathLength * (settings.petalCount ?? 1)
+    maximumPathLength * (settings.petalCount ?? 3)
   ) {
     reasons.push('Map is too long.')
   }

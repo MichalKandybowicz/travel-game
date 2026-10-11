@@ -13,14 +13,11 @@ const specialCostRanges = {
   GOAL: [5, 8],
 } as const
 
-// Columns correspond to movement costs 1 through 4; rows are progression milestones.
-// Expected costs: 1.45, 1.80, 2.15, 2.45, 2.75. Longer maps interpolate between rows.
+// Columns correspond to movement costs 1 through 4.
+// Interpolate from the first to the last petal: expected cost 1.45 → 2.75.
 const ordinaryCostWeights = [
   [55, 45, 0, 0],
-  [35, 50, 15, 0],
-  [20, 50, 25, 5],
-  [10, 45, 35, 10],
-  [5, 35, 40, 20],
+  [0, 35, 50, 15],
 ] as const
 
 const pickCost = (
@@ -34,7 +31,7 @@ const pickCost = (
     const lastMilestone = ordinaryCostWeights.length - 1
     const progress = Math.min(
       lastMilestone,
-      (petalId * lastMilestone) / Math.max(lastMilestone, petalCount - 1),
+      (petalId * lastMilestone) / Math.max(1, petalCount - 1),
     )
     const lowerIndex = Math.floor(progress)
     const lower = ordinaryCostWeights[lowerIndex]!
@@ -377,7 +374,7 @@ export const applyTerrain = (
   for (const goalTile of goalTiles) goalTile.terrain = 'GOAL'
   placeCamps(
     tiles,
-    settings.petalCount ?? 1,
+    settings.petalCount ?? 3,
     settings.campCountMinPerPetal ?? 1,
     settings.campCountMaxPerPetal ?? 1,
     random,
@@ -397,7 +394,7 @@ export const applyTerrain = (
         settings.difficulty,
         tile.terrain,
         tile.petalId ?? 0,
-        settings.petalCount ?? 1,
+        settings.petalCount ?? 3,
       )
     }
   }

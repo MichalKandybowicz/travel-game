@@ -103,8 +103,13 @@ export async function connectStorage(url: string): Promise<Storage> {
             difficulty:
               room.status === 'LOBBY' ? 'NORMAL' : room.settings.difficulty,
             routeCount: room.status === 'LOBBY' ? 1 : room.settings.routeCount,
-            allowSharedTiles: room.settings.allowSharedTiles ?? true,
-            petalCount: room.settings.petalCount ?? 1,
+            allowSharedTiles: room.settings.allowSharedTiles ?? false,
+            petalCount:
+              room.status === 'LOBBY'
+                ? Math.max(3, room.settings.petalCount ?? 3)
+                : (room.settings.petalCount ??
+                  room.gameState?.map.petalCount ??
+                  3),
             campCountMinPerPetal: room.settings.campCountMinPerPetal ?? 1,
             campCountMaxPerPetal: room.settings.campCountMaxPerPetal ?? 1,
             fogMode: lobbySettings.fogMode ?? 'NONE',
@@ -146,8 +151,11 @@ export async function connectStorage(url: string): Promise<Storage> {
                   settings: {
                     ...room.gameState.settings,
                     allowSharedTiles:
-                      room.gameState.settings.allowSharedTiles ?? true,
-                    petalCount: room.gameState.settings.petalCount ?? 1,
+                      room.gameState.settings.allowSharedTiles ?? false,
+                    petalCount:
+                      room.gameState.settings.petalCount ??
+                      room.gameState.map.petalCount ??
+                      3,
                     campCountMinPerPetal:
                       room.gameState.settings.campCountMinPerPetal ?? 1,
                     campCountMaxPerPetal:

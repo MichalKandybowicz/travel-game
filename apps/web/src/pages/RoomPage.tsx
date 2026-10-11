@@ -516,7 +516,7 @@ export function RoomPage() {
                       })
                     }
                   >
-                    {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                    {Array.from({ length: 10 }, (_, index) => index + 3).map(
                       (count) => (
                         <option key={count} value={count}>
                           {count}
