@@ -9,8 +9,8 @@ import { SeededRandom } from './SeededRandom.js'
 type CostTerrain = 'JUNGLE' | 'WATER' | 'DESERT' | 'RUBBLE' | 'CAMP' | 'GOAL'
 
 const specialCostRanges = {
-  CAMP: [1, 1],
-  GOAL: [5, 8],
+  CAMP: [1, 2],
+  GOAL: [5, 6],
 } as const
 
 // Columns correspond to movement costs 1 through 4.

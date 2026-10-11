@@ -3,7 +3,10 @@ import type {
   HexTile,
   MapSettings,
   MapSize,
+  MapShape,
 } from '../../shared/src/index.js'
+import { getMinimumPetalCount } from '../../shared/src/index.js'
+import { createShapedPetals } from './PetalShapes.js'
 import {
   axialDistance,
   createHexGrid,
@@ -27,6 +30,7 @@ const getEndpointTiles = (
   radius: number,
   centers: Array<{ q: number; r: number }>,
   random: SeededRandom,
+  shape: MapShape,
 ): { starts: HexTile[]; goals: HexTile[] } => {
   const firstPetal = grid.filter((tile) => tile.petalId === 0)
   const center = centers[0]!
@@ -83,14 +87,32 @@ const getEndpointTiles = (
     side.reduce((sum, tile) => sum + axialDistance(tile, centers[0]!), 0),
   )
   const farthestSideScore = Math.max(...goalSideScores)
+  const lastContactSide = goalSides.reduce(
+    (best, side, index) => {
+      const contacts = side.reduce(
+        (sum, tile) =>
+          sum +
+          getNeighbors(grid, tile).filter(
+            (neighbor) => neighbor.petalId === lastPetalId - 1,
+          ).length,
+        0,
+      )
+      return contacts > best.contacts ? { index, contacts } : best
+    },
+    { index: 0, contacts: -1 },
+  ).index
+  const lastOppositeSide =
+    lastContactSide % 2 === 0 ? lastContactSide + 1 : lastContactSide - 1
   const goalSide =
-    centers.length === 1
-      ? goalSides[contactSide]!
-      : random.pick(
-          goalSides.filter(
-            (_, index) => goalSideScores[index] === farthestSideScore,
-          ),
-        )
+    shape !== 'RANDOM'
+      ? goalSides[lastOppositeSide]!
+      : centers.length === 1
+        ? goalSides[contactSide]!
+        : random.pick(
+            goalSides.filter(
+              (_, index) => goalSideScores[index] === farthestSideScore,
+            ),
+          )
   const ordered = [...goalSide].sort((a, b) => a.q - b.q || a.r - b.r)
   if (ordered.length < 3)
     throw new Error('Unable to determine three GOAL tiles.')
@@ -108,8 +130,10 @@ const createConnectedPetals = (
   radius: number,
   count: number,
   random: SeededRandom,
+  shape: MapShape,
 ): { tiles: HexTile[]; centers: Array<{ q: number; r: number }> } => {
-  const petals = [{ u: 0, v: 0 }]
+  const petals =
+    shape === 'RANDOM' ? [{ u: 0, v: 0 }] : createShapedPetals(shape, count)
   const key = (u: number, v: number) => `${u},${v}`
   const occupied = new Set([key(0, 0)])
   const extend = (): boolean => {
@@ -142,7 +166,7 @@ const createConnectedPetals = (
     }
     return false
   }
-  if (!extend()) {
+  if (shape === 'RANDOM' && !extend()) {
     throw new Error('Unable to connect the requested number of petals.')
   }
   // These basis vectors join neighboring petals along a full side.
@@ -163,7 +187,11 @@ const createConnectedPetals = (
 export const generateMap = (inputSettings: MapSettings): GameMap => {
   const settings = {
     ...inputSettings,
-    petalCount: Math.max(3, inputSettings.petalCount ?? 3),
+    mapShape: inputSettings.mapShape ?? 'RANDOM',
+    petalCount: Math.max(
+      getMinimumPetalCount(inputSettings.mapShape),
+      inputSettings.petalCount ?? 3,
+    ),
   }
   const radius = settings.segmentEdgeLength
     ? settings.segmentEdgeLength - 1
@@ -175,8 +203,15 @@ export const generateMap = (inputSettings: MapSettings): GameMap => {
       radius,
       settings.petalCount,
       random,
+      settings.mapShape,
     )
-    const { starts, goals } = getEndpointTiles(grid, radius, centers, random)
+    const { starts, goals } = getEndpointTiles(
+      grid,
+      radius,
+      centers,
+      random,
+      settings.mapShape,
+    )
     const goal = goals[1]!
     const routes = createRouteSet(
       starts[0]!,

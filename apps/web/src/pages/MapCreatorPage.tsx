@@ -1,10 +1,18 @@
 import { analyzeMap, generateMap } from '@map-generator'
 import { findDiverseFastestRoutes, type MapRoute } from '@game-engine'
-import type { CustomMap, HexTile, MapSettings, TerrainType } from '@shared'
+import {
+  MAP_SHAPES,
+  getMinimumPetalCount,
+  type CustomMap,
+  type HexTile,
+  type MapSettings,
+  type MapShape,
+  type TerrainType,
+} from '@shared'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { TerrainIcon } from '../components/TerrainIcon.js'
-import { terrainLabels } from '../labels.js'
+import { terrainLabels, mapShapeLabels } from '../labels.js'
 import { defaultSettings, useGameStore } from '../store.js'
 import { loadCustomMaps, saveCustomMap } from '../customMaps.js'
 
@@ -305,6 +313,32 @@ export function MapCreatorPage() {
               </select>
             </label>
             <label>
+              Kształt mapy
+              <select
+                value={settings.mapShape ?? 'RANDOM'}
+                onChange={(event) => {
+                  const mapShape = event.target.value as MapShape
+                  setSettings({
+                    ...settings,
+                    mapShape,
+                    petalCount: Math.max(
+                      settings.petalCount,
+                      getMinimumPetalCount(mapShape),
+                    ),
+                  })
+                }}
+              >
+                {MAP_SHAPES.map((shape) => (
+                  <option key={shape} value={shape}>
+                    {mapShapeLabels[shape]}
+                    {getMinimumPetalCount(shape) > 3
+                      ? ` (min. ${getMinimumPetalCount(shape)})`
+                      : ''}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               Płatki
               <select
                 value={settings.petalCount}
@@ -315,11 +349,12 @@ export function MapCreatorPage() {
                   })
                 }
               >
-                {Array.from({ length: 4 }, (_, index) => index + 3).map(
-                  (count) => (
-                    <option key={count}>{count}</option>
-                  ),
-                )}
+                {Array.from(
+                  { length: 7 - getMinimumPetalCount(settings.mapShape) },
+                  (_, index) => index + getMinimumPetalCount(settings.mapShape),
+                ).map((count) => (
+                  <option key={count}>{count}</option>
+                ))}
               </select>
             </label>
             <button

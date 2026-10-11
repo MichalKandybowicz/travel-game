@@ -8,6 +8,7 @@ import type {
   PlayerColor,
   PlayerSymbol,
 } from '../../../packages/shared/src/index.js'
+import { getMinimumPetalCount } from '../../../packages/shared/src/index.js'
 import { normalizeLobbyFogSettings } from './fogSettings.js'
 
 export interface RoomPlayerRecord {
@@ -103,10 +104,14 @@ export async function connectStorage(url: string): Promise<Storage> {
             difficulty:
               room.status === 'LOBBY' ? 'NORMAL' : room.settings.difficulty,
             routeCount: room.status === 'LOBBY' ? 1 : room.settings.routeCount,
+            mapShape: room.settings.mapShape ?? 'RANDOM',
             allowSharedTiles: room.settings.allowSharedTiles ?? false,
             petalCount:
               room.status === 'LOBBY'
-                ? Math.max(3, room.settings.petalCount ?? 3)
+                ? Math.max(
+                    getMinimumPetalCount(room.settings.mapShape),
+                    room.settings.petalCount ?? 3,
+                  )
                 : (room.settings.petalCount ??
                   room.gameState?.map.petalCount ??
                   3),
@@ -150,6 +155,7 @@ export async function connectStorage(url: string): Promise<Storage> {
                   },
                   settings: {
                     ...room.gameState.settings,
+                    mapShape: room.gameState.settings.mapShape ?? 'RANDOM',
                     allowSharedTiles:
                       room.gameState.settings.allowSharedTiles ?? false,
                     petalCount:

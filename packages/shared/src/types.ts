@@ -57,6 +57,7 @@ export type ActionCardEffect =
   | 'TANGLED_ROOTS'
   | 'CLOSED_MARKET'
   | 'HEX_SEAL'
+export type MapShape = 'RANDOM' | 'LINE' | 'C' | 'L' | 'S'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
 export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL' | 'RANGE'
@@ -67,6 +68,7 @@ import type { PlayerColor, PlayerSymbol } from './playerAppearance.js'
 export interface MapSettings {
   seed: string
   mapSize: MapSize
+  mapShape?: MapShape
   segmentEdgeLength?: number | undefined
   difficulty: GameDifficulty
   routeCount: number

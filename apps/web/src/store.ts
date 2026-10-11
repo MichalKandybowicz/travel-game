@@ -17,6 +17,7 @@ import {
 const defaultSettings: MapSettings = {
   seed: 'JUNGLE-92841',
   mapSize: 'MEDIUM',
+  mapShape: 'RANDOM',
   segmentEdgeLength: 7,
   difficulty: 'NORMAL',
   routeCount: 1,

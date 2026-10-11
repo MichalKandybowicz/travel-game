@@ -86,7 +86,7 @@ Przycisk **Opuść pokój** w poczekalni lub **Opuść grę** podczas rozgrywki 
 
 ## Zasady ruchu i terenów
 
-Rozmiar krawędzi segmentu określa długość każdej strony heksagonalnego **płatka**: od 5 do 9 pól, domyślnie 7. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 3 do 12. Generator łączy je długimi bokami w nieregularny łańcuch: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
+Rozmiar krawędzi segmentu określa długość każdej strony heksagonalnego **płatka**: od 5 do 9 pól, domyślnie 7. Domyślnie mapa ma 3 płatki, a gospodarz może wybrać od 3 do 12. Dostępne kształty to losowy łańcuch, linia prosta oraz litery C, L i S. Litera C wymaga co najmniej 4 płatków, a S co najmniej 6; wybór kształtu automatycznie zwiększa liczbę płatków w razie potrzeby. Generator łączy je długimi bokami: jeden płatek styka się najwyżej z dwoma innymi. Start i cel leżą na końcowych płatkach; wewnątrz łańcucha pozostaje kilka możliwych tras przez pola.
 
 W poczekalni wszyscy gracze widzą podgląd kształtu wygenerowanej mapy. Podgląd rozróżnia płatki, ale nie pokazuje typów terenów, kosztów ani położenia celu. Zmienia się po aktualizacji ustawień mapy.
 

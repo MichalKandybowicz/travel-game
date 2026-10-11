@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { defaultSettings, useGameStore } from '../store.js'
-import { errorLabels } from '../labels.js'
+import { errorLabels, mapShapeLabels } from '../labels.js'
 import { MapShapePreview } from '../components/MapShapePreview.js'
 import { PlayerBadge } from '../components/PlayerBadge.js'
 import { PlayerSymbol } from '../components/PlayerSymbol.js'
@@ -9,6 +9,9 @@ import {
   PLAYER_COLORS,
   PLAYER_SYMBOLS,
   getMaximumPlayers,
+  MAP_SHAPES,
+  getMinimumPetalCount,
+  type MapShape,
   type CustomMap,
 } from '@shared'
 import { loadCustomMaps } from '../customMaps.js'
@@ -505,6 +508,33 @@ export function RoomPage() {
                   </select>
                 </label>
                 <label>
+                  Kształt mapy
+                  <select
+                    value={settings.mapShape ?? 'RANDOM'}
+                    disabled={!isHost}
+                    onChange={(event) => {
+                      const mapShape = event.target.value as MapShape
+                      updateSettings({
+                        ...settings,
+                        mapShape,
+                        petalCount: Math.max(
+                          settings.petalCount,
+                          getMinimumPetalCount(mapShape),
+                        ),
+                      })
+                    }}
+                  >
+                    {MAP_SHAPES.map((shape) => (
+                      <option key={shape} value={shape}>
+                        {mapShapeLabels[shape]}
+                        {getMinimumPetalCount(shape) > 3
+                          ? ` (min. ${getMinimumPetalCount(shape)})`
+                          : ''}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
                   Liczba połączonych płatków
                   <select
                     value={settings.petalCount}
@@ -516,13 +546,15 @@ export function RoomPage() {
                       })
                     }
                   >
-                    {Array.from({ length: 10 }, (_, index) => index + 3).map(
-                      (count) => (
-                        <option key={count} value={count}>
-                          {count}
-                        </option>
-                      ),
-                    )}
+                    {Array.from(
+                      { length: 13 - getMinimumPetalCount(settings.mapShape) },
+                      (_, index) =>
+                        index + getMinimumPetalCount(settings.mapShape),
+                    ).map((count) => (
+                      <option key={count} value={count}>
+                        {count}
+                      </option>
+                    ))}
                   </select>
                 </label>
                 <label>

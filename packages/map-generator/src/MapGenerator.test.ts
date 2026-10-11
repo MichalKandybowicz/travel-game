@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { GameMap, MapSettings } from '../../shared/src/index.js'
-import { getMaximumPlayers, mapSettingsSchema } from '../../shared/src/index.js'
+import {
+  getMaximumPlayers,
+  mapSettingsSchema,
+  MAP_SHAPES,
+  getMinimumPetalCount,
+} from '../../shared/src/index.js'
 import { analyzeMap, countDistinctRoutesFromStart } from './MapAnalyzer.js'
 import { generateMap } from './MapGenerator.js'
 import { axialDistance, getNeighbors, HEX_DIRECTIONS } from './HexGrid.js'
@@ -57,6 +62,38 @@ describe('generateMap', () => {
         .allowSharedTiles,
     ).toBe(true)
   })
+
+  it('validates minimum sizes for C and S and keeps the random shape default', () => {
+    expect(mapSettingsSchema.parse(settings).mapShape).toBe('RANDOM')
+    for (const mapShape of MAP_SHAPES) {
+      const minimum = getMinimumPetalCount(mapShape)
+      expect(
+        mapSettingsSchema.safeParse({
+          ...settings,
+          mapShape,
+          petalCount: minimum,
+        }).success,
+      ).toBe(true)
+      expect(
+        mapSettingsSchema.safeParse({
+          ...settings,
+          mapShape,
+          petalCount: minimum - 1,
+        }).success,
+      ).toBe(false)
+    }
+    expect(
+      mapSettingsSchema.safeParse({ ...settings, mapShape: 'UNKNOWN' }).success,
+    ).toBe(false)
+  })
+
+  it.each(['C', 'S'] as const)(
+    'raises the petal count to complete the %s shape',
+    (mapShape) => {
+      const map = generateMap({ ...settings, mapShape, petalCount: 3 })
+      expect(map.petalCount).toBe(getMinimumPetalCount(mapShape))
+    },
+  )
 
   it('returns the same map for the same seed and settings', () => {
     const first = generateMap(settings)
@@ -165,93 +202,99 @@ describe('generateMap', () => {
     expect(map.goalHexIds!.every((id) => visited.has(id))).toBe(true)
   })
 
-  it('connects the requested number of distinct petals', () => {
-    for (const petalCount of Array.from(
-      { length: 10 },
-      (_, index) => index + 3,
-    )) {
-      const map = generateMap({ ...settings, petalCount })
-      const ids = new Set(map.tiles.map((tile) => tile.id))
-      expect(map.petalCount).toBe(petalCount)
-      expect(new Set(map.tiles.map((tile) => tile.petalId)).size).toBe(
-        petalCount,
-      )
-      expect(ids.size).toBe(map.tiles.length)
-      expect(map.stats.shortestPathLength).toBeGreaterThan(0)
-      const sideLength = 2 * 4 + 1
-      let petalConnections = 0
-      const petalNeighbors = Array.from(
-        { length: petalCount },
-        () => new Set<number>(),
-      )
-      for (let index = 1; index < petalCount; index += 1) {
-        const boundaryByPetal = new Map<number, number>()
-        for (const tile of map.tiles.filter(
-          (entry) => entry.petalId === index,
-        )) {
-          for (const neighbor of getNeighbors(map.tiles, tile)) {
-            if (neighbor.petalId !== undefined && neighbor.petalId < index) {
-              boundaryByPetal.set(
-                neighbor.petalId,
-                (boundaryByPetal.get(neighbor.petalId) ?? 0) + 1,
-              )
+  it.each(MAP_SHAPES)(
+    'connects the requested petals in a %s shape',
+    (mapShape) => {
+      const minimum = getMinimumPetalCount(mapShape)
+      for (const petalCount of Array.from(
+        { length: 13 - minimum },
+        (_, index) => index + minimum,
+      )) {
+        const map = generateMap({ ...settings, petalCount, mapShape })
+        const ids = new Set(map.tiles.map((tile) => tile.id))
+        expect(map.petalCount).toBe(petalCount)
+        expect(new Set(map.tiles.map((tile) => tile.petalId)).size).toBe(
+          petalCount,
+        )
+        expect(ids.size).toBe(map.tiles.length)
+        expect(map.stats.shortestPathLength).toBeGreaterThan(0)
+        const sideLength = 2 * 4 + 1
+        let petalConnections = 0
+        const petalNeighbors = Array.from(
+          { length: petalCount },
+          () => new Set<number>(),
+        )
+        for (let index = 1; index < petalCount; index += 1) {
+          const boundaryByPetal = new Map<number, number>()
+          for (const tile of map.tiles.filter(
+            (entry) => entry.petalId === index,
+          )) {
+            for (const neighbor of getNeighbors(map.tiles, tile)) {
+              if (neighbor.petalId !== undefined && neighbor.petalId < index) {
+                boundaryByPetal.set(
+                  neighbor.petalId,
+                  (boundaryByPetal.get(neighbor.petalId) ?? 0) + 1,
+                )
+              }
             }
           }
-        }
-        expect(
-          [...boundaryByPetal.values()].some((count) => count === sideLength),
-        ).toBe(true)
-        expect(
-          [...boundaryByPetal.values()].every((count) => count === sideLength),
-        ).toBe(true)
-        for (const neighborId of boundaryByPetal.keys()) {
-          petalNeighbors[index]!.add(neighborId)
-          petalNeighbors[neighborId]!.add(index)
-        }
-        petalConnections += boundaryByPetal.size
-      }
-      expect(petalConnections).toBe(petalCount - 1)
-      expect(petalNeighbors.every((neighbors) => neighbors.size <= 2)).toBe(
-        true,
-      )
-      expect(
-        map.tiles.find((tile) => tile.id === map.startHexId)?.petalId,
-      ).toBe(0)
-      expect(map.tiles.find((tile) => tile.id === map.goalHexId)?.petalId).toBe(
-        petalCount - 1,
-      )
-      const portals = map.tiles.filter((tile) => tile.terrain === 'GOAL')
-      expect(portals).toHaveLength(3)
-      expect(new Set(map.goalHexIds).size).toBe(3)
-      expect(map.goalHexIds).toContain(map.goalHexId)
-      expect(portals.every((tile) => tile.petalId === petalCount - 1)).toBe(
-        true,
-      )
-      expect(
-        [
-          portals.every((tile) => tile.q === portals[0]!.q),
-          portals.every((tile) => tile.r === portals[0]!.r),
-          portals.every(
-            (tile) => tile.q + tile.r === portals[0]!.q + portals[0]!.r,
-          ),
-        ].some(Boolean),
-      ).toBe(true)
-      if (petalCount >= 3) {
-        const centers = [0, 1, 2].map((petalId) => {
-          const tiles = map.tiles.filter((tile) => tile.petalId === petalId)
-          return {
-            q: tiles.reduce((sum, tile) => sum + tile.q, 0) / tiles.length,
-            r: tiles.reduce((sum, tile) => sum + tile.r, 0) / tiles.length,
+          expect(
+            [...boundaryByPetal.values()].some((count) => count === sideLength),
+          ).toBe(true)
+          expect(
+            [...boundaryByPetal.values()].every(
+              (count) => count === sideLength,
+            ),
+          ).toBe(true)
+          for (const neighborId of boundaryByPetal.keys()) {
+            petalNeighbors[index]!.add(neighborId)
+            petalNeighbors[neighborId]!.add(index)
           }
-        })
-        const [first, second, third] = centers
-        const cross =
-          (second!.q - first!.q) * (third!.r - first!.r) -
-          (second!.r - first!.r) * (third!.q - first!.q)
-        expect(cross).not.toBe(0)
+          petalConnections += boundaryByPetal.size
+        }
+        expect(petalConnections).toBe(petalCount - 1)
+        expect(petalNeighbors.every((neighbors) => neighbors.size <= 2)).toBe(
+          true,
+        )
+        expect(
+          map.tiles.find((tile) => tile.id === map.startHexId)?.petalId,
+        ).toBe(0)
+        expect(
+          map.tiles.find((tile) => tile.id === map.goalHexId)?.petalId,
+        ).toBe(petalCount - 1)
+        const portals = map.tiles.filter((tile) => tile.terrain === 'GOAL')
+        expect(portals).toHaveLength(3)
+        expect(new Set(map.goalHexIds).size).toBe(3)
+        expect(map.goalHexIds).toContain(map.goalHexId)
+        expect(portals.every((tile) => tile.petalId === petalCount - 1)).toBe(
+          true,
+        )
+        expect(
+          [
+            portals.every((tile) => tile.q === portals[0]!.q),
+            portals.every((tile) => tile.r === portals[0]!.r),
+            portals.every(
+              (tile) => tile.q + tile.r === portals[0]!.q + portals[0]!.r,
+            ),
+          ].some(Boolean),
+        ).toBe(true)
+        if (mapShape === 'RANDOM') {
+          const centers = [0, 1, 2].map((petalId) => {
+            const tiles = map.tiles.filter((tile) => tile.petalId === petalId)
+            return {
+              q: tiles.reduce((sum, tile) => sum + tile.q, 0) / tiles.length,
+              r: tiles.reduce((sum, tile) => sum + tile.r, 0) / tiles.length,
+            }
+          })
+          const [first, second, third] = centers
+          const cross =
+            (second!.q - first!.q) * (third!.r - first!.r) -
+            (second!.r - first!.r) * (third!.q - first!.q)
+          expect(cross).not.toBe(0)
+        }
       }
-    }
-  })
+    },
+  )
 
   it('places the configured number of camps on every petal', () => {
     const map = generateMap({
@@ -365,43 +408,43 @@ describe('generateMap', () => {
       petalCount: 3,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.3, 0.375, 0.25, 0.075],
-        [0.05, 0.3, 0.5, 0.15],
+        [0.275, 0.4, 0.25, 0.075],
+        [0, 0.35, 0.5, 0.15],
       ],
     },
     {
       petalCount: 5,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.425, 0.4125, 0.125, 0.0375],
-        [0.3, 0.375, 0.25, 0.075],
-        [0.175, 0.3375, 0.375, 0.1125],
-        [0.05, 0.3, 0.5, 0.15],
+        [0.4125, 0.425, 0.125, 0.0375],
+        [0.275, 0.4, 0.25, 0.075],
+        [0.1375, 0.375, 0.375, 0.1125],
+        [0, 0.35, 0.5, 0.15],
       ],
     },
     {
       petalCount: 6,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.45, 0.42, 0.1, 0.03],
-        [0.35, 0.39, 0.2, 0.06],
-        [0.25, 0.36, 0.3, 0.09],
-        [0.15, 0.33, 0.4, 0.12],
-        [0.05, 0.3, 0.5, 0.15],
+        [0.44, 0.43, 0.1, 0.03],
+        [0.33, 0.41, 0.2, 0.06],
+        [0.22, 0.39, 0.3, 0.09],
+        [0.11, 0.37, 0.4, 0.12],
+        [0, 0.35, 0.5, 0.15],
       ],
     },
     {
       petalCount: 9,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.4875, 0.43125, 0.0625, 0.01875],
-        [0.425, 0.4125, 0.125, 0.0375],
-        [0.3625, 0.39375, 0.1875, 0.05625],
-        [0.3, 0.375, 0.25, 0.075],
-        [0.2375, 0.35625, 0.3125, 0.09375],
-        [0.175, 0.3375, 0.375, 0.1125],
-        [0.1125, 0.31875, 0.4375, 0.13125],
-        [0.05, 0.3, 0.5, 0.15],
+        [0.48125, 0.4375, 0.0625, 0.01875],
+        [0.4125, 0.425, 0.125, 0.0375],
+        [0.34375, 0.4125, 0.1875, 0.05625],
+        [0.275, 0.4, 0.25, 0.075],
+        [0.20625, 0.3875, 0.3125, 0.09375],
+        [0.1375, 0.375, 0.375, 0.1125],
+        [0.06875, 0.3625, 0.4375, 0.13125],
+        [0, 0.35, 0.5, 0.15],
       ],
     },
   ])(
@@ -431,7 +474,7 @@ describe('generateMap', () => {
           (sum, count, index) => sum + count * (index + 1),
           0,
         ) / lastPetalTotal
-      expect(Math.abs(lastPetalMean - 2.75)).toBeLessThan(0.05)
+      expect(Math.abs(lastPetalMean - 2.8)).toBeLessThan(0.05)
       for (const [petalId, probabilities] of expected.entries()) {
         const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
         expect(total).toBeGreaterThan(0)

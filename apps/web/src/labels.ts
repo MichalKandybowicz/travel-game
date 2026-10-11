@@ -1,4 +1,9 @@
-import type { CardDefinition, MovementType, TerrainType } from '@shared'
+import type {
+  CardDefinition,
+  MovementType,
+  TerrainType,
+  MapShape,
+} from '@shared'
 
 export const movementLabels: Record<MovementType, string> = {
   GREEN: 'zielone',
@@ -181,4 +186,12 @@ export const errorLabels: Record<string, string> = {
   PLAYER_NOT_FOUND: 'Nie znaleziono gracza.',
   ROOM_FULL: 'Pokój jest pełny.',
   INVALID_ACTION: 'Nie można wykonać tej akcji.',
+}
+
+export const mapShapeLabels: Record<MapShape, string> = {
+  RANDOM: 'Losowy',
+  LINE: 'Linia prosta',
+  C: 'Litera C',
+  L: 'Litera L',
+  S: 'Litera S',
 }

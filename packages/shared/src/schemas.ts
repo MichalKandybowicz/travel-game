@@ -1,10 +1,12 @@
 import { z } from 'zod'
+import { MAP_SHAPES, getMinimumPetalCount } from './mapShapes.js'
 import { PLAYER_COLORS, PLAYER_SYMBOLS } from './playerAppearance.js'
 
 export const mapSettingsSchema = z
   .object({
     seed: z.string().min(1),
     mapSize: z.enum(['SMALL', 'MEDIUM', 'LARGE']),
+    mapShape: z.enum(MAP_SHAPES).default('RANDOM'),
     segmentEdgeLength: z.number().int().min(5).max(9).optional(),
     difficulty: z.enum(['EASY', 'NORMAL', 'HARD']),
     routeCount: z.number().int().min(1).max(4),
@@ -28,6 +30,13 @@ export const mapSettingsSchema = z
       .default(2),
     dragonCount: z.number().int().min(0).max(3).default(0),
   })
+  .refine(
+    ({ mapShape, petalCount }) => petalCount >= getMinimumPetalCount(mapShape),
+    {
+      message: 'Not enough petals for the selected map shape.',
+      path: ['petalCount'],
+    },
+  )
   .refine(
     ({ campCountMinPerPetal, campCountMaxPerPetal }) =>
       campCountMinPerPetal <= campCountMaxPerPetal,
