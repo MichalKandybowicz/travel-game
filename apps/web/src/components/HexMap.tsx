@@ -7,7 +7,7 @@ import {
   type MoveRequirement,
 } from '@game-engine'
 import type { GameState, HexTile, MovementPool, PlayerState } from '@shared'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { movementLabels, movementUnitLabel, terrainLabels } from '../labels.js'
 import { playerColor, playerSymbol } from '../playerColors.js'
 import { PlayerBadge } from './PlayerBadge.js'
@@ -52,9 +52,13 @@ type MapView = {
   height: number
 }
 
-const focusedView = (tile: HexTile | undefined, mapView: MapView) => {
+const focusedView = (
+  tile: HexTile | undefined,
+  mapView: MapView,
+  rotation: number,
+) => {
   const point = tile
-    ? hexToPixel(tile.q, tile.r, HEX_SPACING)
+    ? projectHex(tile.q, tile.r, HEX_SPACING, rotation)
     : { x: mapView.centerX, y: mapView.centerY }
   return {
     zoom: Math.min(
@@ -92,10 +96,18 @@ const terrainRules: Record<HexTile['terrain'], string> = {
   GOAL: 'Koszt pola 5–8: punkty dowolnego koloru. Wejście kończy grę zwycięstwem.',
 }
 
-const hexToPixel = (q: number, r: number, size: number) => {
+const rotatePoint = (point: { x: number; y: number }, rotation: number) => {
+  const angle = (rotation * Math.PI) / 180
+  return {
+    x: point.x * Math.cos(angle) - point.y * Math.sin(angle),
+    y: point.x * Math.sin(angle) + point.y * Math.cos(angle),
+  }
+}
+
+const projectHex = (q: number, r: number, size: number, rotation = 0) => {
   const x = size * (Math.sqrt(3) * q + (Math.sqrt(3) / 2) * r)
   const y = size * ((3 / 2) * r)
-  return { x, y }
+  return rotatePoint({ x, y }, rotation)
 }
 
 const polygonPoints = (x: number, y: number, size: number): string =>
@@ -172,6 +184,11 @@ export function HexMap({
   blockTargeting,
   onBlockHex,
 }: HexMapProps) {
+  const [rotation, setRotation] = useState(0)
+  const hexToPixel = useCallback(
+    (q: number, r: number, size: number) => projectHex(q, r, size, rotation),
+    [rotation],
+  )
   const [selectedHexId, setSelectedHexId] = useState<string>()
   const [selectedDragonId, setSelectedDragonId] = useState<string>()
   const [inspectedDragonId, setInspectedDragonId] = useState<string>()
@@ -350,12 +367,12 @@ export function HexMap({
     ) {
       const point = currentTile ?? startTile
       const center = point
-        ? hexToPixel(point.q, point.r, HEX_SPACING)
+        ? projectHex(point.q, point.r, HEX_SPACING, rotation)
         : { x: 0, y: 0 }
       return { centerX: center.x, centerY: center.y, width: 360, height: 330 }
     }
     const points = game.map.tiles.map((tile) =>
-      hexToPixel(tile.q, tile.r, HEX_SPACING),
+      projectHex(tile.q, tile.r, HEX_SPACING),
     )
     const xs = points.map((point) => point.x)
     const ys = points.map((point) => point.y)
@@ -363,9 +380,13 @@ export function HexMap({
     const maxX = Math.max(...xs)
     const minY = Math.min(...ys)
     const maxY = Math.max(...ys)
+    const center = rotatePoint(
+      { x: (minX + maxX) / 2, y: (minY + maxY) / 2 },
+      rotation,
+    )
     return {
-      centerX: (minX + maxX) / 2,
-      centerY: (minY + maxY) / 2,
+      centerX: center.x,
+      centerY: center.y,
       width: Math.max(480, maxX - minX + 90),
       height: Math.max(440, maxY - minY + 90),
     }
@@ -376,11 +397,21 @@ export function HexMap({
     game.settings.fogMode,
     game.settings.terrainVisibilityRange,
     game.settings.costVisibilityRange,
+    rotation,
   ])
   const [view, setView] = useState(() =>
-    focusedView(currentTile ?? startTile, mapView),
+    focusedView(currentTile ?? startTile, mapView, rotation),
   )
   const { zoom, pan } = view
+  const rotateMap = (nextRotation: number) => {
+    // Keep the same map location at the center while changing orientation.
+    setView((current) => ({
+      ...current,
+      pan: rotatePoint(current.pan, nextRotation - rotation),
+    }))
+    setRotation((nextRotation + 360) % 360)
+  }
+  const rotationDisabled = isAnimatingMove || movingDragonIds.size > 0
   const [viewportAspectRatio, setViewportAspectRatio] = useState<number>()
   useEffect(() => {
     const svg = svgRef.current
@@ -407,25 +438,25 @@ export function HexMap({
     const tile = game.map.tiles.find(
       (entry) => entry.id === focusHexRequest.hexId,
     )
-    if (tile) setView(focusedView(tile, mapView))
-  }, [focusHexRequest, game.map.tiles, mapView])
+    if (tile) setView(focusedView(tile, mapView, rotation))
+  }, [focusHexRequest, game.map.tiles, mapView, rotation])
 
   useEffect(() => {
     if (!focusOnPlayer || focusOnPlayer === focusedCampRef.current) return
     focusedCampRef.current = focusOnPlayer
-    setView(focusedView(currentTile, mapView))
-  }, [focusOnPlayer, currentTile, mapView])
+    setView(focusedView(currentTile, mapView, rotation))
+  }, [focusOnPlayer, currentTile, mapView, rotation])
 
   useEffect(() => {
     if (focusedGameRef.current !== game.id) {
       focusedGameRef.current = game.id
       focusedOwnStartRef.current = Boolean(currentTile)
-      setView(focusedView(currentTile ?? startTile, mapView))
+      setView(focusedView(currentTile ?? startTile, mapView, rotation))
     } else if (!focusedOwnStartRef.current && currentTile) {
       focusedOwnStartRef.current = true
-      setView(focusedView(currentTile, mapView))
+      setView(focusedView(currentTile, mapView, rotation))
     }
-  }, [game.id, currentTile, startTile, mapView])
+  }, [game.id, currentTile, startTile, mapView, rotation])
 
   useEffect(() => {
     const svg = svgRef.current
@@ -716,7 +747,7 @@ export function HexMap({
       }
     }
     requestAnimationFrame(frame)
-  }, [game.dragons, game.map.tiles])
+  }, [game.dragons, game.map.tiles, hexToPixel])
 
   useEffect(() => {
     if (isAnimatingMove && (game.currentPlayerId !== playerId || !isActive)) {
@@ -859,7 +890,7 @@ export function HexMap({
           : []
       }),
     )
-  }, [game.map.tiles])
+  }, [game.map.tiles, hexToPixel])
 
   // Keep a margin for tile icons and connections crossing the viewport edge.
   const visibleTileIds = useMemo(() => {
@@ -886,7 +917,15 @@ export function HexMap({
         })
         .map((tile) => tile.id),
     )
-  }, [game.map.tiles, mapView, pan.x, pan.y, zoom, viewportAspectRatio])
+  }, [
+    game.map.tiles,
+    mapView,
+    pan.x,
+    pan.y,
+    zoom,
+    viewportAspectRatio,
+    hexToPixel,
+  ])
   const visibleTiles = useMemo(
     () => game.map.tiles.filter((tile) => visibleTileIds.has(tile.id)),
     [game.map.tiles, visibleTileIds],
@@ -908,8 +947,35 @@ export function HexMap({
         <div className="map-controls">
           <button
             type="button"
+            aria-label="Obróć mapę w lewo o 60°"
+            title="Obróć mapę w lewo o 60°"
+            disabled={rotationDisabled}
+            onClick={() => rotateMap(rotation - 60)}
+          >
+            ↶
+          </button>
+          <button
+            type="button"
+            aria-label="Obróć mapę w prawo o 60°"
+            title="Obróć mapę w prawo o 60°"
+            disabled={rotationDisabled}
+            onClick={() => rotateMap(rotation + 60)}
+          >
+            ↷
+          </button>
+          <button
+            type="button"
+            aria-label="Przywróć początkową orientację mapy"
+            title="Przywróć początkową orientację mapy"
+            disabled={rotationDisabled || rotation === 0}
+            onClick={() => rotateMap(0)}
+          >
+            {rotation}°
+          </button>
+          <button
+            type="button"
             onClick={() => {
-              setView(focusedView(currentTile ?? startTile, mapView))
+              setView(focusedView(currentTile ?? startTile, mapView, rotation))
             }}
           >
             {currentTile ? 'Pokaż mnie' : 'Pokaż start'}
