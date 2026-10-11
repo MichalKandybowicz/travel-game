@@ -13,13 +13,14 @@ const specialCostRanges = {
   GOAL: [5, 8],
 } as const
 
-// Columns correspond to movement costs 1 through 5; rows to successive petals.
+// Columns correspond to movement costs 1 through 4; rows are progression milestones.
+// Expected costs: 1.45, 1.80, 2.15, 2.45, 2.75. Longer maps interpolate between rows.
 const ordinaryCostWeights = [
-  [35, 55, 10, 0, 0],
-  [20, 50, 30, 0, 0],
-  [0, 40, 40, 20, 0],
-  [0, 20, 50, 35, 0],
-  [0, 10, 30, 40, 20],
+  [55, 45, 0, 0],
+  [35, 50, 15, 0],
+  [20, 50, 25, 5],
+  [10, 45, 35, 10],
+  [5, 35, 40, 20],
 ] as const
 
 const pickCost = (
@@ -27,14 +28,25 @@ const pickCost = (
   difficulty: GameDifficulty,
   terrain: CostTerrain,
   petalId: number,
+  petalCount: number,
 ): number => {
   if (terrain !== 'CAMP' && terrain !== 'GOAL') {
-    const weights =
-      ordinaryCostWeights[Math.min(petalId, ordinaryCostWeights.length - 1)]!
-    let roll = random.int(1, 100)
+    const lastMilestone = ordinaryCostWeights.length - 1
+    const progress = Math.min(
+      lastMilestone,
+      (petalId * lastMilestone) / Math.max(lastMilestone, petalCount - 1),
+    )
+    const lowerIndex = Math.floor(progress)
+    const lower = ordinaryCostWeights[lowerIndex]!
+    const upper = ordinaryCostWeights[Math.min(lowerIndex + 1, lastMilestone)]!
+    const fraction = progress - lowerIndex
+    const weights = lower.map(
+      (weight, index) => weight + (upper[index]! - weight) * fraction,
+    )
+    let roll = random.next() * 100
     for (const [index, weight] of weights.entries()) {
       roll -= weight
-      if (roll <= 0) return index + 1
+      if (roll < 0) return index + 1
     }
     throw new Error('Ordinary movement cost weights must total 100.')
   }
@@ -385,6 +397,7 @@ export const applyTerrain = (
         settings.difficulty,
         tile.terrain,
         tile.petalId ?? 0,
+        settings.petalCount ?? 1,
       )
     }
   }

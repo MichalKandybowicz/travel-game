@@ -330,10 +330,10 @@ describe('generateMap', () => {
       const ranges = [
         [1, 2],
         [1, 3],
-        [2, 4],
-        [2, 5],
-        [2, 5],
-        [2, 5],
+        [1, 4],
+        [1, 4],
+        [1, 4],
+        [1, 4],
       ] as const
       for (const [petalId, [min, max]] of ranges.entries()) {
         const tiles = map.tiles.filter(
@@ -350,35 +350,82 @@ describe('generateMap', () => {
     },
   )
 
-  it('samples ordinary movement costs according to the petal percentages', () => {
-    const expected = [
-      [0.5, 0.5, 0, 0, 0],
-      [0.3, 0.5, 0.2, 0, 0],
-      [0, 0.4, 0.45, 0.15, 0],
-      [0, 0.2, 0.45, 0.3, 0.05],
-      [0, 0.1, 0.3, 0.4, 0.2],
-      [0, 0.1, 0.3, 0.4, 0.2],
-    ]
-    const counts = expected.map(() => [0, 0, 0, 0, 0])
-    for (let seed = 0; seed < 12; seed += 1) {
-      const map = generateMap({
-        ...settings,
-        seed: `cost-distribution-${seed}`,
-        petalCount: 6,
-      })
-      for (const tile of map.tiles) {
-        if (['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
-          counts[tile.petalId!]![tile.difficulty - 1]! += 1
+  it.each([
+    {
+      petalCount: 5,
+      expected: [
+        [0.55, 0.45, 0, 0],
+        [0.35, 0.5, 0.15, 0],
+        [0.2, 0.5, 0.25, 0.05],
+        [0.1, 0.45, 0.35, 0.1],
+        [0.05, 0.35, 0.4, 0.2],
+      ],
+    },
+    {
+      petalCount: 6,
+      expected: [
+        [0.55, 0.45, 0, 0],
+        [0.39, 0.49, 0.12, 0],
+        [0.26, 0.5, 0.21, 0.03],
+        [0.16, 0.48, 0.29, 0.07],
+        [0.09, 0.43, 0.36, 0.12],
+        [0.05, 0.35, 0.4, 0.2],
+      ],
+    },
+    {
+      petalCount: 9,
+      expected: [
+        [0.55, 0.45, 0, 0],
+        [0.45, 0.475, 0.075, 0],
+        [0.35, 0.5, 0.15, 0],
+        [0.275, 0.5, 0.2, 0.025],
+        [0.2, 0.5, 0.25, 0.05],
+        [0.15, 0.475, 0.3, 0.075],
+        [0.1, 0.45, 0.35, 0.1],
+        [0.075, 0.4, 0.375, 0.15],
+        [0.05, 0.35, 0.4, 0.2],
+      ],
+    },
+  ])(
+    'samples progressive costs across $petalCount petals',
+    ({ petalCount, expected }) => {
+      const counts = expected.map(() => [0, 0, 0, 0])
+      for (let seed = 0; seed < 12; seed += 1) {
+        const map = generateMap({
+          ...settings,
+          seed: `cost-distribution-${seed}`,
+          petalCount,
+        })
+        for (const tile of map.tiles) {
+          if (['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
+            counts[tile.petalId!]![tile.difficulty - 1]! += 1
+          }
         }
       }
-    }
-    for (const [petalId, probabilities] of expected.entries()) {
-      const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
-      expect(total).toBeGreaterThan(0)
-      for (const [index, probability] of probabilities.entries()) {
-        const frequency = counts[petalId]![index]! / total
-        if (probability === 0) expect(frequency).toBe(0)
-        else expect(Math.abs(frequency - probability)).toBeLessThan(0.05)
+      for (const [petalId, probabilities] of expected.entries()) {
+        const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
+        expect(total).toBeGreaterThan(0)
+        for (const [index, probability] of probabilities.entries()) {
+          const frequency = counts[petalId]![index]! / total
+          if (probability === 0) expect(frequency).toBe(0)
+          else expect(Math.abs(frequency - probability)).toBeLessThan(0.05)
+        }
+      }
+    },
+  )
+
+  it('keeps ordinary costs within 1–4 on a twelve-petal map', () => {
+    const map = generateMap({ ...settings, petalCount: 12 })
+    for (let petalId = 0; petalId < 12; petalId += 1) {
+      const ordinary = map.tiles.filter(
+        (tile) =>
+          tile.petalId === petalId &&
+          ['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain),
+      )
+      expect(ordinary.length).toBeGreaterThan(0)
+      for (const tile of ordinary) {
+        expect(tile.difficulty).toBeGreaterThanOrEqual(1)
+        expect(tile.difficulty).toBeLessThanOrEqual(petalId === 0 ? 2 : 4)
       }
     }
   })
