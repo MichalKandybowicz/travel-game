@@ -2069,8 +2069,8 @@ export function HexMap({
           Przejście między polami tego samego rodzaju ruchu kosztuje sumę ich
           kosztów pomniejszoną o 1. Dla tego samego terenu bonus wynosi 2, jeśli
           przynajmniej jedno z pól otaczają wyłącznie pola tego terenu, góry lub
-          krawędź planszy. Dotyczy to dżungli, wody, pustyni i rumowiska. Koszt
-          przejścia nie spada poniżej 1.
+          krawędź planszy. Dotyczy to dżungli, wody, pustyni i kamiennego
+          pustkowia. Koszt przejścia nie spada poniżej 1.
         </p>
         <ul>
           {terrainOrder.map((terrain) => (

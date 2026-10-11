@@ -47,7 +47,7 @@ export const terrainLabels: Record<TerrainType, string> = {
   JUNGLE: 'Zaklęty gaj',
   WATER: 'Kryształowe wody',
   DESERT: 'Złote pustkowia',
-  RUBBLE: 'Starożytne ruiny',
+  RUBBLE: 'Kamienne pustkowie',
   CAMP: 'Krąg run',
   MOUNTAIN: 'Góry runiczne',
 }

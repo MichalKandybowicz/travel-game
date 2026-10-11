@@ -104,7 +104,7 @@ Gracz może wejść tylko na sąsiednie pole. Liczba na polu oznacza koszt **wej
 
 Zwykłe pola mają koszt 1–4. Rozkład zmienia się liniowo od 55% pól za 1 i 45% za 2 na pierwszym płatku do 5% za 1, 30% za 2, 50% za 3 i 15% za 4 na ostatnim płatku.
 
-Koszt przejścia jest sumą kosztów obu pól. Gdy pola wymagają tego samego rodzaju ruchu, obowiązuje bonus **−1**. Dla pól tego samego terenu bonus wzrasta do **−2**, jeśli przynajmniej jedno z nich jest otoczone wyłącznie tym terenem, górami lub krawędzią planszy. Dotyczy to dżungli, wody, pustyni i rumowiska; koszt przejścia wynosi co najmniej **1**. Góry nadal są niedostępne.
+Koszt przejścia jest sumą kosztów obu pól. Gdy pola wymagają tego samego rodzaju ruchu, obowiązuje bonus **−1**. Dla pól tego samego terenu bonus wzrasta do **−2**, jeśli przynajmniej jedno z nich jest otoczone wyłącznie tym terenem, górami lub krawędzią planszy. Dotyczy to dżungli, wody, pustyni i kamiennego pustkowia; koszt przejścia wynosi co najmniej **1**. Góry nadal są niedostępne.
 
 Mapę można przesuwać przeciąganiem myszą, a przybliżać i oddalać kółkiem myszy. Przyciski kierunkowe i skali pozostają dostępne.
 
@@ -116,16 +116,16 @@ Licznik **Runda** zmienia się dopiero po turze wszystkich graczy. **Ruch X z Y*
 
 Podczas tworzenia pokoju gospodarz może wyłączyć możliwość stawania na polu zajętym przez innego gracza. Domyślnie kilku graczy może stać na tym samym polu; gospodarz może zmienić tę zasadę także w poczekalni, przed rozpoczęciem gry. Limit graczy i botów odpowiada liczbie pól startowych aktualnej mapy. Zmiana mapy lub rozmiaru nie może zmniejszyć liczby startów poniżej liczby osób w pokoju.
 
-| Teren     | Koszt wejścia                                  | Efekt                                                         |
-| --------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| Dżungla   | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                      |
-| Woda      | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                      |
-| Pustynia  | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                      |
-| Rumowisko | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                      |
-| Krąg run  | 1–5 punktów dowolnego koloru                   | Przy pierwszym wejściu wybierasz jedną z trzech losowych run. |
-| Góry      | Nie można wejść                                | Pole zablokowane.                                             |
-| Start     | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z pól początkowych, wybieranych przed pierwszą turą.    |
-| Cel       | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                               |
+| Teren              | Koszt wejścia                                  | Efekt                                                         |
+| ------------------ | ---------------------------------------------- | ------------------------------------------------------------- |
+| Dżungla            | 1–4 zielone lub uniwersalne punkty             | Brak dodatkowego efektu.                                      |
+| Woda               | 1–3 niebieskie lub uniwersalne punkty          | Brak dodatkowego efektu.                                      |
+| Pustynia           | 1–4 żółte lub uniwersalne punkty               | Brak dodatkowego efektu.                                      |
+| Kamienne pustkowie | 2–4 punkty dowolnego koloru                    | Brak dodatkowego efektu.                                      |
+| Krąg run           | 1–5 punktów dowolnego koloru                   | Przy pierwszym wejściu wybierasz jedną z trzech losowych run. |
+| Góry               | Nie można wejść                                | Pole zablokowane.                                             |
+| Start              | 1 punkt dowolnego koloru przy ponownym wejściu | Jedno z pól początkowych, wybieranych przed pierwszą turą.    |
+| Cel                | 1 punkt dowolnego koloru                       | Wejście kończy grę zwycięstwem.                               |
 
 Generator tworzy góry w połączonych grupach po 3–5 pól. Rzeki biegną od pól sąsiadujących z górami do zewnętrznej krawędzi mapy, a pozostała woda tworzy zwarte jeziora. Kręgi run nie zajmują środkowego pola płatka i leżą co najmniej ¼ promienia płatka od jego krawędzi; między każdą parą są co najmniej 3 pełne heksy (odległość co najmniej 4). Pola początkowe i końcowe oraz wyznaczone trasy nie są blokowane górami.
 

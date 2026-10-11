@@ -357,8 +357,8 @@ export function HomePage() {
                 </span>
                 <h3>Odkrywaj zaklęte krainy</h3>
                 <p>
-                  Wybieraj drogę przez zaklęte gaje, kryształowe wody i
-                  starożytne ruiny. Każda kraina wymaga innej mocy.
+                  Wybieraj drogę przez zaklęte gaje, kryształowe wody i kamienne
+                  pustkowie. Każda kraina wymaga innej mocy.
                 </p>
               </article>
               <article className="home-feature">
