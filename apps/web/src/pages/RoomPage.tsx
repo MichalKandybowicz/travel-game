@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { defaultSettings, useGameStore } from '../store.js'
-import { errorLabels, mapShapeLabels } from '../labels.js'
+import { errorLabels, mapShapeLabels, difficultyLabels } from '../labels.js'
 import { MapShapePreview } from '../components/MapShapePreview.js'
 import { PlayerBadge } from '../components/PlayerBadge.js'
 import { PlayerSymbol } from '../components/PlayerSymbol.js'
@@ -11,8 +11,10 @@ import {
   getMaximumPlayers,
   MAP_SHAPES,
   getMinimumPetalCount,
+  GAME_DIFFICULTIES,
   type MapShape,
   type CustomMap,
+  type GameDifficulty,
 } from '@shared'
 import { loadCustomMaps } from '../customMaps.js'
 import {
@@ -487,6 +489,25 @@ export function RoomPage() {
                       })
                     }
                   />
+                </label>
+                <label>
+                  Poziom trudności
+                  <select
+                    value={settings.difficulty}
+                    disabled={!isHost}
+                    onChange={(event) =>
+                      updateSettings({
+                        ...settings,
+                        difficulty: event.target.value as GameDifficulty,
+                      })
+                    }
+                  >
+                    {GAME_DIFFICULTIES.map((difficulty) => (
+                      <option key={difficulty} value={difficulty}>
+                        {difficultyLabels[difficulty]}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <label>
                   Rozmiar krawędzi segmentu

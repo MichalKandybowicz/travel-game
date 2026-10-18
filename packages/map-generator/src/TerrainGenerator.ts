@@ -14,11 +14,23 @@ const specialCostRanges = {
 } as const
 
 // Columns correspond to movement costs 1 through 4.
-// Interpolate from the first to the last petal: expected cost 1.45 → 2.75.
-const ordinaryCostWeights = [
-  [55, 45, 0, 0],
-  [0, 35, 50, 15],
-] as const
+const ordinaryCostWeightsByDifficulty: Record<
+  GameDifficulty,
+  readonly (readonly [number, number, number, number])[]
+> = {
+  EASY: [
+    [55, 45, 0, 0],
+    [15, 40, 35, 0],
+  ],
+  NORMAL: [
+    [55, 45, 0, 0],
+    [5, 40, 50, 5],
+  ],
+  HARD: [
+    [55, 45, 0, 0],
+    [0, 30, 60, 10],
+  ],
+} as const
 
 const pickCost = (
   random: SeededRandom,
@@ -28,6 +40,9 @@ const pickCost = (
   petalCount: number,
 ): number => {
   if (terrain !== 'CAMP' && terrain !== 'GOAL') {
+    const ordinaryCostWeights =
+      ordinaryCostWeightsByDifficulty[difficulty] ??
+      ordinaryCostWeightsByDifficulty.NORMAL
     const lastMilestone = ordinaryCostWeights.length - 1
     const progress = Math.min(
       lastMilestone,
@@ -40,12 +55,13 @@ const pickCost = (
     const weights = lower.map(
       (weight, index) => weight + (upper[index]! - weight) * fraction,
     )
-    let roll = random.next() * 100
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0)
+    let roll = random.next() * totalWeight
     for (const [index, weight] of weights.entries()) {
       roll -= weight
-      if (roll < 0) return index + 1
+      if (roll <= 0) return index + 1
     }
-    throw new Error('Ordinary movement cost weights must total 100.')
+    return weights.length
   }
   const [min, max] = specialCostRanges[terrain]
   const roll = random.next()

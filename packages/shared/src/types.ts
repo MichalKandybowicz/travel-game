@@ -59,7 +59,8 @@ export type ActionCardEffect =
   | 'HEX_SEAL'
 export type MapShape = 'RANDOM' | 'LINE' | 'C' | 'L' | 'S'
 export type MapSize = 'SMALL' | 'MEDIUM' | 'LARGE'
-export type GameDifficulty = 'EASY' | 'NORMAL' | 'HARD'
+export const GAME_DIFFICULTIES = ['EASY', 'NORMAL', 'HARD'] as const
+export type GameDifficulty = (typeof GAME_DIFFICULTIES)[number]
 export type FogMode = 'NONE' | 'PETAL' | 'MEDIUM' | 'FULL' | 'RANGE'
 export type RoomStatus = 'LOBBY' | 'IN_GAME' | 'FINISHED'
 export type GameStatus = 'LOBBY' | 'CHOOSING_START' | 'ACTIVE' | 'FINISHED'

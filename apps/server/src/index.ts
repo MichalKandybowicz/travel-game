@@ -1193,7 +1193,8 @@ io.on('connection', (socket) => {
         terrainVisibilityRange: parsed.data.settings.terrainVisibilityRange,
         costVisibilityRange: parsed.data.settings.costVisibilityRange,
         dragonCount: parsed.data.settings.dragonCount,
-        difficulty: 'NORMAL',
+        difficulty:
+          customMap?.settings.difficulty ?? parsed.data.settings.difficulty,
         routeCount: 1,
       }),
       ...(customMap
@@ -1425,7 +1426,7 @@ io.on('connection', (socket) => {
     const nextSettings = normalizeLobbyFogSettings({
       ...parsed.data.settings,
       dragonCount: parsed.data.settings.dragonCount ?? 0,
-      difficulty: 'NORMAL',
+      difficulty: parsed.data.settings.difficulty,
       routeCount: 1,
     })
     if (room.players.length > getMaximumPlayers(nextSettings, room.customMap)) {
@@ -1512,7 +1513,7 @@ io.on('connection', (socket) => {
         terrainVisibilityRange: room.settings.terrainVisibilityRange ?? 4,
         costVisibilityRange: room.settings.costVisibilityRange ?? 2,
         dragonCount: room.settings.dragonCount ?? 0,
-        difficulty: 'NORMAL',
+        difficulty: customMap.settings.difficulty,
         routeCount: 1,
       })
       room.seed = customMap.settings.seed
@@ -1795,7 +1796,7 @@ io.on('connection', (socket) => {
       })
       return
     }
-    room.settings = { ...room.settings, difficulty: 'NORMAL', routeCount: 1 }
+    room.settings = { ...room.settings, routeCount: 1 }
     room.gameState = createGameState(
       room.roomCode,
       room.settings,

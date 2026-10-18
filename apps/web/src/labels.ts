@@ -3,6 +3,7 @@ import type {
   MovementType,
   TerrainType,
   MapShape,
+  GameDifficulty,
 } from '@shared'
 
 export const movementLabels: Record<MovementType, string> = {
@@ -194,4 +195,10 @@ export const mapShapeLabels: Record<MapShape, string> = {
   C: 'Litera C',
   L: 'Litera L',
   S: 'Litera S',
+}
+
+export const difficultyLabels: Record<GameDifficulty, string> = {
+  EASY: 'Łatwy',
+  NORMAL: 'Normalny',
+  HARD: 'Trudny',
 }

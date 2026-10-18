@@ -408,43 +408,43 @@ describe('generateMap', () => {
       petalCount: 3,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.275, 0.4, 0.25, 0.075],
-        [0, 0.35, 0.5, 0.15],
+        [0.3, 0.425, 0.25, 0.025],
+        [0.05, 0.4, 0.5, 0.05],
       ],
     },
     {
       petalCount: 5,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.4125, 0.425, 0.125, 0.0375],
-        [0.275, 0.4, 0.25, 0.075],
-        [0.1375, 0.375, 0.375, 0.1125],
-        [0, 0.35, 0.5, 0.15],
+        [0.425, 0.4375, 0.125, 0.0125],
+        [0.3, 0.425, 0.25, 0.025],
+        [0.175, 0.4125, 0.375, 0.0375],
+        [0.05, 0.4, 0.5, 0.05],
       ],
     },
     {
       petalCount: 6,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.44, 0.43, 0.1, 0.03],
-        [0.33, 0.41, 0.2, 0.06],
-        [0.22, 0.39, 0.3, 0.09],
-        [0.11, 0.37, 0.4, 0.12],
-        [0, 0.35, 0.5, 0.15],
+        [0.45, 0.44, 0.1, 0.01],
+        [0.35, 0.43, 0.2, 0.02],
+        [0.25, 0.42, 0.3, 0.03],
+        [0.15, 0.41, 0.4, 0.04],
+        [0.05, 0.4, 0.5, 0.05],
       ],
     },
     {
       petalCount: 9,
       expected: [
         [0.55, 0.45, 0, 0],
-        [0.48125, 0.4375, 0.0625, 0.01875],
-        [0.4125, 0.425, 0.125, 0.0375],
-        [0.34375, 0.4125, 0.1875, 0.05625],
-        [0.275, 0.4, 0.25, 0.075],
-        [0.20625, 0.3875, 0.3125, 0.09375],
-        [0.1375, 0.375, 0.375, 0.1125],
-        [0.06875, 0.3625, 0.4375, 0.13125],
-        [0, 0.35, 0.5, 0.15],
+        [0.4875, 0.44375, 0.0625, 0.00625],
+        [0.425, 0.4375, 0.125, 0.0125],
+        [0.3625, 0.43125, 0.1875, 0.01875],
+        [0.3, 0.425, 0.25, 0.025],
+        [0.2375, 0.41875, 0.3125, 0.03125],
+        [0.175, 0.4125, 0.375, 0.0375],
+        [0.1125, 0.40625, 0.4375, 0.04375],
+        [0.05, 0.4, 0.5, 0.05],
       ],
     },
   ])(
@@ -474,7 +474,7 @@ describe('generateMap', () => {
           (sum, count, index) => sum + count * (index + 1),
           0,
         ) / lastPetalTotal
-      expect(Math.abs(lastPetalMean - 2.8)).toBeLessThan(0.05)
+      expect(Math.abs(lastPetalMean - 2.55)).toBeLessThan(0.05)
       for (const [petalId, probabilities] of expected.entries()) {
         const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
         expect(total).toBeGreaterThan(0)
@@ -486,6 +486,84 @@ describe('generateMap', () => {
       }
     },
   )
+
+  it('samples progressive costs for EASY difficulty', () => {
+    const expected = [
+      [0.55, 0.45, 0, 0],
+      [35 / 95, 42.5 / 95, 17.5 / 95, 0],
+      [15 / 90, 40 / 90, 35 / 90, 0],
+    ]
+    const counts = expected.map(() => [0, 0, 0, 0])
+    for (let seed = 0; seed < 36; seed += 1) {
+      const map = generateMap({
+        ...settings,
+        difficulty: 'EASY',
+        seed: `cost-distribution-easy-${seed}`,
+        petalCount: 3,
+      })
+      for (const tile of map.tiles) {
+        if (['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
+          counts[tile.petalId!]![tile.difficulty - 1]! += 1
+        }
+      }
+    }
+    const lastPetalCounts = counts.at(-1)!
+    const lastPetalTotal = lastPetalCounts.reduce((sum, count) => sum + count, 0)
+    const lastPetalMean =
+      lastPetalCounts.reduce(
+        (sum, count, index) => sum + count * (index + 1),
+        0,
+      ) / lastPetalTotal
+    expect(Math.abs(lastPetalMean - 2.22)).toBeLessThan(0.05)
+    for (const [petalId, probabilities] of expected.entries()) {
+      const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
+      expect(total).toBeGreaterThan(0)
+      for (const [index, probability] of probabilities.entries()) {
+        const frequency = counts[petalId]![index]! / total
+        if (probability === 0) expect(frequency).toBe(0)
+        else expect(Math.abs(frequency - probability)).toBeLessThan(0.05)
+      }
+    }
+  })
+
+  it('samples progressive costs for HARD difficulty', () => {
+    const expected = [
+      [0.55, 0.45, 0, 0],
+      [0.275, 0.375, 0.3, 0.05],
+      [0, 0.3, 0.6, 0.1],
+    ]
+    const counts = expected.map(() => [0, 0, 0, 0])
+    for (let seed = 0; seed < 36; seed += 1) {
+      const map = generateMap({
+        ...settings,
+        difficulty: 'HARD',
+        seed: `cost-distribution-hard-${seed}`,
+        petalCount: 3,
+      })
+      for (const tile of map.tiles) {
+        if (['JUNGLE', 'WATER', 'DESERT', 'RUBBLE'].includes(tile.terrain)) {
+          counts[tile.petalId!]![tile.difficulty - 1]! += 1
+        }
+      }
+    }
+    const lastPetalCounts = counts.at(-1)!
+    const lastPetalTotal = lastPetalCounts.reduce((sum, count) => sum + count, 0)
+    const lastPetalMean =
+      lastPetalCounts.reduce(
+        (sum, count, index) => sum + count * (index + 1),
+        0,
+      ) / lastPetalTotal
+    expect(Math.abs(lastPetalMean - 2.8)).toBeLessThan(0.05)
+    for (const [petalId, probabilities] of expected.entries()) {
+      const total = counts[petalId]!.reduce((sum, count) => sum + count, 0)
+      expect(total).toBeGreaterThan(0)
+      for (const [index, probability] of probabilities.entries()) {
+        const frequency = counts[petalId]![index]! / total
+        if (probability === 0) expect(frequency).toBe(0)
+        else expect(Math.abs(frequency - probability)).toBeLessThan(0.05)
+      }
+    }
+  })
 
   it('generates at least three petals even when called with legacy settings', () => {
     for (const petalCount of [undefined, 1, 2]) {
